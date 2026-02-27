@@ -1,0 +1,63 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+.vite/
+.cache/
+out/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+/backend/data
+/backend/scripts
+
+# Firebase admin SDK credentials (sensitive)
+/backend/performance-monitering-glove-firebase-adminsdk.json
+/backend/import_json_to_firebase.js
+/backend/athlete_training_data.json
+
+package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# IDE/editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.code-workspace
+
+# Coverage
+coverage/
+nyc_output/
+
+# Misc
+*.tgz
+*.pem
+*.key
+*.crt
+.sass-cache
+
+# Windows specific
+desktop.ini

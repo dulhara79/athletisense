@@ -1,0 +1,235 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: theme('colors.premium.50');
+    color: theme('colors.premium.900');
+    font-family: theme('fontFamily.body');
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    --color-surface: theme('colors.premium.50');
+    --color-surface-muted: theme('colors.premium.100');
+    --color-surface-primary: theme('colors.indigo.50');
+    --color-surface-success: theme('colors.emerald.50');
+    --color-surface-warning: theme('colors.amber.50');
+    --color-surface-danger: theme('colors.rose.50');
+  }
+
+  /* Dark mode body colors when `dark` class is applied to <html> */
+  .dark {
+    --color-surface: #050505;
+    --color-surface-muted: #0f1115;
+    --color-surface-primary: rgba(79, 70, 229, 0.15);
+    --color-surface-success: rgba(5, 150, 105, 0.15);
+    --color-surface-warning: rgba(245, 158, 11, 0.15);
+    --color-surface-danger: rgba(225, 29, 72, 0.15);
+  }
+
+  .dark body {
+    background-color: #050505;
+    /* Deep rich true dark background */
+    color: #e2e8f0;
+    /* softer contrasting white */
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: theme('colors.premium.100');
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: theme('colors.premium.300');
+    border-radius: 9999px;
+    border: 1px solid theme('colors.premium.100');
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: theme('colors.premium.400');
+  }
+}
+
+@layer components {
+
+  /* Utility: background card surface that adapts to dark mode */
+  .bg-card {
+    background-color: theme('colors.premium.50');
+    --card-border: theme('colors.premium.200');
+    border-color: var(--card-border);
+  }
+
+  .dark .bg-card {
+    background-color: #0d0f12;
+    /* Elevated premium zinc-style surface */
+    --card-border: rgba(255, 255, 255, 0.06);
+    /* subtle transparent border for depth */
+    border-color: var(--card-border);
+  }
+
+  .card {
+    @apply rounded-2xl p-5 relative overflow-hidden transition-all duration-300;
+    border-width: 1px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    /* shadow-premium */
+  }
+
+  .dark .card {
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+      /* premium inner glow edge */
+      0 4px 10px rgba(0, 0, 0, 0.5);
+    /* deep ambient drop shadow */
+  }
+
+  .card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+    /* shadow-premium-hover */
+  }
+
+  .dark .card:hover {
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+      0 6px 15px rgba(0, 0, 0, 0.6);
+  }
+
+  .card-glow-cyan {
+    box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.1), 0 4px 12px rgba(79, 70, 229, 0.08);
+    /* indigo-600 */
+  }
+
+  .card-glow-green {
+    box-shadow: 0 0 0 1px rgba(5, 150, 105, 0.1), 0 4px 12px rgba(5, 150, 105, 0.08);
+    /* emerald-600 */
+  }
+
+  .metric-value {
+    @apply font-mono text-3xl font-extrabold tracking-tight leading-none;
+    color: theme('colors.premium.900');
+  }
+
+  .dark .metric-value {
+    color: #f8fafc;
+    /* super bright white for values */
+  }
+
+  .metric-label {
+    @apply text-xs font-semibold tracking-wider uppercase;
+    color: theme('colors.premium.500');
+  }
+
+  .dark .metric-label {
+    color: #94a3b8;
+    /* softer slate for labels in dark */
+  }
+
+  .live-dot {
+    @apply inline-block w-2.5 h-2.5 rounded-full bg-accent-success;
+    box-shadow: 0 0 8px rgba(5, 150, 105, 0.6);
+    animation: livePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-sm font-medium;
+    color: theme('colors.premium.600');
+  }
+
+  .dark .nav-item {
+    color: #94a3b8;
+  }
+
+  .nav-item:hover {
+    @apply bg-premium-100 text-accent-primary;
+  }
+
+  .dark .nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    /* transparent low opacity hover */
+    color: #f1f5f9;
+  }
+
+  .nav-item.active {
+    @apply bg-surface-primary text-accent-primary font-semibold shadow-sm ring-1 ring-inset ring-indigo-100;
+  }
+
+  .dark .nav-item.active {
+    background-color: rgba(79, 70, 229, 0.15);
+    /* indigo tinted active state */
+    color: #818cf8;
+    /* indigo-400 */
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    @apply ring-0;
+    /* remove light mode ring */
+  }
+
+  .alert-critical {
+    @apply border-l-4 border-accent-danger bg-surface-danger text-rose-800 shadow-sm rounded-r-lg;
+  }
+
+  .alert-warning {
+    @apply border-l-4 border-accent-warning bg-surface-warning text-amber-800 shadow-sm rounded-r-lg;
+  }
+
+  .alert-info {
+    @apply border-l-4 border-accent-primary bg-surface-primary text-indigo-800 shadow-sm rounded-r-lg;
+  }
+}
+
+@keyframes livePulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
+    box-shadow: 0 0 4px rgba(5, 150, 105, 0.3);
+  }
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  /* premium-200 */
+  border-radius: 12px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+  color: #0f172a !important;
+  /* premium-900 */
+}
+
+.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: #0d0f12 !important;
+  /* bg-card equivalent */
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 10px 25px rgba(0, 0, 0, 0.8) !important;
+  color: #f8fafc !important;
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #f1f5f9 !important;
+  /* premium-100 */
+}
+
+.dark .recharts-cartesian-grid-horizontal line,
+.dark .recharts-cartesian-grid-vertical line {
+  stroke: rgba(255, 255, 255, 0.04) !important;
+  /* very subtle dark mode grid */
+}
+
+.gauge-needle {
+  transform-origin: bottom center;
+  transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}

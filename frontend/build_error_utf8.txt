@@ -1,0 +1,89 @@
+﻿
+> athletisense-frontend@1.0.0 build
+> vite build
+
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 4 modules transformed.
+node.exe : [31mx[39m Build 
+failed in 1.26s
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo          : 
+    NotSpecified: ([31mx[3  
+  9m Build failed in 1.26s:   
+ String) [], RemoteExcepti    
+on
+    + FullyQualifiedErrorId : 
+    NativeCommandError
+ 
+[31merror during build:
+[31m[vite:css] [postcss] C:/U
+sers/dulha/Downloads/GitHub/at
+hletisense/frontend/src/index.
+css:143:5: The 
+`bg-surface-primary` class 
+does not exist. If 
+`bg-surface-primary` is a 
+custom class, make sure it is 
+defined within a `@layer` 
+directive.[31m
+file: [36mC:/Users/dulha/Down
+loads/GitHub/athletisense/fron
+tend/src/index.css:143:4[31m
+    at Input.error (C:\Users\d
+ulha\Downloads\GitHub\athletis
+ense\frontend\node_modules\pos
+tcss\lib\input.js:135:16)
+    at AtRule.error (C:\Users\
+dulha\Downloads\GitHub\athleti
+sense\frontend\node_modules\po
+stcss\lib\node.js:146:32)
+    at processApply (C:\Users\
+dulha\Downloads\GitHub\athleti
+sense\frontend\node_modules\ta
+ilwindcss\lib\lib\expandApplyA
+tRules.js:380:29)
+    at C:\Users\dulha\Download
+s\GitHub\athletisense\frontend
+\node_modules\tailwindcss\lib\
+lib\expandApplyAtRules.js:551:
+9
+    at C:\Users\dulha\Download
+s\GitHub\athletisense\frontend
+\node_modules\tailwindcss\lib\
+processTailwindFeatures.js:55:
+50
+    at async plugins (C:\Users
+\dulha\Downloads\GitHub\athlet
+isense\frontend\node_modules\t
+ailwindcss\lib\plugin.js:38:17
+)
+    at async 
+LazyResult.runAsync (C:\Users\
+dulha\Downloads\GitHub\athleti
+sense\frontend\node_modules\po
+stcss\lib\lazy-result.js:293:1
+1)
+    at async compileCSS (file:
+///C:/Users/dulha/Downloads/Gi
+tHub/athletisense/frontend/nod
+e_modules/vite/dist/node/chunk
+s/dep-BK3b2jBa.js:36898:21)
+    at async Object.transform 
+(file:///C:/Users/dulha/Downlo
+ads/GitHub/athletisense/fronte
+nd/node_modules/vite/dist/node
+/chunks/dep-BK3b2jBa.js:36171:
+11)
+    at async transform (file:/
+//C:/Users/dulha/Downloads/Git
+Hub/athletisense/frontend/node
+_modules/rollup/dist/es/shared
+/node-entry.js:21246:16)[39m
