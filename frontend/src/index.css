@@ -1,3 +1,4 @@
+@import '../theme.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,8 +9,8 @@
   }
 
   body {
-    background-color: theme('colors.premium.50');
-    color: theme('colors.premium.900');
+    background-color: var(--bg-base);
+    color: var(--text-primary);
     font-family: theme('fontFamily.body');
     margin: 0;
     padding: 0;
@@ -32,13 +33,17 @@
     --color-surface-success: rgba(5, 150, 105, 0.15);
     --color-surface-warning: rgba(245, 158, 11, 0.15);
     --color-surface-danger: rgba(225, 29, 72, 0.15);
+    /* Ensure text tokens are present for components that reference them */
+    --text-primary:     #e6eef8;
+    --text-secondary:   #b7c2ea;
+    --text-muted:       #9097b8;
+    --text-faint:       #667083;
   }
 
   .dark body {
-    background-color: #050505;
+    background-color: var(--bg-base);
     /* Deep rich true dark background */
-    color: #e2e8f0;
-    /* softer contrasting white */
+    color: var(--text-primary);
   }
 
   ::-webkit-scrollbar {
@@ -65,16 +70,8 @@
 
   /* Utility: background card surface that adapts to dark mode */
   .bg-card {
-    background-color: theme('colors.premium.50');
-    --card-border: theme('colors.premium.200');
-    border-color: var(--card-border);
-  }
-
-  .dark .bg-card {
-    background-color: #0d0f12;
-    /* Elevated premium zinc-style surface */
-    --card-border: rgba(255, 255, 255, 0.06);
-    /* subtle transparent border for depth */
+    background-color: var(--bg-card);
+    --card-border: var(--border-subtle);
     border-color: var(--card-border);
   }
 
@@ -114,22 +111,12 @@
 
   .metric-value {
     @apply font-mono text-3xl font-extrabold tracking-tight leading-none;
-    color: theme('colors.premium.900');
-  }
-
-  .dark .metric-value {
-    color: #f8fafc;
-    /* super bright white for values */
+    color: var(--text-primary);
   }
 
   .metric-label {
     @apply text-xs font-semibold tracking-wider uppercase;
-    color: theme('colors.premium.500');
-  }
-
-  .dark .metric-label {
-    color: #94a3b8;
-    /* softer slate for labels in dark */
+    color: var(--text-secondary);
   }
 
   .live-dot {
@@ -140,11 +127,7 @@
 
   .nav-item {
     @apply flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-sm font-medium;
-    color: theme('colors.premium.600');
-  }
-
-  .dark .nav-item {
-    color: #94a3b8;
+    color: var(--text-muted);
   }
 
   .nav-item:hover {
@@ -154,7 +137,7 @@
   .dark .nav-item:hover {
     background-color: rgba(255, 255, 255, 0.05);
     /* transparent low opacity hover */
-    color: #f1f5f9;
+    color: var(--text-primary);
   }
 
   .nav-item.active {
@@ -164,7 +147,7 @@
   .dark .nav-item.active {
     background-color: rgba(79, 70, 229, 0.15);
     /* indigo tinted active state */
-    color: #818cf8;
+    color: var(--accent-indigo);
     /* indigo-400 */
     box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
     @apply ring-0;
@@ -200,33 +183,29 @@
 }
 
 .recharts-tooltip-wrapper .recharts-default-tooltip {
-  background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  /* premium-200 */
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-subtle) !important;
   border-radius: 12px !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
-  color: #0f172a !important;
-  /* premium-900 */
+  box-shadow: var(--shadow-card) !important;
+  color: var(--text-primary) !important;
+  /* tooltip text follows theme text color */
 }
 
 .dark .recharts-tooltip-wrapper .recharts-default-tooltip {
-  background: #0d0f12 !important;
-  /* bg-card equivalent */
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 10px 25px rgba(0, 0, 0, 0.8) !important;
-  color: #f8fafc !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: var(--shadow-card) !important;
+  color: var(--text-primary) !important;
 }
 
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
-  stroke: #f1f5f9 !important;
-  /* premium-100 */
+  stroke: var(--border-strong) !important;
 }
 
 .dark .recharts-cartesian-grid-horizontal line,
 .dark .recharts-cartesian-grid-vertical line {
-  stroke: rgba(255, 255, 255, 0.04) !important;
-  /* very subtle dark mode grid */
+  stroke: var(--border-subtle) !important;
 }
 
 .gauge-needle {
