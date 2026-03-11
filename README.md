@@ -1,4 +1,4 @@
-# 🏃 AthletiSense — IoT Athletic Performance Dashboard
+# 🏃 AthletiSense: IoT Athletic Performance Dashboard
 
 A real-time athletic performance monitoring dashboard built for IoT sensor data. Supports role-based access for athletes, head coaches, and physiotherapists.
 
