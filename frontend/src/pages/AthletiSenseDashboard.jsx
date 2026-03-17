@@ -203,17 +203,11 @@ function StatCard({
 }
 
 function SessionTimer({ t }) {
-  const [secs, setSecs] = useState(0);
-  const [running, setRunning] = useState(false);
-  const ref = useRef();
-  useEffect(() => {
-    if (running) ref.current = setInterval(() => setSecs((s) => s + 1), 1000);
-    else clearInterval(ref.current);
-    return () => clearInterval(ref.current);
-  }, [running]);
-  const h = String(Math.floor(secs / 3600)).padStart(2, "0");
-  const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
-  const s = String(secs % 60).padStart(2, "0");
+  const { timerSecs, setTimerSecs, timerRunning, setTimerRunning } = useAuth();
+  
+  const h = String(Math.floor(timerSecs / 3600)).padStart(2, "0");
+  const m = String(Math.floor((timerSecs % 3600) / 60)).padStart(2, "0");
+  const s = String(timerSecs % 60).padStart(2, "0");
   return (
     <div
       className="card-fadein"
@@ -256,7 +250,7 @@ function SessionTimer({ t }) {
         </span>
         <div style={{ display: "flex", gap: 6 }}>
           <button
-            onClick={() => setRunning((r) => !r)}
+            onClick={() => setTimerRunning((r) => !r)}
             style={{
               background: t.surface,
               border: `1px solid ${t.border}`,
@@ -269,10 +263,10 @@ function SessionTimer({ t }) {
               justifyContent: "center"
             }}
           >
-            {running ? <Pause size={14} /> : <Play size={14} />}
+            {timerRunning ? <Pause size={14} /> : <Play size={14} />}
           </button>
           <button
-            onClick={() => { setRunning(false); setSecs(0); }}
+            onClick={() => { setTimerRunning(false); setTimerSecs(0); }}
             style={{
               background: t.surface,
               border: `1px solid ${t.border}`,
