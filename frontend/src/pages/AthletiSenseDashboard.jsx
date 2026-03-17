@@ -657,14 +657,14 @@ function AlertsPanel({ latest, t }) {
         id: `hr-c`,
         level: "critical",
         title: "Critical: HR Threshold Exceeded",
-        msg: `${fmtBpm(bpm)} bpm — limit 175 bpm`,
+        msg: `${fmtBpm(bpm)} bpm - limit 175 bpm`,
       });
     else if (bpm > 155)
       out.push({
         id: `hr-w`,
         level: "warning",
         title: "Warning: Elevated Heart Rate",
-        msg: `${fmtBpm(bpm)} bpm — approaching threshold`,
+        msg: `${fmtBpm(bpm)} bpm - approaching threshold`,
       });
     if (mg > 11)
       out.push({
@@ -678,14 +678,14 @@ function AlertsPanel({ latest, t }) {
         id: `tp-w`,
         level: "warning",
         title: "Warning: High Skin Temperature",
-        msg: `${fmtTemp(temp)}°C — heat risk present`,
+        msg: `${fmtTemp(temp)}°C - heat risk present`,
       });
     if (leads === false)
       out.push({
         id: `ld-w`,
         level: "warning",
         title: "Warning: ECG Leads Disconnected",
-        msg: "Electrode contact lost — check strap placement",
+        msg: "Electrode contact lost - check strap placement",
       });
     if (!out.length)
       out.push({
@@ -1359,12 +1359,12 @@ export default function AthletiSenseDashboard({ t }) {
             >
               <defs>
                 <linearGradient id="mgAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="mgArea2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid
@@ -1411,7 +1411,7 @@ export default function AthletiSenseDashboard({ t }) {
                 type="monotone"
                 dataKey="mg"
                 name="Acceleration"
-                stroke="#4f46e5"
+                stroke="#10b981"
                 strokeWidth={2}
                 fill="url(#mgAreaGrad)"
                 dot={false}
@@ -1421,7 +1421,7 @@ export default function AthletiSenseDashboard({ t }) {
                 type="monotone"
                 dataKey="resp"
                 name="Resp rate (÷10)"
-                stroke="#10b981"
+                stroke="#3b82f6"
                 strokeWidth={1.5}
                 fill="url(#mgArea2)"
                 dot={false}
@@ -1607,8 +1607,8 @@ export default function AthletiSenseDashboard({ t }) {
                 yAxisId="mg"
                 type="monotone"
                 dataKey="mg"
-                name="Motion magnitude"
-                stroke="#3b82f6"
+                name="Motion"
+                stroke="#10b981"
                 strokeWidth={1.5}
                 dot={false}
                 isAnimationActive={false}
@@ -1648,7 +1648,7 @@ export default function AthletiSenseDashboard({ t }) {
               margin={{ top: 5, right: 30, bottom: 0, left: 0 }}
             >
               <defs>
-                <linearGradient id="respGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="brGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
@@ -1708,16 +1708,16 @@ export default function AthletiSenseDashboard({ t }) {
                 name="Breathing Rate"
                 stroke="#3b82f6"
                 strokeWidth={2}
-                fill="url(#respGrad)"
+                fill="url(#brGrad)"
                 dot={false}
                 isAnimationActive={false}
-                unit=" br/min"
+                unit=" rpm"
               />
               <Line
                 yAxisId="mg"
                 type="monotone"
                 dataKey="mg"
-                name="Motion magnitude"
+                name="Motion"
                 stroke="#10b981"
                 strokeWidth={1.5}
                 dot={false}
