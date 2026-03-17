@@ -717,7 +717,7 @@ export default function AthletiSenseDashboard({ t }) {
   const wsRef = useRef(null);
 
   // Role-based filtering
-  const { user } = useAuth();
+  const { user, connectedCoaches = [] } = useAuth();
   const isAdmin = user?.role === 'admin';
   const myAthleteId = user?.athleteId;
 
@@ -841,165 +841,199 @@ export default function AthletiSenseDashboard({ t }) {
           flexWrap: "wrap",
         }}
       >
-        <div
-          className="card-fadein"
+    <div
+      className="card-fadein"
+      style={{
+        background: t.card,
+        border: `1px solid ${t.border}`,
+        borderRadius: 16,
+        padding: "1rem 1.25rem",
+        flex: "0 0 auto",
+        boxShadow: t.shadow,
+        position: "relative",
+        minWidth: 240,
+      }}
+    >
+      <p
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.10em",
+          textTransform: "uppercase",
+          color: t.muted,
+          marginBottom: 8,
+          fontFamily: "'DM Mono', monospace",
+        }}
+      >
+        {isAdmin ? 'Athlete Select' : 'Coach Sync'}
+      </p>
+
+      {isAdmin ? (
+        // Admin View: Athlete Dropdown
+        <button
+          onClick={() => setDropOpen((o) => !o)}
           style={{
-            background: t.card,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            width: "100%",
+            background: t.surface,
             border: `1px solid ${t.border}`,
-            borderRadius: 16,
-            padding: "1rem 1.25rem",
-            flex: "0 0 auto",
-            boxShadow: t.shadow,
-            position: "relative",
-            minWidth: 240,
+            borderRadius: 10,
+            padding: "8px 12px",
+            cursor: "pointer",
           }}
         >
-          <p
+          <div
             style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.10em",
-              textTransform: "uppercase",
-              color: t.muted,
-              marginBottom: 8,
-              fontFamily: "'DM Mono', monospace",
-            }}
-          >
-            Athlete Select
-          </p>
-          <button
-            onClick={() => isAdmin && setDropOpen((o) => !o)}
-            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: `linear-gradient(135deg, ${t.accent}30, ${t.accent}15)`,
+              border: `1px solid ${t.accent}30`,
               display: "flex",
               alignItems: "center",
-              gap: 10,
-              width: "100%",
-              background: t.surface,
-              border: `1px solid ${t.border}`,
-              borderRadius: 10,
-              padding: "8px 12px",
-              cursor: isAdmin ? "pointer" : "default",
-              opacity: isAdmin ? 1 : 0.85,
+              justifyContent: "center",
+              fontSize: 11,
+              fontWeight: 800,
+              color: t.accent,
+              fontFamily: "'DM Mono', monospace",
+              flexShrink: 0,
             }}
           >
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 8,
-                background: `linear-gradient(135deg, ${t.accent}30, ${t.accent}15)`,
-                border: `1px solid ${t.accent}30`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 11,
-                fontWeight: 800,
-                color: t.accent,
-                fontFamily: "'DM Mono', monospace",
-                flexShrink: 0,
-              }}
-            >
-              {meta.avatar}
-            </div>
-            <div style={{ textAlign: "left", flex: 1 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: t.text }}>
-                {meta.name}
-              </p>
-              <p style={{ fontSize: 10, color: t.muted }}>{meta.sport}</p>
-            </div>
-            <ChevronDown size={14} color={t.muted} />
-          </button>
-          {dropOpen && (
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                right: 0,
-                zIndex: 100,
-                background: t.card,
-                border: `1px solid ${t.border}`,
-                borderRadius: 12,
-                marginTop: 4,
-                boxShadow: t.shadowHover,
-                overflow: "hidden",
-              }}
-            >
-              {athletes.map((a) => {
-                const m = ATHLETE_META[a.id] ?? {
-                  name: a.id,
-                  sport: "Athlete",
-                  avatar: "?",
-                };
-                return (
-                  <button
-                    key={a.id}
-                    onClick={() => {
-                      setSelectedId(a.id);
-                      setDropOpen(false);
-                    }}
+            {meta.avatar}
+          </div>
+          <div style={{ textAlign: "left", flex: 1 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: t.text }}>
+              {meta.name}
+            </p>
+            <p style={{ fontSize: 10, color: t.muted }}>{meta.sport}</p>
+          </div>
+          <ChevronDown size={14} color={t.muted} />
+        </button>
+      ) : (
+        // Athlete View: Coach Display
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%", background: t.surface,
+          border: `1px solid ${t.border}`, borderRadius: 10,
+          padding: "8px 12px",
+        }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: connectedCoaches.length ? `linear-gradient(135deg, ${t.accent}30, ${t.accent}15)` : t.bg,
+            border: `1px solid ${t.accent}30`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, fontWeight: 800, color: t.accent, flexShrink: 0,
+          }}>
+            {connectedCoaches.length ? <Shield size={14} /> : '💪'}
+          </div>
+          <div style={{ textAlign: "left", flex: 1 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: t.text }}>
+              {connectedCoaches.length 
+                ? connectedCoaches.map(c => c.name).join(', ') 
+                : "You are your own Coach!"}
+            </p>
+            <p style={{ fontSize: 10, color: t.muted }}>
+              {connectedCoaches.length ? "Monitoring active" : "Independent Athlete Yay!"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isAdmin && dropOpen && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            background: t.card,
+            border: `1px solid ${t.border}`,
+            borderRadius: 12,
+            marginTop: 4,
+            boxShadow: t.shadowHover,
+            overflow: "hidden",
+          }}
+        >
+          {athletes.map((a) => {
+            const m = ATHLETE_META[a.id] ?? {
+              name: a.id,
+              sport: "Athlete",
+              avatar: "?",
+            };
+            return (
+              <button
+                key={a.id}
+                onClick={() => {
+                  setSelectedId(a.id);
+                  setDropOpen(false);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  width: "100%",
+                  padding: "10px 14px",
+                  background:
+                    a.id === selectedId ? t.accentBg : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "background 0.15s",
+                }}
+              >
+                <div
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: 7,
+                    background: `linear-gradient(135deg, ${t.accent}25, ${t.accent}10)`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: t.accent,
+                    fontFamily: "'DM Mono', monospace",
+                  }}
+                >
+                  {m.avatar}
+                </div>
+                <div style={{ textAlign: "left" }}>
+                  <p
+                    style={{ fontSize: 12, fontWeight: 600, color: t.text }}
+                  >
+                    {m.name}
+                  </p>
+                  <p style={{ fontSize: 10, color: t.muted }}>
+                    {a.id} · {m.sport}
+                  </p>
+                </div>
+                {wsConnected && (
+                  <span
                     style={{
+                      marginLeft: "auto",
                       display: "flex",
                       alignItems: "center",
-                      gap: 10,
-                      width: "100%",
-                      padding: "10px 14px",
-                      background:
-                        a.id === selectedId ? t.accentBg : "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      transition: "background 0.15s",
+                      gap: 4,
+                      fontSize: 9,
+                      color: t.success,
+                      fontFamily: "'DM Mono', monospace",
+                      fontWeight: 700,
                     }}
                   >
-                    <div
-                      style={{
-                        width: 26,
-                        height: 26,
-                        borderRadius: 7,
-                        background: `linear-gradient(135deg, ${t.accent}25, ${t.accent}10)`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 10,
-                        fontWeight: 800,
-                        color: t.accent,
-                        fontFamily: "'DM Mono', monospace",
-                      }}
-                    >
-                      {m.avatar}
-                    </div>
-                    <div style={{ textAlign: "left" }}>
-                      <p
-                        style={{ fontSize: 12, fontWeight: 600, color: t.text }}
-                      >
-                        {m.name}
-                      </p>
-                      <p style={{ fontSize: 10, color: t.muted }}>
-                        {a.id} · {m.sport}
-                      </p>
-                    </div>
-                    {wsConnected && (
-                      <span
-                        style={{
-                          marginLeft: "auto",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 4,
-                          fontSize: 9,
-                          color: t.success,
-                          fontFamily: "'DM Mono', monospace",
-                          fontWeight: 700,
-                        }}
-                      >
-                        <LiveDot t={t} /> LIVE
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                    <LiveDot t={t} /> LIVE
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+      )}
+    </div>
+
+        {/* --- Removed the other parts of StatusCard that were manually extracted, they belong here --- */}
 
         <SessionTimer t={t} />
         <StatusCard athlete={latest} wsConnected={wsConnected} t={t} />

@@ -1,45 +1,77 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Activity, Lock, Mail, User, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Activity, Lock, Mail, User, Eye, EyeOff, ShieldCheck, Users, UserPlus, Search } from 'lucide-react';
 
 export default function SignupPage({ onToggle }) {
-    const { signup } = useAuth();
+    const { signup, checkUsernameAvailable } = useAuth();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('athlete');
-    const [athleteId, setAthleteId] = useState('');
+    const [username, setUsername] = useState('');
     const [age, setAge] = useState('');
     const [sport, setSport] = useState('');
     const [showPw, setShowPw] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Athlete-specific: independent or has a coach
+    const [athleteType, setAthleteType] = useState('independent'); // 'independent' | 'has_coach'
+    const [coachUsername, setCoachUsername] = useState('');
+
+    // Username validation state
+    const [usernameStatus, setUsernameStatus] = useState(''); // '' | 'checking' | 'available' | 'taken'
+
+    const handleUsernameCheck = async (value) => {
+        setUsername(value);
+        setUsernameStatus('');
+        if (!value.trim() || value.length < 3) return;
+
+        setUsernameStatus('checking');
+        const available = await checkUsernameAvailable(value.trim());
+        setUsernameStatus(available ? 'available' : 'taken');
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
-        // Simple validation
         if (password.length < 6) {
             setError('Password must be at least 6 characters');
             setLoading(false);
             return;
         }
 
-        if (role === 'athlete' && !athleteId.trim()) {
-            setError('Athlete ID is required for Athletes');
+        if (!username.trim() || username.length < 3) {
+            setError('Username must be at least 3 characters');
             setLoading(false);
             return;
         }
 
+        if (usernameStatus === 'taken') {
+            setError('This username is already taken');
+            setLoading(false);
+            return;
+        }
+
+        if (role === 'athlete' && athleteType === 'has_coach' && !coachUsername.trim()) {
+            setError("Please enter your coach's username");
+            setLoading(false);
+            return;
+        }
+
+        const isAthlete = role === 'athlete';
         const metadata = {
             name,
-            role: role === 'athlete' ? 'athlete' : 'admin',
+            username: username.trim(),
+            role: isAthlete ? 'athlete' : 'admin',
             title: role === 'head_coach' ? 'Head Coach' : role === 'therapist' ? 'Therapist' : 'Athlete',
-            athleteId: role === 'athlete' ? athleteId : null,
-            age: role === 'athlete' ? parseInt(age, 10) || null : null,
-            sport: role === 'athlete' ? sport : null
+            athleteId: isAthlete ? username.trim() : null,
+            age: parseInt(age, 10) || null,
+            sport: isAthlete ? sport : null,
+            independent: isAthlete ? athleteType === 'independent' : null,
+            coachUsername: (isAthlete && athleteType === 'has_coach') ? coachUsername.trim() : null,
         };
 
         const result = await signup(email, password, metadata);
@@ -47,6 +79,12 @@ export default function SignupPage({ onToggle }) {
             setError(result.error);
         }
         setLoading(false);
+    };
+
+    const usernameIndicator = {
+        checking: { text: 'Checking...', color: 'text-premium-400' },
+        available: { text: '✓ Available', color: 'text-emerald-600' },
+        taken: { text: '✗ Taken', color: 'text-rose-500' },
     };
 
     return (
@@ -84,6 +122,7 @@ export default function SignupPage({ onToggle }) {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Full Name */}
                         <div>
                             <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-2 block">Full Name</label>
                             <div className="relative">
@@ -99,6 +138,7 @@ export default function SignupPage({ onToggle }) {
                             </div>
                         </div>
 
+                        {/* Email */}
                         <div>
                             <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-2 block">Email</label>
                             <div className="relative">
@@ -114,7 +154,30 @@ export default function SignupPage({ onToggle }) {
                             </div>
                         </div>
 
+                        {/* Username + Account Type row */}
                         <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-2 block">
+                                    Username {role === 'athlete' && <span className="text-premium-400 normal-case">(= Device ID)</span>}
+                                </label>
+                                <div className="relative">
+                                    <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-premium-400" />
+                                    <input
+                                        type="text"
+                                        value={username}
+                                        onChange={e => handleUsernameCheck(e.target.value)}
+                                        placeholder={role === 'athlete' ? 'e.g., ATH_001' : 'e.g., coach_rivera'}
+                                        className="w-full bg-surface border border-premium-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-premium-900 placeholder-premium-400 focus:outline-none focus:border-accent-purple focus:ring-2 focus:ring-accent-purple/20 transition-all shadow-sm"
+                                        required
+                                    />
+                                </div>
+                                {usernameStatus && (
+                                    <p className={`text-xs font-bold mt-1 ${usernameIndicator[usernameStatus]?.color}`}>
+                                        {usernameIndicator[usernameStatus]?.text}
+                                    </p>
+                                )}
+                            </div>
+
                             <div>
                                 <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-2 block">Account Type</label>
                                 <div className="relative">
@@ -130,7 +193,10 @@ export default function SignupPage({ onToggle }) {
                                     </select>
                                 </div>
                             </div>
+                        </div>
 
+                        {/* Password + Age row */}
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-2 block">Password</label>
                                 <div className="relative">
@@ -149,34 +215,22 @@ export default function SignupPage({ onToggle }) {
                                     </button>
                                 </div>
                             </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-2 block">Age</label>
+                                <input
+                                    type="number"
+                                    value={age}
+                                    onChange={e => setAge(e.target.value)}
+                                    placeholder="24"
+                                    className="w-full bg-surface border border-premium-200 rounded-xl px-4 py-3 text-sm font-medium text-premium-900 placeholder-premium-400 focus:outline-none focus:border-accent-purple focus:ring-2 focus:ring-accent-purple/20 transition-all shadow-sm"
+                                />
+                            </div>
                         </div>
 
+                        {/* Athlete-specific fields */}
                         {role === 'athlete' && (
-                            <div className="grid grid-cols-2 gap-4 animate-fade-up">
-                                <div className="col-span-2">
-                                    <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-2 block">Athlete ID</label>
-                                    <input
-                                        type="text"
-                                        value={athleteId}
-                                        onChange={e => setAthleteId(e.target.value)}
-                                        placeholder="e.g., ATH_001"
-                                        className="w-full bg-surface border border-premium-200 rounded-xl px-4 py-3 text-sm font-medium text-premium-900 placeholder-premium-400 focus:outline-none focus:border-accent-purple focus:ring-2 focus:ring-accent-purple/20 transition-all shadow-sm"
-                                        required={role === 'athlete'}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-2 block">Age</label>
-                                    <input
-                                        type="number"
-                                        value={age}
-                                        onChange={e => setAge(e.target.value)}
-                                        placeholder="24"
-                                        className="w-full bg-surface border border-premium-200 rounded-xl px-4 py-3 text-sm font-medium text-premium-900 placeholder-premium-400 focus:outline-none focus:border-accent-purple focus:ring-2 focus:ring-accent-purple/20 transition-all shadow-sm"
-                                        required={role === 'athlete'}
-                                    />
-                                </div>
-
+                            <div className="space-y-4 animate-fade-up">
+                                {/* Sport */}
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-2 block">Sport</label>
                                     <input
@@ -185,9 +239,59 @@ export default function SignupPage({ onToggle }) {
                                         onChange={e => setSport(e.target.value)}
                                         placeholder="e.g., Sprinter"
                                         className="w-full bg-surface border border-premium-200 rounded-xl px-4 py-3 text-sm font-medium text-premium-900 placeholder-premium-400 focus:outline-none focus:border-accent-purple focus:ring-2 focus:ring-accent-purple/20 transition-all shadow-sm"
-                                        required={role === 'athlete'}
+                                        required
                                     />
                                 </div>
+
+                                {/* Independent or Has Coach */}
+                                <div>
+                                    <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-3 block">Training Setup</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setAthleteType('independent'); setCoachUsername(''); }}
+                                            className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all text-sm font-semibold ${
+                                                athleteType === 'independent'
+                                                    ? 'border-accent-purple bg-violet-50 text-accent-purple'
+                                                    : 'border-premium-200 bg-surface text-premium-500 hover:border-premium-300'
+                                            }`}
+                                        >
+                                            <User size={16} />
+                                            Independent
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAthleteType('has_coach')}
+                                            className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all text-sm font-semibold ${
+                                                athleteType === 'has_coach'
+                                                    ? 'border-accent-purple bg-violet-50 text-accent-purple'
+                                                    : 'border-premium-200 bg-surface text-premium-500 hover:border-premium-300'
+                                            }`}
+                                        >
+                                            <Users size={16} />
+                                            I Have a Coach
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Coach username input */}
+                                {athleteType === 'has_coach' && (
+                                    <div className="animate-fade-up">
+                                        <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-2 block">Coach's Username</label>
+                                        <div className="relative">
+                                            <UserPlus size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-premium-400" />
+                                            <input
+                                                type="text"
+                                                value={coachUsername}
+                                                onChange={e => setCoachUsername(e.target.value)}
+                                                placeholder="Enter your coach's username"
+                                                className="w-full bg-surface border border-premium-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-premium-900 placeholder-premium-400 focus:outline-none focus:border-accent-purple focus:ring-2 focus:ring-accent-purple/20 transition-all shadow-sm"
+                                                required
+                                            />
+                                        </div>
+                                        <p className="text-xs text-premium-400 mt-1">A connection request will be sent to your coach</p>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -199,7 +303,7 @@ export default function SignupPage({ onToggle }) {
 
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || usernameStatus === 'taken'}
                             className="w-full bg-accent-purple text-white font-bold tracking-wide py-3.5 rounded-xl hover:bg-violet-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none flex items-center justify-center gap-2 mt-6 shadow-sm"
                         >
                             {loading ? (

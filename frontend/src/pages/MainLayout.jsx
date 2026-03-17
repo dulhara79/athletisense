@@ -16,12 +16,13 @@ import {
   Moon,
   LogOut,
   LogIn,
+  Link2,
 } from "lucide-react";
 
-// Adjust this import path to match where your AuthContext is located!
 import { useAuth } from "../context/AuthContext";
+import ConnectionManager from "../components/ConnectionManager";
+import ManageConnections from "../components/ManageConnections";
 
-// Import your page components
 import AthletiSenseDashboard from "./AthletiSenseDashboard";
 import PerformanceAnalytics from "./PerformanceAnalytics";
 import FatigueRecovery from "./FatigueRecovery";
@@ -98,6 +99,12 @@ const NAV_ITEMS = [
     label: "Comparison",
     icon: Users,
     desc: "Multi-athlete view",
+  },
+  {
+    id: "connections",
+    label: "Connections",
+    icon: Link2,
+    desc: "Manage your team",
   },
 ];
 
@@ -230,11 +237,18 @@ export default function MainLayout() {
               {user.title}
             </p>
           )}
+          {/* Connection Manager bell icon */}
+          <div style={{ marginTop: 8 }}>
+            <ConnectionManager t={t} />
+          </div>
         </div>
 
         {/* Navigation */}
         <nav style={{ padding: "0.75rem", flex: 1, overflowY: "auto" }}>
-          {NAV_ITEMS.filter(item => isAdmin || item.id !== 'comparison').map((item) => {
+          {NAV_ITEMS.filter(item => {
+            if (!isAdmin && item.id === 'comparison') return false;
+            return true;
+          }).map((item) => {
             const Icon = item.icon;
             const isActive = activePage === item.id;
             return (
@@ -374,6 +388,7 @@ export default function MainLayout() {
       {activePage === "performance" && <PerformanceAnalytics t={t} />}
       {activePage === "recovery" && <FatigueRecovery t={t} />}
       {(activePage === "comparison" && isAdmin) && <MultiAthleteComparison t={t} />}
+      {activePage === "connections" && <ManageConnections t={t} />}
     </div>
   );
 }
