@@ -108,6 +108,9 @@ export default function MainLayout() {
   // Pull user and logout function from your Auth context
   const { user, logout } = useAuth();
 
+  // Role-based filtering: athletes cannot access the comparison page
+  const isAdmin = user?.role === 'admin';
+
   const t = THEMES[theme];
 
   return (
@@ -231,7 +234,7 @@ export default function MainLayout() {
 
         {/* Navigation */}
         <nav style={{ padding: "0.75rem", flex: 1, overflowY: "auto" }}>
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEMS.filter(item => isAdmin || item.id !== 'comparison').map((item) => {
             const Icon = item.icon;
             const isActive = activePage === item.id;
             return (
@@ -370,7 +373,7 @@ export default function MainLayout() {
       {activePage === "monitoring" && <AthletiSenseDashboard t={t} />}
       {activePage === "performance" && <PerformanceAnalytics t={t} />}
       {activePage === "recovery" && <FatigueRecovery t={t} />}
-      {activePage === "comparison" && <MultiAthleteComparison t={t} />}
+      {(activePage === "comparison" && isAdmin) && <MultiAthleteComparison t={t} />}
     </div>
   );
 }
