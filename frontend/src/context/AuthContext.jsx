@@ -43,6 +43,20 @@ export function AuthProvider({ children }) {
   const [connectedCoaches, setConnectedCoaches] = useState([]);
   const [connectedAthletes, setConnectedAthletes] = useState([]);
 
+  // ─── Global Session Timer ────────────────────────────────────────────────────
+  const [timerSecs, setTimerSecs] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+
+  useEffect(() => {
+    let interval = null;
+    if (timerRunning) {
+      interval = setInterval(() => setTimerSecs((s) => s + 1), 1000);
+    } else if (!timerRunning && timerSecs !== 0) {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [timerRunning, timerSecs]);
+
   // ─── Build enriched user object from Firebase data ─────────────────────────
   async function buildUser(firebaseUser) {
     let metadata = {};
@@ -248,6 +262,8 @@ export function AuthProvider({ children }) {
     setPendingRequests([]);
     setConnectedCoaches([]);
     setConnectedAthletes([]);
+    setTimerSecs(0);
+    setTimerRunning(false);
   };
 
   // ─── Accept a connection request ───────────────────────────────────────────
@@ -320,12 +336,16 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{
-      user, login, signup, logout, loading,
-      checkUsernameAvailable,
-      pendingRequests, acceptRequest, rejectRequest, sendRequest,
-      connectedCoaches, connectedAthletes, removeConnection,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user, loading,
+        login, signup, logout,
+        checkUsernameAvailable,
+        pendingRequests, connectedCoaches, connectedAthletes,
+        acceptRequest, rejectRequest, sendRequest, removeConnection,
+        timerSecs, setTimerSecs, timerRunning, setTimerRunning
+      }}
+    >
       {!loading && children}
     </AuthContext.Provider>
   );
