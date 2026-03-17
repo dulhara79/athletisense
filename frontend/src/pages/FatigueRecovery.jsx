@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   AreaChart,
   Area,
@@ -601,14 +602,23 @@ export default function FatigueRecovery({ t }) {
   const [filterAthletes, setFilterAthletes] = useState([]);
   const [dateRange, setDateRange] = useState("all");
 
+  // Role-based filtering
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const myAthleteId = user?.athleteId;
+
   // Fetch athletes + histories
   useEffect(() => {
     setLoading(true);
     fetch(`${API_BASE}/api/athletes`)
       .then((r) => r.json())
       .then(async ({ athletes: list }) => {
-        setAthletes(list || []);
-        setFilterAthletes((list || []).map((a) => a.id));
+        // Role-based filter: athletes only see their own data
+        const filtered = (!isAdmin && myAthleteId)
+          ? (list || []).filter(a => a.id === myAthleteId)
+          : (list || []);
+        setAthletes(filtered);
+        setFilterAthletes(filtered.map((a) => a.id));
         const latMap = {};
         list?.forEach((a) => {
           if (a.latest) latMap[a.id] = a.latest;
@@ -1039,7 +1049,7 @@ export default function FatigueRecovery({ t }) {
             alignItems: "center",
           }}
         >
-          <MultiSelect
+          {isAdmin && <MultiSelect
             label="Athlete Multi-select"
             options={athletes.map((a) => ({
               value: a.id,
@@ -1049,7 +1059,7 @@ export default function FatigueRecovery({ t }) {
             value={filterAthletes}
             onChange={setFilterAthletes}
             t={t}
-          />
+          />}
           <DateRangeSelect value={dateRange} onChange={setDateRange} t={t} />
           <button
             onClick={() => {

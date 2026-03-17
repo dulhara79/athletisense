@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   LineChart,
   Line,
@@ -715,16 +716,25 @@ export default function AthletiSenseDashboard({ t }) {
   const [dropOpen, setDropOpen] = useState(false);
   const wsRef = useRef(null);
 
+  // Role-based filtering
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const myAthleteId = user?.athleteId;
+
   useEffect(() => {
     fetch(`${API_BASE}/api/athletes`)
       .then((r) => r.json())
       .then(({ athletes: list }) => {
-        setAthletes(list);
-        if (list.length) {
-          const first = list[0];
+        // Role-based filter: athletes only see their own data
+        const filtered = (!isAdmin && myAthleteId)
+          ? (list || []).filter(a => a.id === myAthleteId)
+          : (list || []);
+        setAthletes(filtered);
+        if (filtered.length) {
+          const first = filtered[0];
           setSelectedId(first.id);
           const latestMap = {};
-          list.forEach((a) => {
+          filtered.forEach((a) => {
             if (a.latest) latestMap[a.id] = a.latest;
           });
           setLiveLatest(latestMap);
@@ -858,7 +868,7 @@ export default function AthletiSenseDashboard({ t }) {
             Athlete Select
           </p>
           <button
-            onClick={() => setDropOpen((o) => !o)}
+            onClick={() => isAdmin && setDropOpen((o) => !o)}
             style={{
               display: "flex",
               alignItems: "center",
@@ -868,7 +878,8 @@ export default function AthletiSenseDashboard({ t }) {
               border: `1px solid ${t.border}`,
               borderRadius: 10,
               padding: "8px 12px",
-              cursor: "pointer",
+              cursor: isAdmin ? "pointer" : "default",
+              opacity: isAdmin ? 1 : 0.85,
             }}
           >
             <div
