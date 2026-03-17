@@ -74,7 +74,7 @@ cd backend && npm install
 cd ../frontend && npm install
 ```
 
-### 2. Start the backend
+#### Start the Services
 ```bash
 # Terminal 1: Backend
 cd backend && npm start
@@ -82,25 +82,6 @@ cd backend && npm start
 # Terminal 2: Frontend
 cd frontend && npm run dev
 ```
-
-## 📊 CSV Data Format
-
-Place your CSV file at `backend/data/athlete_data.csv` with these columns:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| Timestamp | string | `YYYY-MM-DD HH:MM:SS` |
-| Athlete_ID | string | e.g., `ATH_001` |
-| BMI160_Acc_X/Y/Z | float | Accelerometer (m/s²) |
-| BMI160_Gyro_X/Y/Z | float | Gyroscope (°/s) |
-| Motion_Magnitude | float | Combined motion (g) |
-| MAX30102_Heart_Rate_bpm | float | Heart rate |
-| MAX30102_PPG_Signal | float | PPG raw signal |
-| DS18B20_Skin_Temperature_C | float | Skin temperature |
-| StrainGauge_Force_N | float | Strain gauge force (N) |
-| Fatigue_Index | float | 0.0 – 1.0 |
-
----
 
 
 ## 📡 REST API Endpoints
@@ -160,16 +141,3 @@ The dashboard is fully responsive:
 - **Tablet**: Collapsible sidebar, 2-column grid
 - **Mobile**: Hamburger menu, single column
 
----
-
-## 🎨 Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18 + Vite + Tailwind CSS |
-| Charts | Recharts |
-| Icons | Lucide React |
-| Backend | Node.js + Express |
-| Real-time | WebSocket (ws) |
-| CSV Parsing | csv-parse |
-| Database (future) | Firebase Realtime DB |
