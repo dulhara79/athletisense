@@ -1750,7 +1750,7 @@ export default function MultiAthleteComparison({ t }) {
                                     marginBottom: 6,
                                   }}
                                 >
-                                  HR trend — last{" "}
+                                  HR trend - last{" "}
                                   {Math.min(statRow.raw.hr.length, 30)} readings
                                 </p>
                                 <ResponsiveContainer width="100%" height={70}>
