@@ -572,7 +572,7 @@ export default function PerformanceAnalytics({ t }) {
         const d = parseTs(s.records[0]?.timestamp);
         return {
           session: `Session ${sessionList.length - i}`,
-          athlete: `${meta.name} — ${meta.sport}`,
+          athlete: `${meta.name} - ${meta.sport}`,
           minHR: hrs.length ? Math.round(Math.min(...hrs)) : "--",
           maxHR: hrs.length ? Math.round(Math.max(...hrs)) : "--",
           avgSteps: Math.round(
@@ -1073,7 +1073,7 @@ export default function PerformanceAnalytics({ t }) {
                     return (
                       <div
                         key={hi}
-                        title={`${day} ${String(hi).padStart(2, "0")}:00 — ${val.toFixed(2)}g`}
+                        title={`${day} ${String(hi).padStart(2, "0")}:00 - ${val.toFixed(2)}g`}
                         style={{
                           flex: 1,
                           height: 22,
@@ -1352,7 +1352,7 @@ export default function PerformanceAnalytics({ t }) {
                                 marginBottom: 8,
                               }}
                             >
-                              Session detail — {s._records.length} readings
+                              Session detail - {s._records.length} readings
                             </p>
                             <ResponsiveContainer width="100%" height={80}>
                               <LineChart
