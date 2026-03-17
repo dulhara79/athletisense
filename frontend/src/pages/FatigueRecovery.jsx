@@ -80,14 +80,14 @@ function motionMag(r) {
 }
 
 /**
- * FIX 1 — parseTs
+ * FIX 1 - parseTs
  * ─────────────────────────────────────────────────────────────
  * The original assumed "DD/MM/YYYY HH:MM:SS" format exactly, but
  * Firebase records coming back from the backend sometimes arrive as
  * ISO strings (from Date.toISOString) or with missing time portions.
- * An unparseable string silently produced an Invalid Date whose
- * .getMonth() returns NaN — which when used as an array index gives
- * undefined, causing "Cannot set properties of undefined".
+ * If a timestamp is purely invalid, `new Date()` results in "Invalid Date" and
+ * `.getMonth()` returns NaN - which when used as an array index gives
+ * "Cannot set properties of undefined (setting 'hr')".
  *
  * Fix: handle both slash-delimited and ISO formats, and return null
  * for anything that doesn't produce a valid Date.
@@ -107,7 +107,7 @@ function parseTs(ts) {
   } else {
     d = new Date(ts); // ISO 8601 and anything the browser can natively parse
   }
-  // isNaN guard — rejects Invalid Date before it reaches any index operation
+  // isNaN guard - rejects Invalid Date before it reaches any index operation
   return isNaN(d.getTime()) ? null : d;
 }
 
@@ -647,9 +647,8 @@ export default function FatigueRecovery({ t }) {
   }, []);
 
   /**
-   * FIX 2 — WebSocket StrictMode double-invoke crash
-   * ─────────────────────────────────────────────────
-   * React 18 StrictMode mounts → unmounts → re-mounts every component
+   * FIX 2 - WebSocket StrictMode double-invoke crash
+   * In React 18 StrictMode, useEffect runs twice. If we append to `last20` arrayictMode mounts → unmounts → re-mounts every component
    * in development.  The original code called wsRef.current?.close()
    * in the cleanup, but then the setTimeout inside onclose fired and
    * called connect() again on the already-destroyed instance, producing
@@ -799,18 +798,18 @@ export default function FatigueRecovery({ t }) {
   }, [allRecords, filterAthletes, athletes]);
 
   /**
-   * FIX 3 — loadAccumulation "Cannot set properties of undefined"
-   * ─────────────────────────────────────────────────────────────
-   * Three issues in the original:
+   * FIX 3 - loadAccumulation "Cannot set properties of undefined"
+   * The original code looped over `MONTHS` (12 items) and then inside that loop, * Three issues in the original:
    *
-   * a) parseTs returned Invalid Date for some records → .getMonth()
-   *    returned NaN → buckets[NaN] is undefined → property write crashed.
+ * FIX 1 - parseTs
+ * Ensures `timestamp` values coming from Firebase (like "2023-11-20T...")
+ * are parsed cleanly without `.replace(' ', 'T')` unless needed. → property write crashed.
    *    Fixed in parseTs (FIX 1 above); also added an explicit range
    *    guard here as a second safety net.
    *
-   * b) The denominator used a nested filteredRecords.filter() inside
-   *    the outer forEach — O(n²) and it re-scanned filteredRecords for
-   *    every single record.  Replaced with a per-(athlete,month) counter
+   * b) The denominator   * Instead of scanning `filteredRecords` 12 times, we scan it ONCE.
+   *    the outer forEach - O(n²) and it re-scanned filteredRecords for
+   *    every single month.record.  Replaced with a per-(athlete,month) counter
    *    array that is O(n) total.
    *
    * c) Removed the stray console.log that was printing every record.
@@ -820,8 +819,9 @@ export default function FatigueRecovery({ t }) {
       ? filterAthletes
       : athletes.map((a) => a.id);
 
-    // 12 plain objects, one per month — always exactly 12 entries
-    const buckets = MONTHS.map((m) => ({ month: m }));
+    // 1. Initialize empty buckets
+    // 12 plain objects, one per month - always exactly 12 entries
+    const buckets = Array.from({ length: 12 }, (_, i) => ({ month: MONTHS[i] }));
     const cumul = {}; // cumulative load per athlete
     const counts = {}; // record count per athlete per month
 
@@ -844,7 +844,7 @@ export default function FatigueRecovery({ t }) {
       cumul[id] += load;
       counts[id][mi] += 1;
 
-      // buckets[mi] is guaranteed to exist — MONTHS always has 12 entries
+      // buckets[mi] is guaranteed to exist - MONTHS always has 12 entries
       buckets[mi][id] = Math.round(cumul[id] / counts[id][mi]);
     });
 
@@ -1588,9 +1588,9 @@ export default function FatigueRecovery({ t }) {
                 }}
               >
                 {worstRisk.level === "high"
-                  ? `High Fatigue Risk — ${worstRisk.name}`
+                  ? `High Fatigue Risk - ${worstRisk.name}`
                   : worstRisk.level === "moderate"
-                    ? `Moderate Fatigue Load — ${worstRisk.name}`
+                    ? `Moderate Fatigue Load - ${worstRisk.name}`
                     : "All Athletes Within Safe Recovery Range"}
               </p>
               <p style={{ fontSize: 11, color: t.muted, lineHeight: 1.6 }}>
