@@ -22,6 +22,15 @@ export default function SignupPage({ onToggle }) {
     // Username validation state
     const [usernameStatus, setUsernameStatus] = useState(''); // '' | 'checking' | 'available' | 'taken'
 
+    const [showAccountTypeOptions, setShowAccountTypeOptions] = useState(false);
+    const [selectedAccountTypeTitle, setSelectedAccountTypeTitle] = useState('Athlete');
+
+    const handleAccountTypeChange = (newRole, newTitle) => {
+        setRole(newRole);
+        setSelectedAccountTypeTitle(newTitle);
+        setShowAccountTypeOptions(false);
+    };
+
     const handleUsernameCheck = async (value) => {
         setUsername(value);
         setUsernameStatus('');
@@ -66,7 +75,7 @@ export default function SignupPage({ onToggle }) {
             name,
             username: username.trim(),
             role: isAthlete ? 'athlete' : 'admin',
-            title: role === 'head_coach' ? 'Head Coach' : role === 'therapist' ? 'Therapist' : 'Athlete',
+            title: role === 'coach' ? 'Coach' : role === 'therapist' ? 'Therapist' : 'Athlete',
             athleteId: isAthlete ? username.trim() : null,
             age: parseInt(age, 10) || null,
             sport: isAthlete ? sport : null,
@@ -181,16 +190,46 @@ export default function SignupPage({ onToggle }) {
                             <div>
                                 <label className="text-xs font-bold uppercase tracking-wider text-premium-500 mb-2 block">Account Type</label>
                                 <div className="relative">
-                                    <ShieldCheck size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-premium-400" />
-                                    <select
-                                        value={role}
-                                        onChange={e => setRole(e.target.value)}
-                                        className="w-full bg-surface border border-premium-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-premium-900 focus:outline-none focus:border-accent-purple focus:ring-2 focus:ring-accent-purple/20 transition-all shadow-sm appearance-none"
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAccountTypeOptions(!showAccountTypeOptions)}
+                                        className="w-full flex items-center justify-between bg-surface border border-premium-200 rounded-xl px-4 py-3 text-sm font-medium text-premium-900 focus:outline-none focus:border-accent-purple focus:ring-2 focus:ring-accent-purple/20 transition-all shadow-sm"
                                     >
-                                        <option value="athlete">Athlete</option>
-                                        <option value="head_coach">Head Coach</option>
-                                        <option value="therapist">Therapist</option>
-                                    </select>
+                                        <div className="flex items-center gap-2">
+                                            <ShieldCheck size={18} className="text-premium-400" />
+                                            <span>{selectedAccountTypeTitle || 'Select Type'}</span>
+                                        </div>
+                                        <ChevronDown size={16} className={`text-premium-400 transition-transform ${showAccountTypeOptions ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {showAccountTypeOptions && (
+                                        <div className="absolute top-full left-0 w-full mt-2 bg-white border border-premium-200 rounded-xl shadow-lg z-20 py-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAccountTypeChange('athlete', 'Athlete')}
+                                                className="w-full text-left px-4 py-2 hover:bg-premium-50 text-sm font-medium text-premium-900 transition-colors flex items-center gap-2"
+                                            >
+                                                <Activity size={16} className="text-accent-blue" />
+                                                Athlete
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAccountTypeChange('coach', 'Coach')}
+                                                className="w-full text-left px-4 py-2 hover:bg-premium-50 text-sm font-medium text-premium-900 transition-colors flex items-center gap-2"
+                                            >
+                                                <Activity size={16} className="text-accent-purple" />
+                                                Coach
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAccountTypeChange('therapist', 'Therapist')}
+                                                className="w-full text-left px-4 py-2 hover:bg-premium-50 text-sm font-medium text-premium-900 transition-colors flex items-center gap-2"
+                                            >
+                                                <Activity size={16} className="text-accent-green" />
+                                                Therapist
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

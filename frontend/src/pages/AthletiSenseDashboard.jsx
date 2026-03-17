@@ -204,7 +204,7 @@ function StatCard({
 
 function SessionTimer({ t }) {
   const [secs, setSecs] = useState(0);
-  const [running, setRunning] = useState(true);
+  const [running, setRunning] = useState(false);
   const ref = useRef();
   useEffect(() => {
     if (running) ref.current = setInterval(() => setSecs((s) => s + 1), 1000);
@@ -254,19 +254,43 @@ function SessionTimer({ t }) {
         >
           {h}:{m}:{s}
         </span>
-        <button
-          onClick={() => setRunning((r) => !r)}
-          style={{
-            background: t.surface,
-            border: `1px solid ${t.border}`,
-            borderRadius: 8,
-            padding: "6px 8px",
-            cursor: "pointer",
-            color: t.muted,
-          }}
-        >
-          {running ? <Pause size={14} /> : <Play size={14} />}
-        </button>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            onClick={() => setRunning((r) => !r)}
+            style={{
+              background: t.surface,
+              border: `1px solid ${t.border}`,
+              borderRadius: 8,
+              padding: "6px 8px",
+              cursor: "pointer",
+              color: t.muted,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}
+          >
+            {running ? <Pause size={14} /> : <Play size={14} />}
+          </button>
+          <button
+            onClick={() => { setRunning(false); setSecs(0); }}
+            style={{
+              background: t.surface,
+              border: `1px solid ${t.border}`,
+              borderRadius: 8,
+              padding: "6px 8px",
+              cursor: "pointer",
+              color: t.muted,
+              fontSize: 10,
+              fontWeight: 700,
+              fontFamily: "'DM Mono', monospace",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}
+          >
+            RST
+          </button>
+        </div>
       </div>
     </div>
   );
