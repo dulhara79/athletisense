@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   BarChart,
   Bar,
@@ -443,13 +444,22 @@ export default function MultiAthleteComparison({ t }) {
   const [sortDir, setSortDir] = useState("desc");
   const [expandedRows, setExpandedRows] = useState(new Set());
 
+  // Role-based filtering
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const myAthleteId = user?.athleteId;
+
   useEffect(() => {
     setLoading(true);
     fetch(`${API_BASE}/api/athletes`)
       .then((r) => r.json())
       .then(async ({ athletes: list }) => {
-        setAthletes(list || []);
-        setFilterAthletes((list || []).map((a) => a.id));
+        // Role-based filter: athletes only see their own data
+        const filtered = (!isAdmin && myAthleteId)
+          ? (list || []).filter(a => a.id === myAthleteId)
+          : (list || []);
+        setAthletes(filtered);
+        setFilterAthletes(filtered.map((a) => a.id));
         const latMap = {};
         list?.forEach((a) => {
           if (a.latest) latMap[a.id] = a.latest;
