@@ -9,13 +9,13 @@ function generateAlerts(athleteId, latest) {
   if (latest.MAX30102_Heart_Rate_bpm > 175) {
     alerts.push({
       id: `hr-${ts}`, level: 'critical',
-      message: `CRITICAL: HR Above Threshold (175bpm) — Current: ${latest.MAX30102_Heart_Rate_bpm.toFixed(0)}bpm`,
+      message: `CRITICAL: HR Above Threshold (175bpm) - Current: ${latest.MAX30102_Heart_Rate_bpm.toFixed(0)}bpm`,
       time: ts, athleteId
     });
   } else if (latest.MAX30102_Heart_Rate_bpm > 155) {
     alerts.push({
       id: `hr-warn-${ts}`, level: 'warning',
-      message: `WARNING: Elevated Heart Rate — ${latest.MAX30102_Heart_Rate_bpm.toFixed(0)}bpm`,
+      message: `WARNING: Elevated Heart Rate - ${latest.MAX30102_Heart_Rate_bpm.toFixed(0)}bpm`,
       time: ts, athleteId
     });
   }
@@ -23,7 +23,7 @@ function generateAlerts(athleteId, latest) {
   if (latest.Motion_Magnitude > 11) {
     alerts.push({
       id: `motion-${ts}`, level: 'warning',
-      message: `WARNING: High Impact Detected — Motion: ${latest.Motion_Magnitude.toFixed(2)}g`,
+      message: `WARNING: High Impact Detected - Motion: ${latest.Motion_Magnitude.toFixed(2)}g`,
       time: ts, athleteId
     });
   }
@@ -31,7 +31,7 @@ function generateAlerts(athleteId, latest) {
   if (latest.DS18B20_Skin_Temperature_C > 38) {
     alerts.push({
       id: `temp-${ts}`, level: 'warning',
-      message: `WARNING: High Skin Temperature — ${latest.DS18B20_Skin_Temperature_C.toFixed(1)}°C`,
+      message: `WARNING: High Skin Temperature - ${latest.DS18B20_Skin_Temperature_C.toFixed(1)}°C`,
       time: ts, athleteId
     });
   }
@@ -39,7 +39,7 @@ function generateAlerts(athleteId, latest) {
   if (latest.Fatigue_Index > 0.7) {
     alerts.push({
       id: `fatigue-${ts}`, level: 'critical',
-      message: `CRITICAL: High Fatigue Index — ${(latest.Fatigue_Index * 100).toFixed(0)}%`,
+      message: `CRITICAL: High Fatigue Index - ${(latest.Fatigue_Index * 100).toFixed(0)}%`,
       time: ts, athleteId
     });
   }
@@ -47,7 +47,7 @@ function generateAlerts(athleteId, latest) {
   if (alerts.length === 0) {
     alerts.push({
       id: `ok-${ts}`, level: 'info',
-      message: `INFO: All metrics within normal range — Session active`,
+      message: `INFO: All metrics within normal range - Session active`,
       time: ts, athleteId
     });
   }
