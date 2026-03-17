@@ -150,8 +150,8 @@ export default function MainLayout() {
       {/* ── Sidebar ─────────────────────────────────────── */}
       <aside
         style={{
-          width: 220,
-          minWidth: 220,
+          width: 260,
+          minWidth: 260,
           background: t.sidebar,
           borderRight: `1px solid ${t.border}`,
           display: "flex",
