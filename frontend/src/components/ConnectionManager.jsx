@@ -73,8 +73,8 @@ export default function ConnectionManager({ t }) {
         <div style={{
           position: 'absolute',
           top: 'calc(100% + 8px)',
-          right: 0,
-          width: 320,
+          left: 0,
+          width: 300,
           zIndex: 999,
           background: t.card,
           border: `1px solid ${t.border}`,
