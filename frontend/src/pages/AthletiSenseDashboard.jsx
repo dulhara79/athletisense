@@ -242,8 +242,8 @@ function SessionTimer({ t }) {
             fontSize: 32,
             fontWeight: 800,
             color: t.text,
-            fontFamily: "'DM Mono', monospace",
             letterSpacing: "-1px",
+            fontVariantNumeric: "tabular-nums",
           }}
         >
           {h}:{m}:{s}
@@ -511,6 +511,130 @@ function MotionGauge({ value = 0, max = 15, t }) {
           textAnchor="middle"
         >
           {value.toFixed(2)}g / {max}g max
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+function HeartRateGauge({ value = 0, max = 220, t }) {
+  const pct = Math.min(value / max, 1);
+  const [anim, setAnim] = useState(0);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setAnim(pct));
+    return () => cancelAnimationFrame(id);
+  }, [pct]);
+
+  const color = anim < 0.5 ? "#10b981" : anim < 0.85 ? "#f59e0b" : "#ef4444";
+  const cx = 80, cy = 85, r = 55;
+  const angle = (p, offset = 135) => offset + p * 270;
+
+  function pt(angleDeg, radius = r) {
+    const rad = ((angleDeg - 90) * Math.PI) / 180;
+    return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
+  }
+  function arc(start, end, radius = r) {
+    if (end - start < 0.01) return "";
+    const s = pt(start, radius),
+      e = pt(end, radius);
+    const large = end - start > 180 ? 1 : 0;
+    return `M ${s.x} ${s.y} A ${radius} ${radius} 0 ${large} 1 ${e.x} ${e.y}`;
+  }
+
+  const score = Math.round(anim * max);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        width: "100%",
+      }}
+    >
+      <svg viewBox="0 0 160 155" style={{ width: "100%", maxWidth: 220 }}>
+        <defs>
+          <linearGradient id="hrgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#10b981" />
+            <stop offset="50%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#ef4444" />
+          </linearGradient>
+        </defs>
+        <path
+          d={arc(135, 405)}
+          fill="none"
+          stroke={t.surface}
+          strokeWidth={14}
+          strokeLinecap="round"
+        />
+        <path
+          d={arc(135, 405)}
+          fill="none"
+          stroke="url(#hrgGrad)"
+          strokeWidth={14}
+          strokeLinecap="round"
+          opacity={0.12}
+        />
+        {anim > 0.005 && (
+          <path
+            d={arc(135, 135 + anim * 270)}
+            fill="none"
+            stroke={color}
+            strokeWidth={14}
+            strokeLinecap="round"
+            style={{ transition: "stroke 0.4s ease, d 0.6s ease" }}
+          />
+        )}
+        {[
+          ["REST", "#10b981", 20, 115],
+          ["AERO", "#f59e0b", 80, 28],
+          ["MAX", "#ef4444", 140, 115],
+        ].map(([l, c, x, y]) => (
+          <text
+            key={l}
+            x={x}
+            y={y}
+            fill={c}
+            fontSize="7.5"
+            fontWeight="800"
+            fontFamily="'DM Mono', monospace"
+            textAnchor="middle"
+          >
+            {l}
+          </text>
+        ))}
+        <text
+          x={cx}
+          y={cy + 15}
+          textAnchor="middle"
+          fontSize="28"
+          fontWeight="800"
+          fill={color}
+          fontFamily="'DM Mono', monospace"
+        >
+          {score}
+        </text>
+        <text
+          x={cx}
+          y={cy + 35}
+          textAnchor="middle"
+          fontSize="8"
+          fontWeight="800"
+          letterSpacing="1px"
+          fill={t.text}
+          fontFamily="'DM Mono', monospace"
+        >
+          HEART RATE
+        </text>
+        <text
+          x={cx}
+          y={cy + 48}
+          textAnchor="middle"
+          fontSize="7"
+          fill={t.faint}
+          fontFamily="'DM Mono', monospace"
+        >
+          {max} bpm max
         </text>
       </svg>
     </div>
@@ -1305,6 +1429,37 @@ export default function AthletiSenseDashboard({ t }) {
               />
             </AreaChart>
           </ResponsiveContainer>
+        </div>
+
+        <div
+          className="card-fadein"
+          style={{
+            flex: 1,
+            background: t.card,
+            border: `1px solid ${t.border}`,
+            borderRadius: 16,
+            padding: "1.25rem",
+            boxShadow: t.shadow,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <p
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.10em",
+              textTransform: "uppercase",
+              color: t.muted,
+              marginBottom: 8,
+              alignSelf: "flex-start",
+              fontFamily: "'DM Mono', monospace",
+            }}
+          >
+            HR Gauge
+          </p>
+          <HeartRateGauge value={bpm} max={220} t={t} />
         </div>
 
         <div
