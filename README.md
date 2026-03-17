@@ -76,20 +76,12 @@ cd ../frontend && npm install
 
 ### 2. Start the backend
 ```bash
-cd backend
-npm start
-# Server runs on http://localhost:3001
-# WebSocket on ws://localhost:3001
-```
+# Terminal 1: Backend
+cd backend && npm start
 
-### 3. Start the frontend
-```bash
-cd frontend
-npm run dev
-# App runs on http://localhost:5173
+# Terminal 2: Frontend
+cd frontend && npm run dev
 ```
-
----
 
 ## 📊 CSV Data Format
 
@@ -110,18 +102,6 @@ Place your CSV file at `backend/data/athlete_data.csv` with these columns:
 
 ---
 
-## 👥 Role-Based Access
-
-| Role | Email | Password | Access |
-|------|-------|----------|--------|
-| Head Coach | coach@athletisense.io | coach123 | All athletes |
-| Physiotherapist | physio@athletisense.io | physio123 | All athletes |
-| Athlete (Marcus) | ath001@athletisense.io | ath001 | Own data only |
-| Athlete (Sarah) | ath002@athletisense.io | ath002 | Own data only |
-| Athlete (Diego) | ath003@athletisense.io | ath003 | Own data only |
-| Athlete (Aisha) | ath004@athletisense.io | ath004 | Own data only |
-
----
 
 ## 📡 REST API Endpoints
 
