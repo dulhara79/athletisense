@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   BarChart,
   Bar,
@@ -308,6 +309,11 @@ export default function PerformanceAnalytics({ t }) {
   const [loading, setLoading] = useState(true);
   const wsRef = useRef(null);
 
+  // Role-based filtering
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const myAthleteId = user?.athleteId;
+
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 5 }, (_, i) => ({
     value: String(currentYear - i),
@@ -327,8 +333,12 @@ export default function PerformanceAnalytics({ t }) {
     fetch(`${API_BASE}/api/athletes`)
       .then((r) => r.json())
       .then(async ({ athletes: list }) => {
-        setAthletes(list || []);
-        setFilterAthletes((list || []).map((a) => a.id));
+        // Role-based filter: athletes only see their own data
+        const filtered = (!isAdmin && myAthleteId)
+          ? (list || []).filter(a => a.id === myAthleteId)
+          : (list || []);
+        setAthletes(filtered);
+        setFilterAthletes(filtered.map((a) => a.id));
         const latestMap = {};
         list?.forEach((a) => {
           if (a.latest) latestMap[a.id] = a.latest;
@@ -720,7 +730,7 @@ export default function PerformanceAnalytics({ t }) {
             multi={false}
             t={t}
           />
-          <Select
+          {isAdmin && <Select
             label="Athlete Multi-select"
             options={athletes.map((a) => ({
               value: a.id,
@@ -730,7 +740,7 @@ export default function PerformanceAnalytics({ t }) {
             onChange={setFilterAthletes}
             multi={true}
             t={t}
-          />
+          />}
           <button
             onClick={() => {
               setFilterYear(String(currentYear));
