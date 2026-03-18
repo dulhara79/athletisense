@@ -1233,6 +1233,37 @@ export default function AthletiSenseDashboard({ t }) {
         <div
           className="card-fadein"
           style={{
+            flex: 1,
+            background: t.card,
+            border: `1px solid ${t.border}`,
+            borderRadius: 16,
+            padding: "1.25rem",
+            boxShadow: t.shadow,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <p
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.10em",
+              textTransform: "uppercase",
+              color: t.muted,
+              marginBottom: 8,
+              alignSelf: "flex-start",
+              fontFamily: "'DM Sans', monospace",
+            }}
+          >
+            HR Gauge
+          </p>
+          <HeartRateGauge value={bpm} max={220} isResting={mg < 1.2} t={t} />
+        </div>
+
+        <div
+          className="card-fadein"
+          style={{
             flex: 3,
             background: t.card,
             border: `1px solid ${t.border}`,
@@ -1338,37 +1369,6 @@ export default function AthletiSenseDashboard({ t }) {
               />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
-
-        <div
-          className="card-fadein"
-          style={{
-            flex: 1,
-            background: t.card,
-            border: `1px solid ${t.border}`,
-            borderRadius: 16,
-            padding: "1.25rem",
-            boxShadow: t.shadow,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
-          <p
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.10em",
-              textTransform: "uppercase",
-              color: t.muted,
-              marginBottom: 8,
-              alignSelf: "flex-start",
-              fontFamily: "'DM Sans', monospace",
-            }}
-          >
-            HR Gauge
-          </p>
-          <HeartRateGauge value={bpm} max={220} isResting={mg < 1.2} t={t} />
         </div>
 
         <div
