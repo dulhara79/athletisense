@@ -4,7 +4,10 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential
 } from 'firebase/auth';
 import { ref, set, get, push, update, remove, onValue, query, orderByChild, equalTo } from 'firebase/database';
 
@@ -266,6 +269,80 @@ export function AuthProvider({ children }) {
     setTimerRunning(false);
   };
 
+  // ─── Delete Account ────────────────────────────────────────────────────────
+  const deleteAccount = async () => {
+    try {
+      if (!user || !auth.currentUser) return { success: false, error: 'No user signed in' };
+      
+      const uid = auth.currentUser.uid;
+      const username = user.username;
+      
+      // Remove from connected coaches
+      if (user.coaches) {
+        for (const coachUid of Object.keys(user.coaches)) {
+          await remove(ref(db, `users/${coachUid}/athletes/${uid}`));
+        }
+      }
+      
+      // Remove from connected athletes
+      if (user.athletes) {
+        for (const athleteUid of Object.keys(user.athletes)) {
+          await remove(ref(db, `users/${athleteUid}/coaches/${uid}`));
+        }
+      }
+
+      // Remove any pending connection requests involving this user
+      const requestsSnap = await get(ref(db, 'connection_requests'));
+      if (requestsSnap.exists()) {
+        requestsSnap.forEach((child) => {
+          const req = child.val();
+          if (req.from === uid || req.to === uid) {
+            remove(ref(db, `connection_requests/${child.key}`));
+          }
+        });
+      }
+      
+      // Delete user data from database
+      await remove(ref(db, `users/${uid}`));
+      if (username) {
+        await remove(ref(db, `usernames/${username}`));
+      }
+      
+      // Delete auth user
+      try {
+        await deleteUser(auth.currentUser);
+      } catch (authError) {
+        if (authError?.code === 'auth/requires-recent-login') {
+          const password = window.prompt("Security check: Please enter your password to finalize account deletion.");
+          if (password) {
+            const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
+            await reauthenticateWithCredential(auth.currentUser, credential);
+            await deleteUser(auth.currentUser);
+          } else {
+             // If canceled, still log out as the account data is now gone
+             await logout();
+             return { success: true };
+          }
+        } else {
+          throw authError; // pass other auth errors down to main catch block
+        }
+      }
+      
+      setUser(null);
+      setPendingRequests([]);
+      setConnectedCoaches([]);
+      setConnectedAthletes([]);
+      setTimerSecs(0);
+      setTimerRunning(false);
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Delete account error:", error);
+      alert(error.message);
+      return { success: false, error: error.message };
+    }
+  };
+
   // ─── Accept a connection request ───────────────────────────────────────────
   const acceptRequest = async (requestId, request) => {
     try {
@@ -339,7 +416,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user, loading,
-        login, signup, logout,
+        login, signup, logout, deleteAccount,
         checkUsernameAvailable,
         pendingRequests, connectedCoaches, connectedAthletes,
         acceptRequest, rejectRequest, sendRequest, removeConnection,
