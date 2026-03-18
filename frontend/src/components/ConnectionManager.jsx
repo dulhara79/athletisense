@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Bell, Check, X, UserPlus, Send } from 'lucide-react';
+import { Check, X, UserPlus, Send } from 'lucide-react';
 
 export default function ConnectionManager({ t }) {
   const {
@@ -35,7 +35,7 @@ export default function ConnectionManager({ t }) {
 
   return (
     <div ref={panelRef} style={{ position: 'relative' }}>
-      {/* Bell icon button */}
+      {/* Connection icon button */}
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -52,7 +52,7 @@ export default function ConnectionManager({ t }) {
           transition: 'all 0.15s',
         }}
       >
-        <Bell size={16} color={open ? t.accent : t.muted} />
+        <UserPlus size={16} color={open ? t.accent : t.muted} />
         {count > 0 && (
           <span style={{
             position: 'absolute', top: -4, right: -4,
