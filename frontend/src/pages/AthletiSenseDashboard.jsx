@@ -966,7 +966,7 @@ export default function AthletiSenseDashboard({ t }) {
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: "'Syne', sans-serif", letterSpacing: "0.02em" }}>LIVE MONITORING</h2>
+          <h2 style={{ fontSize: 24, fontWeight: 400, color: t.text, fontFamily: "'Bebas Neue','Syne', sans-serif", letterSpacing: "0.06em" }}>LIVE MONITORING</h2>
           <p style={{ fontSize: 11, color: t.muted }}>Real-time biometric data stream</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
