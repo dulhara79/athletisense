@@ -171,7 +171,7 @@ export default function MainLayout() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div
               style={{
-                width: 38,
+                width: 52,
                 height: 38,
                 borderRadius: 10,
                 background: "linear-gradient(135deg,#4f46e5,#7c3aed)",
@@ -200,7 +200,7 @@ export default function MainLayout() {
                 style={{
                   fontSize: 9,
                   color: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                   letterSpacing: "0.06em",
                   marginTop: 2,
                 }}
