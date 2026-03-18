@@ -31,6 +31,7 @@ import {
   Signal,
   X,
   Shield,
+  Bell,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:3001";
@@ -483,40 +484,42 @@ function HeartRateGauge({ value = 0, max = 220, isResting = false, t }) {
 }
 
 
-function AlertsPanel({ latest, t }) {
-  const [dismissed, setDismissed] = useState(new Set());
+function getAlerts(latest, t) {
+  if (!latest) return [];
+  const out = [];
+  const bpm = latest?.heart_rate?.bpm_avg ?? 0;
+  const temp = latest?.temperature?.celsius ?? 0;
+  const mg = motionMagnitude(latest);
+  const leads = latest?.heart_rate?.leads_connected;
 
+  const isMoving = mg > 1.2;
+
+  if (isMoving) {
+    if (bpm > 185) out.push({ id: `hr-c`, level: "critical", title: "Critical: Active HR Too High", msg: `${fmtBpm(bpm)} bpm - limit 185 bpm` });
+    else if (bpm > 165) out.push({ id: `hr-w`, level: "warning", title: "Warning: High Active HR", msg: `${fmtBpm(bpm)} bpm - monitor intensity` });
+    else if (bpm > 0 && bpm < 70 && mg > 3.0) out.push({ id: `hr-a`, level: "warning", title: "Anomaly: Low HR vs High Motion", msg: `${fmtBpm(bpm)} bpm despite activity` });
+
+    if (temp > 38.5) out.push({ id: `tp-c`, level: "critical", title: "Critical: High Active Temp", msg: `${fmtTemp(temp)}°C - heat exhaustion risk` });
+    else if (temp > 38.0) out.push({ id: `tp-w`, level: "warning", title: "Warning: Elevated Active Temp", msg: `${fmtTemp(temp)}°C - monitor cooling` });
+  } else {
+    if (bpm > 120) out.push({ id: `hr-c`, level: "critical", title: "Critical: Resting Tachycardia", msg: `${fmtBpm(bpm)} bpm while inactive` });
+    else if (bpm > 100) out.push({ id: `hr-w`, level: "warning", title: "Warning: Elevated Resting HR", msg: `${fmtBpm(bpm)} bpm while inactive` });
+    else if (bpm > 0 && bpm < 40) out.push({ id: `hr-br`, level: "warning", title: "Warning: Resting Bradycardia", msg: `Unusually low HR: ${fmtBpm(bpm)} bpm` });
+
+    if (temp > 38.0) out.push({ id: `tp-c`, level: "critical", title: "Critical: High Resting Temp", msg: `${fmtTemp(temp)}°C - fever risk` });
+    else if (temp > 37.5 && temp > 0) out.push({ id: `tp-w`, level: "warning", title: "Warning: Elevated Resting Temp", msg: `${fmtTemp(temp)}°C - possible illness` });
+  }
+
+  if (mg > 11) out.push({ id: `mg-w`, level: "warning", title: "Warning: High Impact Detected", msg: `Shock impact: ${mg.toFixed(1)}g` });
+  if (leads === false) out.push({ id: `ld-w`, level: "warning", title: "Warning: ECG Leads Disconnected", msg: "Electrode contact lost - check strap placement" });
+  if (!out.length) out.push({ id: `ok`, level: "info", title: "All Systems Normal", msg: "All biometric metrics within healthy ranges" });
+
+  return out;
+}
+
+function AlertsPanel({ latest, t, dismissed, setDismissed }) {
   const alerts = useMemo(() => {
-    if (!latest) return [];
-    const out = [];
-    const bpm = latest?.heart_rate?.bpm_avg ?? 0;
-    const temp = latest?.temperature?.celsius ?? 0;
-    const mg = motionMagnitude(latest);
-    const leads = latest?.heart_rate?.leads_connected;
-
-    const isMoving = mg > 1.2;
-
-    if (isMoving) {
-      if (bpm > 185) out.push({ id: `hr-c`, level: "critical", title: "Critical: Active HR Too High", msg: `${fmtBpm(bpm)} bpm - limit 185 bpm` });
-      else if (bpm > 165) out.push({ id: `hr-w`, level: "warning", title: "Warning: High Active HR", msg: `${fmtBpm(bpm)} bpm - monitor intensity` });
-      else if (bpm > 0 && bpm < 70 && mg > 3.0) out.push({ id: `hr-a`, level: "warning", title: "Anomaly: Low HR vs High Motion", msg: `${fmtBpm(bpm)} bpm despite activity` });
-
-      if (temp > 38.5) out.push({ id: `tp-c`, level: "critical", title: "Critical: High Active Temp", msg: `${fmtTemp(temp)}°C - heat exhaustion risk` });
-      else if (temp > 38.0) out.push({ id: `tp-w`, level: "warning", title: "Warning: Elevated Active Temp", msg: `${fmtTemp(temp)}°C - monitor cooling` });
-    } else {
-      if (bpm > 120) out.push({ id: `hr-c`, level: "critical", title: "Critical: Resting Tachycardia", msg: `${fmtBpm(bpm)} bpm while inactive` });
-      else if (bpm > 100) out.push({ id: `hr-w`, level: "warning", title: "Warning: Elevated Resting HR", msg: `${fmtBpm(bpm)} bpm while inactive` });
-      else if (bpm > 0 && bpm < 40) out.push({ id: `hr-br`, level: "warning", title: "Warning: Resting Bradycardia", msg: `Unusually low HR: ${fmtBpm(bpm)} bpm` });
-
-      if (temp > 38.0) out.push({ id: `tp-c`, level: "critical", title: "Critical: High Resting Temp", msg: `${fmtTemp(temp)}°C - fever risk` });
-      else if (temp > 37.5 && temp > 0) out.push({ id: `tp-w`, level: "warning", title: "Warning: Elevated Resting Temp", msg: `${fmtTemp(temp)}°C - possible illness` });
-    }
-
-    if (mg > 11) out.push({ id: `mg-w`, level: "warning", title: "Warning: High Impact Detected", msg: `Shock impact: ${mg.toFixed(1)}g` });
-    if (leads === false) out.push({ id: `ld-w`, level: "warning", title: "Warning: ECG Leads Disconnected", msg: "Electrode contact lost - check strap placement" });
-    if (!out.length) out.push({ id: `ok`, level: "info", title: "All Systems Normal", msg: "All biometric metrics within healthy ranges" });
-
-    return out.filter((a) => !dismissed.has(a.id));
+    return getAlerts(latest, t).filter((a) => !dismissed.has(a.id));
   }, [latest, dismissed]);
 
   const colors = {
@@ -636,6 +639,140 @@ function AlertsPanel({ latest, t }) {
   );
 }
 
+function NotificationBell({ history, dismissed, onDismiss, t }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+  
+  useEffect(() => {
+    const h = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const activeCount = history.filter(n => !dismissed.has(n.histId)).length;
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          background: t.surface,
+          border: `1px solid ${t.border}`,
+          borderRadius: 10,
+          padding: "8px",
+          cursor: "pointer",
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: t.muted,
+          transition: "all 0.2s"
+        }}
+      >
+        <Bell size={18} />
+        {activeCount > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              top: -4,
+              right: -4,
+              background: t.danger,
+              color: "#fff",
+              fontSize: 9,
+              fontWeight: 800,
+              minWidth: 16,
+              height: 16,
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: `2px solid ${t.bg}`
+            }}
+          >
+            {activeCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            right: 0,
+            width: 320,
+            background: t.card,
+            border: `1px solid ${t.border}`,
+            borderRadius: 14,
+            boxShadow: t.shadowHover,
+            zIndex: 1000,
+            overflow: "hidden"
+          }}
+        >
+          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${t.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: t.text, textTransform: "uppercase", letterSpacing: "0.05em" }}>Recent Alerts</p>
+            <span style={{ fontSize: 10, color: t.faint }}>Latest 10</span>
+          </div>
+          <div style={{ maxHeight: 360, overflowY: "auto" }}>
+            {history.length === 0 ? (
+              <div style={{ padding: "24px", textAlign: "center" }}>
+                <p style={{ fontSize: 12, color: t.faint }}>No notification history</p>
+              </div>
+            ) : (
+              history.map((n) => {
+                const isDismissed = dismissed.has(n.histId);
+                return (
+                  <div
+                    key={n.histId}
+                    style={{
+                      padding: "12px 16px",
+                      borderBottom: `1px solid ${t.border}`,
+                      background: isDismissed ? "transparent" : t.accentBg,
+                      opacity: isDismissed ? 0.6 : 1,
+                      display: "flex",
+                      gap: 12,
+                      cursor: "pointer",
+                      transition: "background 0.2s"
+                    }}
+                    onClick={() => {
+                      document.getElementById('alerts-panel-section')?.scrollIntoView({ behavior: 'smooth' });
+                      setOpen(false);
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: t.text, marginBottom: 2 }}>{n.title}</p>
+                      <p style={{ fontSize: 11, color: t.muted }}>{n.msg}</p>
+                      <p style={{ fontSize: 9, color: t.faint, marginTop: 4, fontFamily: "'DM Mono', monospace" }}>{n.timestamp}</p>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDismiss(n.histId);
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        cursor: "pointer",
+                        color: t.faint,
+                        height: "fit-content"
+                      }}
+                    >
+                      <X size={14} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ChartTip({ active, payload, label, t }) {
   if (!active || !payload?.length) return null;
   return (
@@ -677,6 +814,9 @@ export default function AthletiSenseDashboard({ t }) {
   const [liveLatest, setLiveLatest] = useState({});
   const [history, setHistory] = useState({});
   const [wsConnected, setWsConnected] = useState(false);
+  const [notificationHistory, setNotificationHistory] = useState([]);
+  const [notificationDismissed, setNotificationDismissed] = useState(new Set());
+  const [alertsDismissed, setAlertsDismissed] = useState(new Set());
   const [dropOpen, setDropOpen] = useState(false);
   const wsRef = useRef(null);
 
@@ -761,6 +901,33 @@ export default function AthletiSenseDashboard({ t }) {
   const latest = liveLatest[selectedId] ?? null;
   const records = history[selectedId] ?? [];
 
+  // Update Notification History
+  useEffect(() => {
+    if (!latest) return;
+    const currentActive = getAlerts(latest, t).filter(a => a.level !== 'info');
+    if (currentActive.length === 0) return;
+
+    setNotificationHistory(prev => {
+      let updated = [...prev];
+      let changed = false;
+
+      currentActive.forEach(alert => {
+        // Create a unique-ish ID for this specific occurrence in history
+        const histId = `${alert.id}-${latest.timestamp}`;
+        if (!updated.some(n => n.histId === histId)) {
+          updated.unshift({
+            ...alert,
+            histId,
+            timestamp: new Date().toLocaleTimeString()
+          });
+          changed = true;
+        }
+      });
+
+      return changed ? updated.slice(0, 10) : prev;
+    });
+  }, [latest, t]);
+
   const chartData = useMemo(
     () =>
       records.map((r) => ({
@@ -797,6 +964,20 @@ export default function AthletiSenseDashboard({ t }) {
         gap: 14,
       }}
     >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: "'Syne', sans-serif", letterSpacing: "0.02em" }}>LIVE MONITORING</h2>
+          <p style={{ fontSize: 11, color: t.muted }}>Real-time biometric data stream</p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <NotificationBell
+            history={notificationHistory}
+            dismissed={notificationDismissed}
+            onDismiss={(id) => setNotificationDismissed(prev => new Set([...prev, id]))}
+            t={t}
+          />
+        </div>
+      </div>
       <div
         style={{
           display: "flex",
@@ -1468,6 +1649,7 @@ export default function AthletiSenseDashboard({ t }) {
       </div>
 
       <div
+        id="alerts-panel-section"
         className="card-fadein"
         style={{
           background: t.card,
@@ -1477,7 +1659,12 @@ export default function AthletiSenseDashboard({ t }) {
           boxShadow: t.shadow,
         }}
       >
-        <AlertsPanel latest={latest} t={t} />
+        <AlertsPanel 
+          latest={latest} 
+          t={t} 
+          dismissed={alertsDismissed}
+          setDismissed={(d) => setAlertsDismissed(new Set([...alertsDismissed, ...d]))}
+        />
       </div>
     </main>
   );
