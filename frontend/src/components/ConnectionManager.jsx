@@ -60,7 +60,7 @@ export default function ConnectionManager({ t }) {
             background: '#ef4444', color: '#fff',
             fontSize: 10, fontWeight: 800,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'DM Sans',monospace",
             border: `2px solid ${t.card}`,
           }}>
             {count}
@@ -92,7 +92,7 @@ export default function ConnectionManager({ t }) {
             <p style={{
               fontSize: 10, fontWeight: 700,
               textTransform: 'uppercase', letterSpacing: '0.10em',
-              color: t.muted, fontFamily: "'DM Mono',monospace",
+              color: t.muted, fontFamily: "'DM Sans',monospace",
             }}>
               Connections
             </p>
@@ -174,7 +174,7 @@ export default function ConnectionManager({ t }) {
                     border: `1px solid ${t.accent}30`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 11, fontWeight: 800, color: t.accent,
-                    fontFamily: "'DM Mono',monospace",
+                    fontFamily: "'DM Sans',monospace",
                     flexShrink: 0,
                   }}>
                     {req.fromName?.charAt(0) || '?'}
