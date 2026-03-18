@@ -109,7 +109,7 @@ function ChartTip({ active, payload, label, t }) {
         padding: "8px 12px",
         boxShadow: t.shadow,
         fontSize: 11,
-        fontFamily: "'DM Mono',monospace",
+        fontFamily: "'DM Sans',monospace",
         zIndex: 50,
       }}
     >
@@ -163,7 +163,7 @@ function Card({ title, children, t, right, fullWidth }) {
             textTransform: "uppercase",
             letterSpacing: "0.10em",
             color: t.muted,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'DM Sans',monospace",
           }}
         >
           {title}
@@ -404,7 +404,7 @@ function MultiSelect({ label, options, value, onChange, t }) {
                     marginLeft: "auto",
                     fontSize: 9,
                     color: t.faint,
-                    fontFamily: "'DM Mono',monospace",
+                    fontFamily: "'DM Sans',monospace",
                   }}
                 >
                   {opt.sub}
@@ -793,7 +793,7 @@ export default function MultiAthleteComparison({ t }) {
             borderRadius: 99,
             fontSize: 10,
             fontWeight: 700,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'DM Sans',monospace",
             background: wsConnected ? t.successBg : t.dangerBg,
             color: wsConnected ? t.success : t.danger,
             border: `1px solid ${wsConnected ? t.success + "30" : t.danger + "30"}`,
@@ -846,7 +846,7 @@ export default function MultiAthleteComparison({ t }) {
               textTransform: "uppercase",
               letterSpacing: "0.10em",
               color: t.muted,
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'DM Sans',monospace",
             }}
           >
             Filters Panel
@@ -987,7 +987,7 @@ export default function MultiAthleteComparison({ t }) {
                       gap: 4,
                       fontSize: 9,
                       color: t.muted,
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'DM Sans',monospace",
                       fontWeight: 700,
                     }}
                   >
@@ -1025,7 +1025,7 @@ export default function MultiAthleteComparison({ t }) {
                     fontWeight: 700,
                     textAlign: "center",
                     color: a.color,
-                    fontFamily: "'DM Mono',monospace",
+                    fontFamily: "'DM Sans',monospace",
                     marginBottom: 2,
                   }}
                 >
@@ -1045,7 +1045,7 @@ export default function MultiAthleteComparison({ t }) {
                       tick={{
                         fontSize: 7,
                         fill: t.muted,
-                        fontFamily: "'DM Mono',monospace",
+                        fontFamily: "'DM Sans',monospace",
                       }}
                     />
                     <Radar
@@ -1068,7 +1068,7 @@ export default function MultiAthleteComparison({ t }) {
                     fontWeight: 700,
                     textAlign: "center",
                     color: t.muted,
-                    fontFamily: "'DM Mono',monospace",
+                    fontFamily: "'DM Sans',monospace",
                     marginBottom: 2,
                   }}
                 >
@@ -1088,7 +1088,7 @@ export default function MultiAthleteComparison({ t }) {
                       tick={{
                         fontSize: 7,
                         fill: t.muted,
-                        fontFamily: "'DM Mono',monospace",
+                        fontFamily: "'DM Sans',monospace",
                       }}
                     />
                     {radarDataPerAthlete.map((a) => (
@@ -1124,7 +1124,7 @@ export default function MultiAthleteComparison({ t }) {
                     gap: 4,
                     fontSize: 9,
                     color: t.muted,
-                    fontFamily: "'DM Mono',monospace",
+                    fontFamily: "'DM Sans',monospace",
                     fontWeight: 700,
                   }}
                 >
@@ -1157,7 +1157,7 @@ export default function MultiAthleteComparison({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1166,7 +1166,7 @@ export default function MultiAthleteComparison({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1183,7 +1183,7 @@ export default function MultiAthleteComparison({ t }) {
               <Legend
                 wrapperStyle={{
                   fontSize: 9,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 iconType="circle"
                 iconSize={7}
@@ -1233,7 +1233,7 @@ export default function MultiAthleteComparison({ t }) {
                         padding: "6px 8px",
                         fontSize: 9,
                         color: t.faint,
-                        fontFamily: "'DM Mono',monospace",
+                        fontFamily: "'DM Sans',monospace",
                         fontWeight: 700,
                       }}
                     />
@@ -1244,7 +1244,7 @@ export default function MultiAthleteComparison({ t }) {
                           padding: "6px 8px",
                           fontSize: 9,
                           color: t.muted,
-                          fontFamily: "'DM Mono',monospace",
+                          fontFamily: "'DM Sans',monospace",
                           fontWeight: 700,
                           textAlign: "center",
                         }}
@@ -1262,7 +1262,7 @@ export default function MultiAthleteComparison({ t }) {
                           padding: "4px 8px",
                           fontSize: 9,
                           color: t.muted,
-                          fontFamily: "'DM Mono',monospace",
+                          fontFamily: "'DM Sans',monospace",
                           fontWeight: 700,
                           whiteSpace: "nowrap",
                         }}
@@ -1291,7 +1291,7 @@ export default function MultiAthleteComparison({ t }) {
                                   : Math.abs(val) > 0.6
                                     ? "#fff"
                                     : t.text,
-                              fontFamily: "'DM Mono',monospace",
+                              fontFamily: "'DM Sans',monospace",
                               margin: "1px",
                               borderRadius: 4,
                               transition: "transform 0.15s",
@@ -1319,7 +1319,7 @@ export default function MultiAthleteComparison({ t }) {
                   style={{
                     fontSize: 9,
                     color: t.faint,
-                    fontFamily: "'DM Mono',monospace",
+                    fontFamily: "'DM Sans',monospace",
                   }}
                 >
                   -1
@@ -1337,7 +1337,7 @@ export default function MultiAthleteComparison({ t }) {
                   style={{
                     fontSize: 9,
                     color: t.faint,
-                    fontFamily: "'DM Mono',monospace",
+                    fontFamily: "'DM Sans',monospace",
                   }}
                 >
                   +1
@@ -1361,7 +1361,7 @@ export default function MultiAthleteComparison({ t }) {
                     gap: 4,
                     fontSize: 9,
                     color: t.muted,
-                    fontFamily: "'DM Mono',monospace",
+                    fontFamily: "'DM Sans',monospace",
                     fontWeight: 700,
                   }}
                 >
@@ -1394,7 +1394,7 @@ export default function MultiAthleteComparison({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1404,7 +1404,7 @@ export default function MultiAthleteComparison({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1421,7 +1421,7 @@ export default function MultiAthleteComparison({ t }) {
               <Legend
                 wrapperStyle={{
                   fontSize: 9,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 iconType="circle"
                 iconSize={7}
@@ -1482,7 +1482,7 @@ export default function MultiAthleteComparison({ t }) {
                       textTransform: "uppercase",
                       letterSpacing: "0.08em",
                       color: t.muted,
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'DM Sans',monospace",
                       whiteSpace: "nowrap",
                       background:
                         sortKey === col.key ? t.accentBg : "transparent",
@@ -1502,7 +1502,7 @@ export default function MultiAthleteComparison({ t }) {
                         fontWeight: 700,
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
-                        fontFamily: "'DM Mono',monospace",
+                        fontFamily: "'DM Sans',monospace",
                         padding: "2px 4px",
                         borderRadius: 4,
                       }}
@@ -1585,7 +1585,7 @@ export default function MultiAthleteComparison({ t }) {
                                 fontSize: 10,
                                 fontWeight: 800,
                                 color: row.color,
-                                fontFamily: "'DM Mono',monospace",
+                                fontFamily: "'DM Sans',monospace",
                               }}
                             >
                               {row.athlete}
@@ -1609,7 +1609,7 @@ export default function MultiAthleteComparison({ t }) {
                         <td
                           style={{
                             padding: "10px 12px",
-                            fontFamily: "'DM Mono',monospace",
+                            fontFamily: "'DM Sans',monospace",
                             fontWeight: 700,
                             color: row.color,
                           }}
@@ -1619,7 +1619,7 @@ export default function MultiAthleteComparison({ t }) {
                         <td
                           style={{
                             padding: "10px 12px",
-                            fontFamily: "'DM Mono',monospace",
+                            fontFamily: "'DM Sans',monospace",
                             color: t.danger,
                             fontWeight: 700,
                           }}
@@ -1629,7 +1629,7 @@ export default function MultiAthleteComparison({ t }) {
                         <td
                           style={{
                             padding: "10px 12px",
-                            fontFamily: "'DM Mono',monospace",
+                            fontFamily: "'DM Sans',monospace",
                             color: t.muted,
                           }}
                         >
@@ -1638,7 +1638,7 @@ export default function MultiAthleteComparison({ t }) {
                         <td
                           style={{
                             padding: "10px 12px",
-                            fontFamily: "'DM Mono',monospace",
+                            fontFamily: "'DM Sans',monospace",
                             color: t.text,
                           }}
                         >
@@ -1647,7 +1647,7 @@ export default function MultiAthleteComparison({ t }) {
                         <td
                           style={{
                             padding: "10px 12px",
-                            fontFamily: "'DM Mono',monospace",
+                            fontFamily: "'DM Sans',monospace",
                             color: t.accent,
                             fontWeight: 700,
                           }}
@@ -1657,7 +1657,7 @@ export default function MultiAthleteComparison({ t }) {
                         <td
                           style={{
                             padding: "10px 12px",
-                            fontFamily: "'DM Mono',monospace",
+                            fontFamily: "'DM Sans',monospace",
                             color: t.text,
                           }}
                         >
@@ -1666,7 +1666,7 @@ export default function MultiAthleteComparison({ t }) {
                         <td
                           style={{
                             padding: "10px 12px",
-                            fontFamily: "'DM Mono',monospace",
+                            fontFamily: "'DM Sans',monospace",
                             color: t.muted,
                           }}
                         >
@@ -1707,7 +1707,7 @@ export default function MultiAthleteComparison({ t }) {
                               style={{
                                 fontSize: 10,
                                 fontWeight: 800,
-                                fontFamily: "'DM Mono',monospace",
+                                fontFamily: "'DM Sans',monospace",
                                 color:
                                   row.consistency > 70
                                     ? t.success
@@ -1746,7 +1746,7 @@ export default function MultiAthleteComparison({ t }) {
                                     fontSize: 9,
                                     fontWeight: 700,
                                     color: t.muted,
-                                    fontFamily: "'DM Mono',monospace",
+                                    fontFamily: "'DM Sans',monospace",
                                     marginBottom: 6,
                                   }}
                                 >
@@ -1781,7 +1781,7 @@ export default function MultiAthleteComparison({ t }) {
                                       tick={{
                                         fontSize: 7,
                                         fill: t.faint,
-                                        fontFamily: "'DM Mono',monospace",
+                                        fontFamily: "'DM Sans',monospace",
                                       }}
                                       tickLine={false}
                                       axisLine={false}
@@ -1831,7 +1831,7 @@ export default function MultiAthleteComparison({ t }) {
                                       style={{
                                         fontSize: 10,
                                         color: t.muted,
-                                        fontFamily: "'DM Mono',monospace",
+                                        fontFamily: "'DM Sans',monospace",
                                       }}
                                     >
                                       {label}
@@ -1841,7 +1841,7 @@ export default function MultiAthleteComparison({ t }) {
                                         fontSize: 10,
                                         fontWeight: 700,
                                         color: row.color,
-                                        fontFamily: "'DM Mono',monospace",
+                                        fontFamily: "'DM Sans',monospace",
                                       }}
                                     >
                                       {typeof val === "number"
