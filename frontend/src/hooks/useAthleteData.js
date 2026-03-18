@@ -117,7 +117,7 @@ export function useAthleteData(athleteId = null) {
                 ...rec,
                 Athlete_ID: rec.Athlete_ID || rec.athlete_id || 'UNKNOWN',
                 Timestamp: ts || rec.Timestamp || new Date().toISOString().replace('T', ' ').slice(0, 19),
-                MAX30102_Heart_Rate_bpm: rec.heart_rate?.bpm || rec.MAX30102_Heart_Rate_bpm || 0,
+                AD8232_Heart_Rate_bpm: rec.heart_rate?.bpm || rec.AD8232_Heart_Rate_bpm || 0,
                 DS18B20_Skin_Temperature_C: rec.temperature?.celsius || rec.DS18B20_Skin_Temperature_C || 0,
                 StrainGauge_Force_N: rec.strain?.raw ? (rec.strain.raw / 100) : (rec.StrainGauge_Force_N || 0),
                 Motion_Magnitude: motionMag || rec.Motion_Magnitude || 0,
@@ -130,7 +130,7 @@ export function useAthleteData(athleteId = null) {
               ...rec,
               Athlete_ID: rec.Athlete_ID || rec.athlete_id || 'UNKNOWN',
               Timestamp: rec.Timestamp || rec.timestamp || new Date().toISOString().replace('T', ' ').slice(0, 19),
-              MAX30102_Heart_Rate_bpm: rec.MAX30102_Heart_Rate_bpm || 0,
+              AD8232_Heart_Rate_bpm: rec.AD8232_Heart_Rate_bpm || 0,
               DS18B20_Skin_Temperature_C: rec.DS18B20_Skin_Temperature_C || 0,
               StrainGauge_Force_N: rec.StrainGauge_Force_N || 0,
               Motion_Magnitude: rec.Motion_Magnitude || 0,
@@ -190,7 +190,7 @@ export function useAthleteData(athleteId = null) {
         const summaryList = Object.keys(map).map(id => {
           const data = map[id];
           const latest = data[data.length - 1] || null;
-          const hrValues = data.map(d => Number(d.MAX30102_Heart_Rate_bpm) || 0);
+          const hrValues = data.map(d => Number(d.AD8232_Heart_Rate_bpm) || 0);
           const avgHR = hrValues.length ? (hrValues.reduce((s, v) => s + v, 0) / hrValues.length) : 0;
           const maxHR = hrValues.length ? hrValues.reduce((m, v) => (v > m ? v : m), hrValues[0]) : 0;
           const tempValues = data.map(d => Number(d.DS18B20_Skin_Temperature_C) || 0);
@@ -202,7 +202,7 @@ export function useAthleteData(athleteId = null) {
             // Prefer metadata from usersMap if available
             name: (usersMap[id] && usersMap[id].name) || latest?.name || id,
             sport: (usersMap[id] && usersMap[id].sport) || latest?.sport || 'Athlete',
-            latestHR: latest ? latest.MAX30102_Heart_Rate_bpm : null,
+            latestHR: latest ? latest.AD8232_Heart_Rate_bpm : null,
             avgHR: Math.round(avgHR * 10) / 10,
             maxHR,
             latestTemp: latest ? latest.DS18B20_Skin_Temperature_C : null,
@@ -265,7 +265,7 @@ export function useAthleteData(athleteId = null) {
           if (!update) return s;
           return {
             ...s,
-            latestHR: update.MAX30102_Heart_Rate_bpm,
+            latestHR: update.AD8232_Heart_Rate_bpm,
             latestTemp: update.DS18B20_Skin_Temperature_C,
             latestFatigue: update.Fatigue_Index,
             latestMotion: update.Motion_Magnitude
