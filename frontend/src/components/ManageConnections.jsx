@@ -40,7 +40,7 @@ export default function ManageConnections({ t }) {
           <p style={{
             fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
             letterSpacing: '0.10em', color: t.muted,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'DM Sans',monospace",
           }}>
             {connections.length} {isAdmin ? 'Athlete' : 'Coach'}{connections.length !== 1 ? 's' : ''}
           </p>
@@ -69,7 +69,7 @@ export default function ManageConnections({ t }) {
                   border: `1px solid ${t.accent}30`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 13, fontWeight: 800, color: t.accent,
-                  fontFamily: "'DM Mono',monospace", flexShrink: 0,
+                  fontFamily: "'DM Sans',monospace", flexShrink: 0,
                 }}>
                   {conn.name?.split(' ').map(w => w[0]).join('') || '?'}
                 </div>
