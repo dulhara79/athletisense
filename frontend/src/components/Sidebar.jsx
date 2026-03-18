@@ -1,4 +1,4 @@
-import { Activity, BarChart2, Heart, Users, LogOut, Wifi, WifiOff, Moon, Sun } from 'lucide-react';
+import { Activity, BarChart2, Heart, Users, LogOut, Wifi, WifiOff, Moon, Sun, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -13,7 +13,7 @@ const adminNavItems = [
 ];
 
 export default function Sidebar({ active, onChange, connected }) {
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isAdmin = user?.role === 'admin';
 
@@ -84,14 +84,26 @@ export default function Sidebar({ active, onChange, connected }) {
         </div>
       </nav>
 
-      {/* Logout */}
-      <div className="p-4 border-t border-premium-100">
+      {/* Logout / Delete Account */}
+      <div className="p-4 border-t border-premium-100 space-y-2">
         <button
           onClick={logout}
           className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-sm font-semibold w-full text-premium-500 hover:bg-surface-danger hover:text-accent-danger group"
         >
           <LogOut size={20} className="text-premium-400 group-hover:text-accent-danger transition-colors" />
           <span>Sign Out</span>
+        </button>
+
+        <button
+          onClick={() => {
+            if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+              deleteAccount();
+            }
+          }}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 text-sm font-semibold w-full text-premium-500 hover:bg-surface-danger hover:text-accent-danger group"
+        >
+          <Trash2 size={20} className="text-premium-400 group-hover:text-accent-danger transition-colors" />
+          <span>Delete Account</span>
         </button>
       </div>
     </aside>
