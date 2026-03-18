@@ -216,7 +216,7 @@ function SessionTimer({ t }) {
         border: `1px solid ${t.border}`,
         borderRadius: 16,
         padding: "1rem 1.5rem",
-        flex: "0 0 auto",
+        flex: 1,
         boxShadow: t.shadow,
         display: "flex",
         flexDirection: "column",
@@ -299,7 +299,7 @@ function StatusCard({ athlete, wsConnected, t }) {
         border: `1px solid ${t.border}`,
         borderRadius: 16,
         padding: "1rem 1.25rem",
-        flex: "0 0 auto",
+        flex: 1,
         boxShadow: t.shadow,
         display: "flex",
         flexDirection: "column",
@@ -518,16 +518,21 @@ function MotionGauge({ value = 0, max = 15, t }) {
 }
 
 function HeartRateGauge({ value = 0, max = 220, t }) {
-  const pct = Math.min(value / max, 1);
-  const [anim, setAnim] = useState(0);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setAnim(pct));
-    return () => cancelAnimationFrame(id);
-  }, [pct]);
+  const bpm = typeof value === "number" ? Math.round(value) : 0;
 
-  const color = anim < 0.5 ? "#10b981" : anim < 0.85 ? "#f59e0b" : "#ef4444";
+  // 5-zone HR color logic
+  function getZone(hr) {
+    if (hr < 50) return { color: "#ef4444", label: "VERY LOW", sublabel: "Risky" };
+    if (hr < 60) return { color: "#f59e0b", label: "LOW", sublabel: "Below Normal" };
+    if (hr <= 100) return { color: "#10b981", label: "NORMAL", sublabel: "Healthy" };
+    if (hr <= 150) return { color: "#f59e0b", label: "HIGH", sublabel: "Elevated" };
+    return { color: "#ef4444", label: "VERY HIGH", sublabel: "Risky" };
+  }
+
+  const zone = getZone(bpm);
   const cx = 80, cy = 85, r = 55;
-  const angle = (p, offset = 135) => offset + p * 270;
+  const totalArc = 270; // degrees of arc
+  const startAngle = 135;
 
   function pt(angleDeg, radius = r) {
     const rad = ((angleDeg - 90) * Math.PI) / 180;
@@ -535,13 +540,24 @@ function HeartRateGauge({ value = 0, max = 220, t }) {
   }
   function arc(start, end, radius = r) {
     if (end - start < 0.01) return "";
-    const s = pt(start, radius),
-      e = pt(end, radius);
+    const s = pt(start, radius), e = pt(end, radius);
     const large = end - start > 180 ? 1 : 0;
     return `M ${s.x} ${s.y} A ${radius} ${radius} 0 ${large} 1 ${e.x} ${e.y}`;
   }
 
-  const score = Math.round(anim * max);
+  // Zone boundaries as fractions of max (220)
+  // 0-50, 50-60, 60-100, 100-150, 150-220
+  const zones = [
+    { frac: 50 / max, color: "#ef4444" },   // very low - red
+    { frac: 60 / max, color: "#f59e0b" },   // low - yellow
+    { frac: 100 / max, color: "#10b981" },  // normal - green
+    { frac: 150 / max, color: "#f59e0b" },  // high - yellow
+    { frac: 1, color: "#ef4444" },           // very high - red
+  ];
+
+  // Current position on the arc
+  const pct = Math.min(bpm / max, 1);
+  const needleAngle = startAngle + pct * totalArc;
 
   return (
     <div
@@ -553,93 +569,112 @@ function HeartRateGauge({ value = 0, max = 220, t }) {
       }}
     >
       <svg viewBox="0 0 160 155" style={{ width: "100%", maxWidth: 220 }}>
-        <defs>
-          <linearGradient id="hrgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#10b981" />
-            <stop offset="50%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#ef4444" />
-          </linearGradient>
-        </defs>
+        {/* Background track */}
         <path
-          d={arc(135, 405)}
+          d={arc(startAngle, startAngle + totalArc)}
           fill="none"
           stroke={t.surface}
           strokeWidth={14}
           strokeLinecap="round"
         />
-        <path
-          d={arc(135, 405)}
-          fill="none"
-          stroke="url(#hrgGrad)"
-          strokeWidth={14}
-          strokeLinecap="round"
-          opacity={0.12}
-        />
-        {anim > 0.005 && (
+        {/* 5 colored zone segments */}
+        {zones.map((z, i) => {
+          const prevFrac = i === 0 ? 0 : zones[i - 1].frac;
+          const segStart = startAngle + prevFrac * totalArc;
+          const segEnd = startAngle + z.frac * totalArc;
+          return (
+            <path
+              key={i}
+              d={arc(segStart, segEnd)}
+              fill="none"
+              stroke={z.color}
+              strokeWidth={14}
+              opacity={0.18}
+            />
+          );
+        })}
+        {/* Active arc fill up to current BPM */}
+        {pct > 0.005 && (
           <path
-            d={arc(135, 135 + anim * 270)}
+            d={arc(startAngle, needleAngle)}
             fill="none"
-            stroke={color}
+            stroke={zone.color}
             strokeWidth={14}
             strokeLinecap="round"
-            style={{ transition: "stroke 0.4s ease, d 0.6s ease" }}
+            style={{ transition: "stroke 0.4s ease" }}
           />
         )}
-        {[
-          ["REST", "#10b981", 20, 115],
-          ["AERO", "#f59e0b", 80, 28],
-          ["MAX", "#ef4444", 140, 115],
-        ].map(([l, c, x, y]) => (
-          <text
-            key={l}
-            x={x}
-            y={y}
-            fill={c}
-            fontSize="7.5"
-            fontWeight="800"
-            fontFamily="'DM Mono', monospace"
-            textAnchor="middle"
-          >
-            {l}
-          </text>
-        ))}
+        {/* Needle dot at current position */}
+        {pct > 0.005 && (() => {
+          const p = pt(needleAngle);
+          return (
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={4}
+              fill={t.card}
+              stroke={zone.color}
+              strokeWidth={2.5}
+              style={{ transition: "cx 0.4s ease, cy 0.4s ease" }}
+            />
+          );
+        })()}
+        {/* BPM value */}
         <text
           x={cx}
-          y={cy + 15}
+          y={cy + 8}
           textAnchor="middle"
-          fontSize="28"
+          fontSize="30"
           fontWeight="800"
-          fill={color}
+          fill={zone.color}
           fontFamily="'DM Mono', monospace"
+          letterSpacing="-1"
         >
-          {score}
+          {bpm || "--"}
         </text>
+        {/* "bpm" label */}
         <text
           x={cx}
-          y={cy + 35}
+          y={cy + 22}
+          textAnchor="middle"
+          fontSize="8"
+          fontWeight="700"
+          fill={t.muted}
+          fontFamily="'DM Mono', monospace"
+          letterSpacing="0.08em"
+        >
+          BPM
+        </text>
+        {/* Zone label */}
+        <text
+          x={cx}
+          y={cy + 42}
           textAnchor="middle"
           fontSize="8"
           fontWeight="800"
-          letterSpacing="1px"
-          fill={t.text}
+          fill={zone.color}
           fontFamily="'DM Mono', monospace"
+          letterSpacing="0.1em"
         >
-          HEART RATE
+          {zone.label}
         </text>
+        {/* Zone sublabel */}
         <text
           x={cx}
-          y={cy + 48}
+          y={cy + 53}
           textAnchor="middle"
-          fontSize="7"
+          fontSize="6.5"
+          fontWeight="600"
           fill={t.faint}
           fontFamily="'DM Mono', monospace"
         >
-          {max} bpm max
+          {zone.sublabel}
         </text>
       </svg>
     </div>
   );
 }
+
 
 function AlertsPanel({ latest, t }) {
   const [dismissed, setDismissed] = useState(new Set());
@@ -990,10 +1025,10 @@ export default function AthletiSenseDashboard({ t }) {
         border: `1px solid ${t.border}`,
         borderRadius: 16,
         padding: "1rem 1.25rem",
-        flex: "0 0 auto",
+        flex: 1,
         boxShadow: t.shadow,
         position: "relative",
-        minWidth: 240,
+        minWidth: 200,
       }}
     >
       <p
@@ -1187,7 +1222,7 @@ export default function AthletiSenseDashboard({ t }) {
             border: `1px solid ${t.border}`,
             borderRadius: 16,
             padding: "1rem 1.25rem",
-            flex: "0 0 auto",
+            flex: 1,
             boxShadow: t.shadow,
           }}
         >
@@ -1238,9 +1273,9 @@ export default function AthletiSenseDashboard({ t }) {
 
         <div
           style={{
-            marginLeft: "auto",
             display: "flex",
             alignItems: "center",
+            justifyContent: "center",
             gap: 8,
           }}
         >
