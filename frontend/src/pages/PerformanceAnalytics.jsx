@@ -84,7 +84,7 @@ function ChartTip({ active, payload, label, t }) {
         padding: "8px 12px",
         boxShadow: t.shadow,
         fontSize: 11,
-        fontFamily: "'DM Mono', monospace",
+        fontFamily: "'DM Sans', monospace",
       }}
     >
       <p style={{ color: t.muted, marginBottom: 5, fontWeight: 700 }}>
@@ -280,7 +280,7 @@ function Card({ title, children, t, action }) {
             textTransform: "uppercase",
             letterSpacing: "0.10em",
             color: t.muted,
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "'DM Sans', monospace",
           }}
         >
           {title}
@@ -660,7 +660,7 @@ export default function PerformanceAnalytics({ t }) {
               borderRadius: 99,
               fontSize: 10,
               fontWeight: 700,
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'DM Sans',monospace",
               background: wsConnected ? t.successBg : t.dangerBg,
               color: wsConnected ? t.success : t.danger,
               border: `1px solid ${wsConnected ? t.success + "30" : t.danger + "30"}`,
@@ -690,7 +690,7 @@ export default function PerformanceAnalytics({ t }) {
               style={{
                 fontSize: 10,
                 color: t.muted,
-                fontFamily: "'DM Mono',monospace",
+                fontFamily: "'DM Sans',monospace",
               }}
             >
               Loading…
@@ -725,7 +725,7 @@ export default function PerformanceAnalytics({ t }) {
               textTransform: "uppercase",
               letterSpacing: "0.10em",
               color: t.muted,
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'DM Sans',monospace",
             }}
           >
             Filters Panel
@@ -829,7 +829,7 @@ export default function PerformanceAnalytics({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -838,7 +838,7 @@ export default function PerformanceAnalytics({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -855,7 +855,7 @@ export default function PerformanceAnalytics({ t }) {
               <Legend
                 wrapperStyle={{
                   fontSize: 9,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 iconType="circle"
                 iconSize={7}
@@ -893,7 +893,7 @@ export default function PerformanceAnalytics({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -903,7 +903,7 @@ export default function PerformanceAnalytics({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -913,7 +913,7 @@ export default function PerformanceAnalytics({ t }) {
                 y={175}
                 stroke={`${t.danger}50`}
                 strokeDasharray="4 3"
-                label={{ value: "Max HR", position: "right", fontSize: 8, fill: t.danger, fontFamily: "'DM Mono',monospace" }}
+                label={{ value: "Max HR", position: "right", fontSize: 8, fill: t.danger, fontFamily: "'DM Sans',monospace" }}
               />
               <Line
                 type="monotone"
@@ -953,7 +953,7 @@ export default function PerformanceAnalytics({ t }) {
                 tick={{
                   fontSize: 8,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -963,7 +963,7 @@ export default function PerformanceAnalytics({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1005,7 +1005,7 @@ export default function PerformanceAnalytics({ t }) {
                 tick={{
                   fontSize: 8,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1015,7 +1015,7 @@ export default function PerformanceAnalytics({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1062,7 +1062,7 @@ export default function PerformanceAnalytics({ t }) {
                     if (!active || !payload?.length) return null;
                     const d = payload[0].payload;
                     return (
-                      <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", boxShadow: t.shadow, fontSize: 11, fontFamily: "'DM Mono',monospace" }}>
+                      <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", boxShadow: t.shadow, fontSize: 11, fontFamily: "'DM Sans',monospace" }}>
                         <p style={{ color: d.color, fontWeight: 700, marginBottom: 2 }}>{d.name}</p>
                         <p style={{ color: t.text }}>{d.value} readings ({d.pct}%)</p>
                       </div>
@@ -1080,7 +1080,7 @@ export default function PerformanceAnalytics({ t }) {
                 <div style={{ flex: 2, height: 6, borderRadius: 99, background: t.surface2 }}>
                   <div style={{ height: "100%", borderRadius: 99, width: `${z.pct}%`, background: z.color, transition: "width 0.4s" }} />
                 </div>
-                <span style={{ fontSize: 10, fontWeight: 800, color: z.color, fontFamily: "'DM Mono',monospace", minWidth: 32, textAlign: "right" }}>{z.pct}%</span>
+                <span style={{ fontSize: 10, fontWeight: 800, color: z.color, fontFamily: "'DM Sans',monospace", minWidth: 32, textAlign: "right" }}>{z.pct}%</span>
               </div>
             ))}
           </div>
@@ -1108,7 +1108,7 @@ export default function PerformanceAnalytics({ t }) {
                     fontSize: 9,
                     fontWeight: 700,
                     color: t.muted,
-                    fontFamily: "'DM Mono',monospace",
+                    fontFamily: "'DM Sans',monospace",
                     height: 22,
                     display: "flex",
                     alignItems: "center",
@@ -1128,7 +1128,7 @@ export default function PerformanceAnalytics({ t }) {
                       textAlign: "center",
                       fontSize: 7,
                       color: t.faint,
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'DM Sans',monospace",
                     }}
                   >
                     {h % 3 === 0 ? `${String(h).padStart(2, "0")}:00` : ""}
@@ -1181,7 +1181,7 @@ export default function PerformanceAnalytics({ t }) {
                 style={{
                   fontSize: 8,
                   color: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
               >
                 {heatmapData.max.toFixed(1)}
@@ -1199,7 +1199,7 @@ export default function PerformanceAnalytics({ t }) {
                 style={{
                   fontSize: 8,
                   color: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
               >
                 {heatmapData.min.toFixed(1)}
@@ -1237,7 +1237,7 @@ export default function PerformanceAnalytics({ t }) {
                       textTransform: "uppercase",
                       letterSpacing: "0.08em",
                       color: t.muted,
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'DM Sans',monospace",
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -1286,7 +1286,7 @@ export default function PerformanceAnalytics({ t }) {
                           padding: "10px 12px",
                           fontWeight: 700,
                           color: t.accent,
-                          fontFamily: "'DM Mono',monospace",
+                          fontFamily: "'DM Sans',monospace",
                           fontSize: 11,
                         }}
                       >
@@ -1321,7 +1321,7 @@ export default function PerformanceAnalytics({ t }) {
                       <td
                         style={{
                           padding: "10px 12px",
-                          fontFamily: "'DM Mono',monospace",
+                          fontFamily: "'DM Sans',monospace",
                           color: t.muted,
                         }}
                       >
@@ -1330,7 +1330,7 @@ export default function PerformanceAnalytics({ t }) {
                       <td
                         style={{
                           padding: "10px 12px",
-                          fontFamily: "'DM Mono',monospace",
+                          fontFamily: "'DM Sans',monospace",
                           color: t.danger,
                           fontWeight: 700,
                         }}
@@ -1340,7 +1340,7 @@ export default function PerformanceAnalytics({ t }) {
                       <td
                         style={{
                           padding: "10px 12px",
-                          fontFamily: "'DM Mono',monospace",
+                          fontFamily: "'DM Sans',monospace",
                           color: t.muted,
                         }}
                       >
@@ -1349,7 +1349,7 @@ export default function PerformanceAnalytics({ t }) {
                       <td
                         style={{
                           padding: "10px 12px",
-                          fontFamily: "'DM Mono',monospace",
+                          fontFamily: "'DM Sans',monospace",
                           color: t.text,
                         }}
                       >
@@ -1358,7 +1358,7 @@ export default function PerformanceAnalytics({ t }) {
                       <td
                         style={{
                           padding: "10px 12px",
-                          fontFamily: "'DM Mono',monospace",
+                          fontFamily: "'DM Sans',monospace",
                           color: t.accent,
                         }}
                       >
@@ -1367,7 +1367,7 @@ export default function PerformanceAnalytics({ t }) {
                       <td
                         style={{
                           padding: "10px 12px",
-                          fontFamily: "'DM Mono',monospace",
+                          fontFamily: "'DM Sans',monospace",
                           color: t.muted,
                         }}
                       >
@@ -1380,7 +1380,7 @@ export default function PerformanceAnalytics({ t }) {
                             borderRadius: 6,
                             fontSize: 10,
                             fontWeight: 800,
-                            fontFamily: "'DM Mono',monospace",
+                            fontFamily: "'DM Sans',monospace",
                             background:
                               parseFloat(s.intensity) > 7
                                 ? t.dangerBg
@@ -1403,7 +1403,7 @@ export default function PerformanceAnalytics({ t }) {
                           padding: "10px 12px",
                           fontSize: 9,
                           color: t.faint,
-                          fontFamily: "'DM Mono',monospace",
+                          fontFamily: "'DM Sans',monospace",
                         }}
                       >
                         {s.date}
@@ -1424,7 +1424,7 @@ export default function PerformanceAnalytics({ t }) {
                                 fontSize: 10,
                                 fontWeight: 700,
                                 color: t.muted,
-                                fontFamily: "'DM Mono',monospace",
+                                fontFamily: "'DM Sans',monospace",
                                 marginBottom: 8,
                               }}
                             >
@@ -1456,7 +1456,7 @@ export default function PerformanceAnalytics({ t }) {
                                   tick={{
                                     fontSize: 8,
                                     fill: t.faint,
-                                    fontFamily: "'DM Mono',monospace",
+                                    fontFamily: "'DM Sans',monospace",
                                   }}
                                   tickLine={false}
                                   axisLine={false}
@@ -1469,7 +1469,7 @@ export default function PerformanceAnalytics({ t }) {
                                   tick={{
                                     fontSize: 8,
                                     fill: t.faint,
-                                    fontFamily: "'DM Mono',monospace",
+                                    fontFamily: "'DM Sans',monospace",
                                   }}
                                   tickLine={false}
                                   axisLine={false}
