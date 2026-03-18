@@ -6,7 +6,7 @@ function generateAlerts(athleteId, latest) {
   const alerts = [];
   const ts = new Date().toLocaleTimeString();
 
-  const bpm = latest.MAX30102_Heart_Rate_bpm || 0;
+  const bpm = latest.AD8232_Heart_Rate_bpm || 0;
   const mg = latest.Motion_Magnitude || 0;
   const temp = latest.DS18B20_Skin_Temperature_C || 0;
 
