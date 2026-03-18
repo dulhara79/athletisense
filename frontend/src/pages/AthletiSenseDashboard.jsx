@@ -127,7 +127,7 @@ function StatCard({
           textTransform: "uppercase",
           color: t.muted,
           marginBottom: 6,
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: "'DM Sans', monospace",
         }}
       >
         {title}
@@ -146,7 +146,7 @@ function StatCard({
             fontWeight: 800,
             lineHeight: 1,
             color,
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "'DM Sans', monospace",
             letterSpacing: "-2px",
           }}
         >
@@ -231,7 +231,7 @@ function SessionTimer({ t }) {
           textTransform: "uppercase",
           color: t.muted,
           marginBottom: 6,
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: "'DM Sans', monospace",
         }}
       >
         Session Timer
@@ -276,7 +276,7 @@ function SessionTimer({ t }) {
               color: t.muted,
               fontSize: 10,
               fontWeight: 700,
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: "'DM Sans', monospace",
               display: "flex",
               alignItems: "center",
               justifyContent: "center"
@@ -313,7 +313,7 @@ function StatusCard({ athlete, wsConnected, steps, t }) {
           letterSpacing: "0.10em",
           textTransform: "uppercase",
           color: t.muted,
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: "'DM Sans', monospace",
         }}
       >
         Status
@@ -574,7 +574,7 @@ function AlertsPanel({ latest, t }) {
             textTransform: "uppercase",
             letterSpacing: "0.10em",
             color: t.muted,
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "'DM Sans', monospace",
           }}
         >
           Alerts Panel
@@ -587,7 +587,7 @@ function AlertsPanel({ latest, t }) {
             borderRadius: 6,
             background: t.accentBg,
             color: t.accent,
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: "'DM Sans', monospace",
           }}
         >
           {alerts.length} active
@@ -669,7 +669,7 @@ function ChartTip({ active, payload, label, t }) {
           fontSize: 10,
           color: t.muted,
           marginBottom: 4,
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: "'DM Sans', monospace",
         }}
       >
         {label}
@@ -842,7 +842,7 @@ export default function AthletiSenseDashboard({ t }) {
           textTransform: "uppercase",
           color: t.muted,
           marginBottom: 8,
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: "'DM Sans', monospace",
         }}
       >
         {isAdmin ? 'Athlete Select' : 'Connection Sync'}
@@ -877,7 +877,7 @@ export default function AthletiSenseDashboard({ t }) {
               fontSize: 11,
               fontWeight: 800,
               color: t.accent,
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: "'DM Sans', monospace",
               flexShrink: 0,
             }}
           >
@@ -975,7 +975,7 @@ export default function AthletiSenseDashboard({ t }) {
                     fontSize: 10,
                     fontWeight: 800,
                     color: t.accent,
-                    fontFamily: "'DM Mono', monospace",
+                    fontFamily: "'DM Sans', monospace",
                   }}
                 >
                   {m.avatar}
@@ -999,7 +999,7 @@ export default function AthletiSenseDashboard({ t }) {
                       gap: 4,
                       fontSize: 9,
                       color: t.success,
-                      fontFamily: "'DM Mono', monospace",
+                      fontFamily: "'DM Sans', monospace",
                       fontWeight: 700,
                     }}
                   >
@@ -1091,7 +1091,7 @@ export default function AthletiSenseDashboard({ t }) {
                 letterSpacing: "0.10em",
                 textTransform: "uppercase",
                 color: t.muted,
-                fontFamily: "'DM Mono', monospace",
+                fontFamily: "'DM Sans', monospace",
               }}
             >
               Motion Live Chart
@@ -1100,7 +1100,7 @@ export default function AthletiSenseDashboard({ t }) {
               style={{
                 fontSize: 9,
                 color: t.faint,
-                fontFamily: "'DM Mono', monospace",
+                fontFamily: "'DM Sans', monospace",
               }}
             >
               last {chartData.length} readings
@@ -1131,7 +1131,7 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "'DM Sans', monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1140,7 +1140,7 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "'DM Sans', monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1158,7 +1158,7 @@ export default function AthletiSenseDashboard({ t }) {
               <Legend
                 wrapperStyle={{
                   fontSize: 10,
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "'DM Sans', monospace",
                 }}
               />
               <Area
@@ -1198,7 +1198,7 @@ export default function AthletiSenseDashboard({ t }) {
               color: t.muted,
               marginBottom: 8,
               alignSelf: "flex-start",
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: "'DM Sans', monospace",
             }}
           >
             HR Gauge
@@ -1229,7 +1229,7 @@ export default function AthletiSenseDashboard({ t }) {
               color: t.muted,
               marginBottom: 8,
               alignSelf: "flex-start",
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: "'DM Sans', monospace",
             }}
           >
             Motion Gauge
@@ -1258,7 +1258,7 @@ export default function AthletiSenseDashboard({ t }) {
               textTransform: "uppercase",
               color: t.muted,
               marginBottom: 12,
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: "'DM Sans', monospace",
             }}
           >
             HR vs Motion
@@ -1284,7 +1284,7 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 8,
                   fill: t.faint,
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "'DM Sans', monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1295,7 +1295,7 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 8,
                   fill: t.faint,
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "'DM Sans', monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1308,7 +1308,7 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 8,
                   fill: t.faint,
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "'DM Sans', monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1319,7 +1319,7 @@ export default function AthletiSenseDashboard({ t }) {
               <Legend
                 wrapperStyle={{
                   fontSize: 9,
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "'DM Sans', monospace",
                 }}
               />
               <ReferenceLine
@@ -1332,7 +1332,7 @@ export default function AthletiSenseDashboard({ t }) {
                   position: "right",
                   fontSize: 8,
                   fill: t.danger,
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "'DM Sans', monospace",
                 }}
               />
               <Area
@@ -1388,7 +1388,7 @@ export default function AthletiSenseDashboard({ t }) {
                 letterSpacing: "0.10em",
                 textTransform: "uppercase",
                 color: t.muted,
-                fontFamily: "'DM Mono', monospace",
+                fontFamily: "'DM Sans', monospace",
               }}
             >
               Breathing Rate Live
@@ -1397,7 +1397,7 @@ export default function AthletiSenseDashboard({ t }) {
               style={{
                 fontSize: 9,
                 color: t.faint,
-                fontFamily: "'DM Mono', monospace",
+                fontFamily: "'DM Sans', monospace",
               }}
             >
               Normal: 12-20 rpm
@@ -1424,7 +1424,7 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 8,
                   fill: t.faint,
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "'DM Sans', monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1434,7 +1434,7 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 8,
                   fill: t.faint,
-                  fontFamily: "'DM Mono', monospace",
+                  fontFamily: "'DM Sans', monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1453,19 +1453,19 @@ export default function AthletiSenseDashboard({ t }) {
                 y={12}
                 stroke="#10b98150"
                 strokeDasharray="4 3"
-                label={{ value: "Low", position: "right", fontSize: 7, fill: "#10b981", fontFamily: "'DM Mono', monospace" }}
+                label={{ value: "Low", position: "right", fontSize: 7, fill: "#10b981", fontFamily: "'DM Sans', monospace" }}
               />
               <ReferenceLine
                 y={20}
                 stroke="#10b98150"
                 strokeDasharray="4 3"
-                label={{ value: "Normal", position: "right", fontSize: 7, fill: "#10b981", fontFamily: "'DM Mono', monospace" }}
+                label={{ value: "Normal", position: "right", fontSize: 7, fill: "#10b981", fontFamily: "'DM Sans', monospace" }}
               />
               <ReferenceLine
                 y={30}
                 stroke="#f59e0b50"
                 strokeDasharray="4 3"
-                label={{ value: "High", position: "right", fontSize: 7, fill: "#f59e0b", fontFamily: "'DM Mono', monospace" }}
+                label={{ value: "High", position: "right", fontSize: 7, fill: "#f59e0b", fontFamily: "'DM Sans', monospace" }}
               />
               <Area
                 type="monotone"
