@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Activity, Lock, Mail, User, Eye, EyeOff, ShieldCheck, Users, UserPlus, Search } from 'lucide-react';
+import { Activity, Lock, Mail, User, Eye, EyeOff, ShieldCheck, Users, UserPlus, Search, ChevronDown } from 'lucide-react';
 
 export default function SignupPage({ onToggle }) {
     const { signup, checkUsernameAvailable } = useAuth();
