@@ -1007,7 +1007,7 @@ export default function AthletiSenseDashboard({ t }) {
           fontFamily: "'DM Mono', monospace",
         }}
       >
-        {isAdmin ? 'Athlete Select' : 'Coach Sync'}
+        {isAdmin ? 'Athlete Select' : 'Connection Sync'}
       </p>
 
       {isAdmin ? (
