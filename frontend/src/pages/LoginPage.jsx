@@ -19,11 +19,6 @@ export default function LoginPage({ onToggle }) {
     setLoading(false);
   };
 
-  const demoLogins = [
-    { label: 'Head Coach', email: 'coach@athletisense.io', password: 'coach123', color: 'text-accent-primary' },
-    { label: 'Therapist', email: 'physio@athletisense.io', password: 'physio123', color: 'text-accent-purple' },
-  ];
-
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background grid */}
@@ -119,22 +114,7 @@ export default function LoginPage({ onToggle }) {
           </form>
         </div>
 
-        {/* Demo credentials */}
-        <div className="card mt-6 animate-fade-up bg-card/60 backdrop-blur-sm border-premium-200 shadow-sm" style={{ animationDelay: '0.2s' }}>
-          <p className="text-xs font-bold text-premium-400 uppercase tracking-wider mb-4 text-center">Quick Demo Login</p>
-          <div className="grid grid-cols-2 gap-3">
-            {demoLogins.map((demo) => (
-              <button
-                key={demo.email}
-                onClick={() => { setEmail(demo.email); setPassword(demo.password); }}
-                className="text-left bg-card hover:bg-premium-50 border border-premium-200 hover:border-premium-300 rounded-xl px-4 py-3 transition-all group shadow-sm hover:shadow"
-              >
-                <p className={`text-sm font-bold ${demo.color} mb-0.5 group-hover:opacity-80 transition-opacity`}>{demo.label}</p>
-                <p className="text-xs text-premium-500 font-medium truncate">{demo.email}</p>
-              </button>
-            ))}
-          </div>
-        </div>
+
       </div>
     </div>
   );
