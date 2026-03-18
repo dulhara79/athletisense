@@ -6,51 +6,32 @@ function generateAlerts(athleteId, latest) {
   const alerts = [];
   const ts = new Date().toLocaleTimeString();
 
-  if (latest.MAX30102_Heart_Rate_bpm > 175) {
-    alerts.push({
-      id: `hr-${ts}`, level: 'critical',
-      message: `CRITICAL: HR Above Threshold (175bpm) - Current: ${latest.MAX30102_Heart_Rate_bpm.toFixed(0)}bpm`,
-      time: ts, athleteId
-    });
-  } else if (latest.MAX30102_Heart_Rate_bpm > 155) {
-    alerts.push({
-      id: `hr-warn-${ts}`, level: 'warning',
-      message: `WARNING: Elevated Heart Rate - ${latest.MAX30102_Heart_Rate_bpm.toFixed(0)}bpm`,
-      time: ts, athleteId
-    });
+  const bpm = latest.MAX30102_Heart_Rate_bpm || 0;
+  const mg = latest.Motion_Magnitude || 0;
+  const temp = latest.DS18B20_Skin_Temperature_C || 0;
+
+  const isMoving = mg > 1.2;
+
+  if (isMoving) {
+    if (bpm > 185) alerts.push({ id: `hr-c-${ts}`, level: 'critical', message: `CRITICAL: Active HR Above Limit - ${bpm.toFixed(0)}bpm`, time: ts, athleteId });
+    else if (bpm > 165) alerts.push({ id: `hr-w-${ts}`, level: 'warning', message: `WARNING: High Active HR - ${bpm.toFixed(0)}bpm`, time: ts, athleteId });
+    else if (bpm > 0 && bpm < 70 && mg > 3.0) alerts.push({ id: `hr-a-${ts}`, level: 'warning', message: `ANOMALY: Low HR vs High Motion - ${bpm.toFixed(0)}bpm`, time: ts, athleteId });
+
+    if (temp > 38.5) alerts.push({ id: `tp-c-${ts}`, level: 'critical', message: `CRITICAL: High Active Skin Temp - ${temp.toFixed(1)}°C`, time: ts, athleteId });
+    else if (temp > 38.0) alerts.push({ id: `tp-w-${ts}`, level: 'warning', message: `WARNING: Elevated Active Temp - ${temp.toFixed(1)}°C`, time: ts, athleteId });
+  } else {
+    if (bpm > 120) alerts.push({ id: `hr-c-${ts}`, level: 'critical', message: `CRITICAL: Resting Tachycardia - ${bpm.toFixed(0)}bpm`, time: ts, athleteId });
+    else if (bpm > 100) alerts.push({ id: `hr-w-${ts}`, level: 'warning', message: `WARNING: Elevated Resting HR - ${bpm.toFixed(0)}bpm`, time: ts, athleteId });
+    else if (bpm > 0 && bpm < 40) alerts.push({ id: `hr-br-${ts}`, level: 'warning', message: `WARNING: Resting Bradycardia - ${bpm.toFixed(0)}bpm`, time: ts, athleteId });
+
+    if (temp > 38.0) alerts.push({ id: `tp-c-${ts}`, level: 'critical', message: `CRITICAL: High Resting Fever Temp - ${temp.toFixed(1)}°C`, time: ts, athleteId });
+    else if (temp > 37.5 && temp > 0) alerts.push({ id: `tp-w-${ts}`, level: 'warning', message: `WARNING: Elevated Resting Temp - ${temp.toFixed(1)}°C`, time: ts, athleteId });
   }
 
-  if (latest.Motion_Magnitude > 11) {
-    alerts.push({
-      id: `motion-${ts}`, level: 'warning',
-      message: `WARNING: High Impact Detected - Motion: ${latest.Motion_Magnitude.toFixed(2)}g`,
-      time: ts, athleteId
-    });
-  }
+  if (mg > 11) alerts.push({ id: `motion-${ts}`, level: 'warning', message: `WARNING: High Impact Detected - Motion: ${mg.toFixed(2)}g`, time: ts, athleteId });
+  if (latest.Fatigue_Index > 0.7) alerts.push({ id: `fatigue-${ts}`, level: 'critical', message: `CRITICAL: High Fatigue Index - ${(latest.Fatigue_Index * 100).toFixed(0)}%`, time: ts, athleteId });
 
-  if (latest.DS18B20_Skin_Temperature_C > 38) {
-    alerts.push({
-      id: `temp-${ts}`, level: 'warning',
-      message: `WARNING: High Skin Temperature - ${latest.DS18B20_Skin_Temperature_C.toFixed(1)}°C`,
-      time: ts, athleteId
-    });
-  }
-
-  if (latest.Fatigue_Index > 0.7) {
-    alerts.push({
-      id: `fatigue-${ts}`, level: 'critical',
-      message: `CRITICAL: High Fatigue Index - ${(latest.Fatigue_Index * 100).toFixed(0)}%`,
-      time: ts, athleteId
-    });
-  }
-
-  if (alerts.length === 0) {
-    alerts.push({
-      id: `ok-${ts}`, level: 'info',
-      message: `INFO: All metrics within normal range - Session active`,
-      time: ts, athleteId
-    });
-  }
+  if (alerts.length === 0) alerts.push({ id: `ok-${ts}`, level: 'info', message: `INFO: All metrics within normal range - Session active`, time: ts, athleteId });
 
   return alerts;
 }
