@@ -1014,7 +1014,7 @@ export default function MultiAthleteComparison({ t }) {
               justifyContent: "center",
             }}
           >
-            {radarDataPerAthlete.map((a) => (
+            {compMode === "head" && radarDataPerAthlete.map((a) => (
               <div
                 key={a.id}
                 style={{ flex: "1 1 120px", maxWidth: 160, minWidth: 110 }}
@@ -1061,7 +1061,7 @@ export default function MultiAthleteComparison({ t }) {
               </div>
             ))}
             {radarDataPerAthlete.length >= 2 && (
-              <div style={{ flex: "1 1 120px", maxWidth: 160, minWidth: 110 }}>
+              <div style={{ flex: compMode === "aggregate" ? "1 1 100%" : "1 1 120px", maxWidth: compMode === "aggregate" ? 320 : 160, minWidth: 110 }}>
                 <p
                   style={{
                     fontSize: 9,
@@ -1072,9 +1072,9 @@ export default function MultiAthleteComparison({ t }) {
                     marginBottom: 2,
                   }}
                 >
-                  Combined
+                  {compMode === "aggregate" ? "Aggregate Overlay" : "Combined"}
                 </p>
-                <ResponsiveContainer width="100%" height={130}>
+                <ResponsiveContainer width="100%" height={compMode === "aggregate" ? 200 : 130}>
                   <RadarChart
                     cx="50%"
                     cy="50%"
@@ -1086,7 +1086,7 @@ export default function MultiAthleteComparison({ t }) {
                     <PolarAngleAxis
                       dataKey="metric"
                       tick={{
-                        fontSize: 7,
+                        fontSize: compMode === "aggregate" ? 9 : 7,
                         fill: t.muted,
                         fontFamily: "'DM Sans',monospace",
                       }}
