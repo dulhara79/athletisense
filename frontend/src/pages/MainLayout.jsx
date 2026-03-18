@@ -133,7 +133,7 @@ export default function MainLayout() {
       }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
         ::-webkit-scrollbar{width:5px;height:5px;}
         ::-webkit-scrollbar-track{background:transparent;}
@@ -186,26 +186,29 @@ export default function MainLayout() {
             <div>
               <div
                 style={{
-                  fontFamily: "'Syne',sans-serif",
-                  fontSize: 14,
+                  fontFamily: "'Bebas Neue','Syne',sans-serif",
+                  fontSize: 30,
                   fontWeight: 800,
-                  letterSpacing: "0.12em",
+                  letterSpacing: "0.10em",
                   textTransform: "uppercase",
                   color: t.text,
+                  marginTop: -8,
+
                 }}
               >
                 ATHLETISENSE
               </div>
               <div
                 style={{
-                  fontSize: 9,
+                  fontSize: 12,
                   color: t.faint,
                   fontFamily: "'DM Sans',monospace",
                   letterSpacing: "0.06em",
-                  marginTop: 2,
+                  marginTop: -6,
                 }}
               >
                 v2.0 · IoT Platform
+
               </div>
             </div>
           </div>
