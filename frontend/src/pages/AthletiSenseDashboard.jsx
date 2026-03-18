@@ -409,14 +409,18 @@ function MotionGauge({ value = 0, max = 15, t }) {
   );
 }
 
-function HeartRateGauge({ value = 0, max = 220, t }) {
+function HeartRateGauge({ value = 0, max = 220, isResting = false, t }) {
   const bpm = typeof value === "number" ? Math.round(value) : 0;
+  
+  const b = isResting 
+    ? { vl: 40, l: 60, h: 80, vh: 100 } 
+    : { vl: 60, l: 90, h: 130, vh: 160 };
 
   function getZone(hr) {
-    if (hr < 50) return { color: "#ef4444", label: "VERY LOW", sublabel: "Risky" };
-    if (hr < 60) return { color: "#f59e0b", label: "LOW", sublabel: "Below Normal" };
-    if (hr <= 100) return { color: "#10b981", label: "NORMAL", sublabel: "Healthy" };
-    if (hr <= 150) return { color: "#f59e0b", label: "HIGH", sublabel: "Elevated" };
+    if (hr < b.vl) return { color: "#ef4444", label: "VERY LOW", sublabel: "Risky" };
+    if (hr < b.l) return { color: "#f59e0b", label: "LOW", sublabel: "Below Normal" };
+    if (hr <= b.h) return { color: "#10b981", label: "NORMAL", sublabel: "Healthy" };
+    if (hr <= b.vh) return { color: "#f59e0b", label: "HIGH", sublabel: "Elevated" };
     return { color: "#ef4444", label: "VERY HIGH", sublabel: "Risky" };
   }
 
@@ -437,10 +441,10 @@ function HeartRateGauge({ value = 0, max = 220, t }) {
   }
 
   const zones = [
-    { frac: 50 / max, color: "#ef4444" },
-    { frac: 60 / max, color: "#f59e0b" },
-    { frac: 100 / max, color: "#10b981" },
-    { frac: 150 / max, color: "#f59e0b" },
+    { frac: b.vl / max, color: "#ef4444" },
+    { frac: b.l / max, color: "#f59e0b" },
+    { frac: b.h / max, color: "#10b981" },
+    { frac: b.vh / max, color: "#f59e0b" },
     { frac: 1, color: "#ef4444" },
   ];
 
@@ -490,48 +494,28 @@ function AlertsPanel({ latest, t }) {
     const mg = motionMagnitude(latest);
     const leads = latest?.heart_rate?.leads_connected;
 
-    if (bpm > 175)
-      out.push({
-        id: `hr-c`,
-        level: "critical",
-        title: "Critical: HR Threshold Exceeded",
-        msg: `${fmtBpm(bpm)} bpm - limit 175 bpm`,
-      });
-    else if (bpm > 155)
-      out.push({
-        id: `hr-w`,
-        level: "warning",
-        title: "Warning: Elevated Heart Rate",
-        msg: `${fmtBpm(bpm)} bpm - approaching threshold`,
-      });
-    if (mg > 11)
-      out.push({
-        id: `mg-w`,
-        level: "warning",
-        title: "Warning: High Impact Detected",
-        msg: `Motion: ${mg.toFixed(2)}g`,
-      });
-    if (temp > 38)
-      out.push({
-        id: `tp-w`,
-        level: "warning",
-        title: "Warning: High Skin Temperature",
-        msg: `${fmtTemp(temp)}°C - heat risk present`,
-      });
-    if (leads === false)
-      out.push({
-        id: `ld-w`,
-        level: "warning",
-        title: "Warning: ECG Leads Disconnected",
-        msg: "Electrode contact lost - check strap placement",
-      });
-    if (!out.length)
-      out.push({
-        id: `ok`,
-        level: "info",
-        title: "All Systems Normal",
-        msg: "All biometric metrics within healthy range",
-      });
+    const isMoving = mg > 1.2;
+
+    if (isMoving) {
+      if (bpm > 185) out.push({ id: `hr-c`, level: "critical", title: "Critical: Active HR Too High", msg: `${fmtBpm(bpm)} bpm - limit 185 bpm` });
+      else if (bpm > 165) out.push({ id: `hr-w`, level: "warning", title: "Warning: High Active HR", msg: `${fmtBpm(bpm)} bpm - monitor intensity` });
+      else if (bpm > 0 && bpm < 70 && mg > 3.0) out.push({ id: `hr-a`, level: "warning", title: "Anomaly: Low HR vs High Motion", msg: `${fmtBpm(bpm)} bpm despite activity` });
+
+      if (temp > 38.5) out.push({ id: `tp-c`, level: "critical", title: "Critical: High Active Temp", msg: `${fmtTemp(temp)}°C - heat exhaustion risk` });
+      else if (temp > 38.0) out.push({ id: `tp-w`, level: "warning", title: "Warning: Elevated Active Temp", msg: `${fmtTemp(temp)}°C - monitor cooling` });
+    } else {
+      if (bpm > 120) out.push({ id: `hr-c`, level: "critical", title: "Critical: Resting Tachycardia", msg: `${fmtBpm(bpm)} bpm while inactive` });
+      else if (bpm > 100) out.push({ id: `hr-w`, level: "warning", title: "Warning: Elevated Resting HR", msg: `${fmtBpm(bpm)} bpm while inactive` });
+      else if (bpm > 0 && bpm < 40) out.push({ id: `hr-br`, level: "warning", title: "Warning: Resting Bradycardia", msg: `Unusually low HR: ${fmtBpm(bpm)} bpm` });
+
+      if (temp > 38.0) out.push({ id: `tp-c`, level: "critical", title: "Critical: High Resting Temp", msg: `${fmtTemp(temp)}°C - fever risk` });
+      else if (temp > 37.5 && temp > 0) out.push({ id: `tp-w`, level: "warning", title: "Warning: Elevated Resting Temp", msg: `${fmtTemp(temp)}°C - possible illness` });
+    }
+
+    if (mg > 11) out.push({ id: `mg-w`, level: "warning", title: "Warning: High Impact Detected", msg: `Shock impact: ${mg.toFixed(1)}g` });
+    if (leads === false) out.push({ id: `ld-w`, level: "warning", title: "Warning: ECG Leads Disconnected", msg: "Electrode contact lost - check strap placement" });
+    if (!out.length) out.push({ id: `ok`, level: "info", title: "All Systems Normal", msg: "All biometric metrics within healthy ranges" });
+
     return out.filter((a) => !dismissed.has(a.id));
   }, [latest, dismissed]);
 
@@ -1203,7 +1187,7 @@ export default function AthletiSenseDashboard({ t }) {
           >
             HR Gauge
           </p>
-          <HeartRateGauge value={bpm} max={220} t={t} />
+          <HeartRateGauge value={bpm} max={220} isResting={mg < 1.2} t={t} />
         </div>
 
         <div
