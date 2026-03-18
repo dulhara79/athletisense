@@ -104,14 +104,14 @@ export default function ConnectionManager({ t }) {
             borderBottom: `1px solid ${t.border}`,
           }}>
             <p style={{ fontSize: 11, fontWeight: 600, color: t.text, marginBottom: 8 }}>
-              {user?.role === 'admin' ? 'Add an athlete by username' : 'Add a coach by username'}
+              {user?.role === 'admin' ? 'Add an athlete by username' : 'Add a connection by username'}
             </p>
             <div style={{ display: 'flex', gap: 6 }}>
               <input
                 type="text"
                 value={sendUsername}
                 onChange={e => { setSendUsername(e.target.value); setSendStatus({ msg: '', ok: false }); }}
-                placeholder="Enter username..."
+                placeholder="Enter Username"
                 style={{
                   flex: 1,
                   padding: '7px 12px',
