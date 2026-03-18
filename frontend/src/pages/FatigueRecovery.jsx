@@ -134,7 +134,7 @@ function ChartTip({ active, payload, label, t }) {
         padding: "8px 12px",
         boxShadow: t.shadow,
         fontSize: 11,
-        fontFamily: "'DM Mono',monospace",
+        fontFamily: "'DM Sans',monospace",
         zIndex: 50,
       }}
     >
@@ -187,7 +187,7 @@ function Card({ title, children, t, right }) {
             textTransform: "uppercase",
             letterSpacing: "0.10em",
             color: t.muted,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'DM Sans',monospace",
           }}
         >
           {title}
@@ -519,7 +519,7 @@ function RecoveryGauge({ score, t }) {
           fill="#ef4444"
           fontSize="8"
           fontWeight="800"
-          fontFamily="'DM Mono',monospace"
+          fontFamily="'DM Sans',monospace"
           textAnchor="middle"
         >
           0
@@ -530,7 +530,7 @@ function RecoveryGauge({ score, t }) {
           fill="#10b981"
           fontSize="8"
           fontWeight="800"
-          fontFamily="'DM Mono',monospace"
+          fontFamily="'DM Sans',monospace"
           textAnchor="middle"
         >
           100
@@ -567,7 +567,7 @@ function RecoveryGauge({ score, t }) {
           fill={color}
           fontSize="30"
           fontWeight="800"
-          fontFamily="'DM Mono',monospace"
+          fontFamily="'DM Sans',monospace"
           textAnchor="middle"
           letterSpacing="-1"
         >
@@ -579,7 +579,7 @@ function RecoveryGauge({ score, t }) {
           fill={t.muted}
           fontSize="8"
           fontWeight="700"
-          fontFamily="'DM Mono',monospace"
+          fontFamily="'DM Sans',monospace"
           textAnchor="middle"
           letterSpacing="0.1em"
         >
@@ -1000,7 +1000,7 @@ export default function FatigueRecovery({ t }) {
             borderRadius: 99,
             fontSize: 10,
             fontWeight: 700,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'DM Sans',monospace",
             background: wsConnected ? t.successBg : t.dangerBg,
             color: wsConnected ? t.success : t.danger,
             border: `1px solid ${wsConnected ? t.success + "30" : t.danger + "30"}`,
@@ -1054,7 +1054,7 @@ export default function FatigueRecovery({ t }) {
               textTransform: "uppercase",
               letterSpacing: "0.10em",
               color: t.muted,
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'DM Sans',monospace",
             }}
           >
             Filters Panel
@@ -1143,7 +1143,7 @@ export default function FatigueRecovery({ t }) {
               letterSpacing: "0.10em",
               color: t.muted,
               marginBottom: 14,
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'DM Sans',monospace",
             }}
           >
             Fatigue Risk Indicator
@@ -1233,7 +1233,7 @@ export default function FatigueRecovery({ t }) {
                 borderRadius: 8,
                 fontSize: 11,
                 fontWeight: 800,
-                fontFamily: "'DM Mono',monospace",
+                fontFamily: "'DM Sans',monospace",
                 background:
                   worstRisk.level === "high"
                     ? t.danger
@@ -1288,7 +1288,7 @@ export default function FatigueRecovery({ t }) {
                       fontSize: 11,
                       fontWeight: 800,
                       color,
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'DM Sans',monospace",
                     }}
                   >
                     {ATHLETE_META[r.id]?.avatar || "?"}
@@ -1301,7 +1301,7 @@ export default function FatigueRecovery({ t }) {
                       style={{
                         fontSize: 9,
                         color: t.muted,
-                        fontFamily: "'DM Mono',monospace",
+                        fontFamily: "'DM Sans',monospace",
                       }}
                     >
                       HR:{r.hr} · Temp:{r.temp}°C · Mg:{r.mg}g
@@ -1315,7 +1315,7 @@ export default function FatigueRecovery({ t }) {
                       borderRadius: 6,
                       background: color,
                       color: "#fff",
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'DM Sans',monospace",
                       flexShrink: 0,
                     }}
                   >
@@ -1340,7 +1340,7 @@ export default function FatigueRecovery({ t }) {
               style={{
                 fontSize: 9,
                 color: t.faint,
-                fontFamily: "'DM Mono',monospace",
+                fontFamily: "'DM Sans',monospace",
               }}
             >
               BPM over session progression
@@ -1362,7 +1362,7 @@ export default function FatigueRecovery({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1372,7 +1372,7 @@ export default function FatigueRecovery({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1389,7 +1389,7 @@ export default function FatigueRecovery({ t }) {
               <Legend
                 wrapperStyle={{
                   fontSize: 9,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
                 iconType="circle"
                 iconSize={7}
@@ -1438,7 +1438,7 @@ export default function FatigueRecovery({ t }) {
               textTransform: "uppercase",
               letterSpacing: "0.10em",
               color: t.muted,
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'DM Sans',monospace",
               alignSelf: "flex-start",
             }}
           >
@@ -1460,7 +1460,7 @@ export default function FatigueRecovery({ t }) {
                   fontSize: 9,
                   fontWeight: 700,
                   color: t.muted,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'DM Sans',monospace",
                 }}
               >
                 <span
@@ -1489,7 +1489,7 @@ export default function FatigueRecovery({ t }) {
                 dataKey="hr"
                 name="HR"
                 domain={[40, 220]}
-                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }}
+                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }}
                 tickLine={false}
                 axisLine={false}
                 label={{ value: "HR (bpm)", position: "insideBottom", offset: -2, fill: t.faint, fontSize: 8 }}
@@ -1499,7 +1499,7 @@ export default function FatigueRecovery({ t }) {
                 dataKey="resp"
                 name="Resp"
                 domain={[0, 50]}
-                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }}
+                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }}
                 tickLine={false}
                 axisLine={false}
               />
@@ -1510,14 +1510,14 @@ export default function FatigueRecovery({ t }) {
                   if (!active || !payload?.length) return null;
                   const d = payload[0]?.payload;
                   return (
-                    <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", boxShadow: t.shadow, fontSize: 11, fontFamily: "'DM Mono',monospace" }}>
+                    <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", boxShadow: t.shadow, fontSize: 11, fontFamily: "'DM Sans',monospace" }}>
                       <p style={{ color: t.muted, marginBottom: 3 }}>HR: <b style={{ color: t.text }}>{d?.hr?.toFixed(0)} bpm</b></p>
                       <p style={{ color: t.muted }}>Resp: <b style={{ color: t.text }}>{d?.resp?.toFixed(1)} br/min</b></p>
                     </div>
                   );
                 }}
               />
-              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Mono',monospace" }} iconType="circle" iconSize={8} />
+              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Sans',monospace" }} iconType="circle" iconSize={8} />
               {scatterData.map((s) => (
                 <Scatter key={s.id} name={s.name} data={s.points} fill={s.color} opacity={0.7} />
               ))}
@@ -1534,7 +1534,7 @@ export default function FatigueRecovery({ t }) {
                 dataKey="hr"
                 name="HR"
                 domain={[40, 220]}
-                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }}
+                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }}
                 tickLine={false}
                 axisLine={false}
                 label={{ value: "HR (bpm)", position: "insideBottom", offset: -2, fill: t.faint, fontSize: 8 }}
@@ -1544,7 +1544,7 @@ export default function FatigueRecovery({ t }) {
                 dataKey="temp"
                 name="Temp"
                 domain={[32, 40]}
-                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }}
+                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }}
                 tickLine={false}
                 axisLine={false}
                 label={{ value: "°C", angle: -90, position: "insideLeft", fill: t.faint, fontSize: 8, dx: -4 }}
@@ -1556,14 +1556,14 @@ export default function FatigueRecovery({ t }) {
                   if (!active || !payload?.length) return null;
                   const d = payload[0]?.payload;
                   return (
-                    <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", boxShadow: t.shadow, fontSize: 11, fontFamily: "'DM Mono',monospace" }}>
+                    <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", boxShadow: t.shadow, fontSize: 11, fontFamily: "'DM Sans',monospace" }}>
                       <p style={{ color: t.muted, marginBottom: 3 }}>HR: <b style={{ color: t.text }}>{d?.hr?.toFixed(0)} bpm</b></p>
                       <p style={{ color: t.muted }}>Temp: <b style={{ color: t.text }}>{d?.temp?.toFixed(1)} °C</b></p>
                     </div>
                   );
                 }}
               />
-              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Mono',monospace" }} iconType="circle" iconSize={8} />
+              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Sans',monospace" }} iconType="circle" iconSize={8} />
               {tempHrData.map((s) => (
                 <Scatter key={s.id} name={s.name} data={s.points} fill={s.color} opacity={0.7} />
               ))}
@@ -1591,10 +1591,10 @@ export default function FatigueRecovery({ t }) {
                 })}
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }} tickLine={false} axisLine={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }} tickLine={false} axisLine={false} />
               <Tooltip content={<ChartTip t={t} />} />
-              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Mono',monospace" }} iconType="circle" iconSize={7} />
+              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Sans',monospace" }} iconType="circle" iconSize={7} />
               {ids.map((id) => (
                 <Area key={id} type="monotone" dataKey={id} name={ATHLETE_META[id]?.name || id} stackId="load" stroke={ATHLETE_META[id]?.color || "#6366f1"} strokeWidth={1.5} fill={`url(#laGrad${id})`} isAnimationActive={false} />
               ))}
@@ -1620,7 +1620,7 @@ export default function FatigueRecovery({ t }) {
               tick={{
                 fontSize: 8,
                 fill: t.faint,
-                fontFamily: "'DM Mono',monospace",
+                fontFamily: "'DM Sans',monospace",
               }}
               tickLine={false}
               axisLine={false}
@@ -1631,14 +1631,14 @@ export default function FatigueRecovery({ t }) {
               tick={{
                 fontSize: 9,
                 fill: t.faint,
-                fontFamily: "'DM Mono',monospace",
+                fontFamily: "'DM Sans',monospace",
               }}
               tickLine={false}
               axisLine={false}
             />
             <Tooltip content={<ChartTip t={t} />} />
             <Legend
-              wrapperStyle={{ fontSize: 9, fontFamily: "'DM Mono',monospace" }}
+              wrapperStyle={{ fontSize: 9, fontFamily: "'DM Sans',monospace" }}
               iconType="circle"
               iconSize={7}
             />
