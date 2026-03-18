@@ -797,6 +797,25 @@ export default function FatigueRecovery({ t }) {
     }));
   }, [allRecords, filterAthletes, athletes]);
 
+  // Temp vs HR Scatter
+  const tempHrData = useMemo(() => {
+    const ids = filterAthletes.length
+      ? filterAthletes
+      : athletes.map((a) => a.id);
+    return ids.map((id) => ({
+      id,
+      color: ATHLETE_META[id]?.color || "#6366f1",
+      name: ATHLETE_META[id]?.name || id,
+      points: (allRecords[id] || [])
+        .slice(-60)
+        .map((r) => ({
+          hr: r?.heart_rate?.bpm_avg || null,
+          temp: r?.temperature?.celsius || null,
+        }))
+        .filter((p) => p.hr && p.temp),
+    }));
+  }, [allRecords, filterAthletes, athletes]);
+
   /**
    * FIX 3 - loadAccumulation "Cannot set properties of undefined"
    * The original code looped over `MONTHS` (12 items) and then inside that loop, * Three issues in the original:
@@ -1100,402 +1119,9 @@ export default function FatigueRecovery({ t }) {
               gap: 5,
             }}
           >
-            <RefreshCw size={11} /> Reset
           </button>
         </div>
       </div>
-
-      {/* Recovery Curve + Gauge */}
-      <div
-        style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 14 }}
-      >
-        <Card
-          title="Recovery Curve (HR)"
-          t={t}
-          right={
-            <span
-              style={{
-                fontSize: 9,
-                color: t.faint,
-                fontFamily: "'DM Mono',monospace",
-              }}
-            >
-              BPM over session progression
-            </span>
-          }
-        >
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart
-              data={recoveryCurveData}
-              margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke={t.chartGrid}
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
-                }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                domain={[60, 180]}
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
-                }}
-                tickLine={false}
-                axisLine={false}
-                label={{
-                  value: "Training Load",
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: t.faint,
-                  fontSize: 8,
-                  dx: -2,
-                }}
-              />
-              <Tooltip content={<ChartTip t={t} />} />
-              <Legend
-                wrapperStyle={{
-                  fontSize: 9,
-                  fontFamily: "'DM Mono',monospace",
-                }}
-                iconType="circle"
-                iconSize={7}
-              />
-              {ids.map((id, idx) => {
-                const color = ATHLETE_META[id]?.color || "#6366f1";
-                return (
-                  <Line
-                    key={id}
-                    type="monotone"
-                    dataKey={id}
-                    name={ATHLETE_META[id]?.name || id}
-                    stroke={color}
-                    strokeWidth={idx === 0 ? 2.5 : 1.5}
-                    dot={{ fill: color, r: 3, strokeWidth: 0 }}
-                    activeDot={{ r: 5, strokeWidth: 0 }}
-                    strokeDasharray={idx === 0 ? undefined : "4 3"}
-                    connectNulls
-                    isAnimationActive={false}
-                  />
-                );
-              })}
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <div
-          className="card-fadein"
-          style={{
-            background: t.card,
-            border: `1px solid ${t.border}`,
-            borderRadius: 14,
-            padding: "1.125rem 1.25rem",
-            boxShadow: t.shadow,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            minWidth: 200,
-            justifyContent: "space-between",
-          }}
-        >
-          <p
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.10em",
-              color: t.muted,
-              fontFamily: "'DM Mono',monospace",
-              alignSelf: "flex-start",
-            }}
-          >
-            Recovery Score
-          </p>
-          <RecoveryGauge score={recoveryScore} t={t} />
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            {[
-              ["#10b981", "Good"],
-              ["#f59e0b", "Mod."],
-              ["#ef4444", "Low"],
-            ].map(([c, l]) => (
-              <span
-                key={l}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 9,
-                  fontWeight: 700,
-                  color: t.muted,
-                  fontFamily: "'DM Mono',monospace",
-                }}
-              >
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: c,
-                  }}
-                />
-                {l}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Scatter + Load Accumulation */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <Card title="HR vs Breathing (Scatter)" t={t}>
-          <ResponsiveContainer width="100%" height={200}>
-            <ScatterChart margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
-              <XAxis
-                type="number"
-                dataKey="hr"
-                name="HR"
-                domain={[40, 220]}
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
-                }}
-                tickLine={false}
-                axisLine={false}
-                label={{
-                  value: "HR (bpm)",
-                  position: "insideBottom",
-                  offset: -2,
-                  fill: t.faint,
-                  fontSize: 8,
-                }}
-              />
-              <YAxis
-                type="number"
-                dataKey="resp"
-                name="Resp"
-                domain={[0, 50]}
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
-                }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <ZAxis range={[20, 20]} />
-              <Tooltip
-                cursor={{ strokeDasharray: "3 3", stroke: t.muted }}
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0]?.payload;
-                  return (
-                    <div
-                      style={{
-                        background: t.card,
-                        border: `1px solid ${t.border}`,
-                        borderRadius: 10,
-                        padding: "8px 12px",
-                        boxShadow: t.shadow,
-                        fontSize: 11,
-                        fontFamily: "'DM Mono',monospace",
-                      }}
-                    >
-                      <p style={{ color: t.muted, marginBottom: 3 }}>
-                        HR:{" "}
-                        <b style={{ color: t.text }}>{d?.hr?.toFixed(0)} bpm</b>
-                      </p>
-                      <p style={{ color: t.muted }}>
-                        Resp:{" "}
-                        <b style={{ color: t.text }}>
-                          {d?.resp?.toFixed(1)} br/min
-                        </b>
-                      </p>
-                    </div>
-                  );
-                }}
-              />
-              <Legend
-                wrapperStyle={{
-                  fontSize: 9,
-                  fontFamily: "'DM Mono',monospace",
-                }}
-                iconType="circle"
-                iconSize={8}
-              />
-              {scatterData.map((s) => (
-                <Scatter
-                  key={s.id}
-                  name={s.name}
-                  data={s.points}
-                  fill={s.color}
-                  opacity={0.7}
-                />
-              ))}
-            </ScatterChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card title="Load Accumulation" t={t}>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart
-              data={loadAccumulation}
-              margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
-            >
-              <defs>
-                {ids.map((id) => {
-                  const color = ATHLETE_META[id]?.color || "#6366f1";
-                  return (
-                    <linearGradient
-                      key={id}
-                      id={`laGrad${id}`}
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor={color} stopOpacity={0.4} />
-                      <stop offset="95%" stopColor={color} stopOpacity={0.05} />
-                    </linearGradient>
-                  );
-                })}
-              </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke={t.chartGrid}
-                vertical={false}
-              />
-              <XAxis
-                dataKey="month"
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
-                }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
-                }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip content={<ChartTip t={t} />} />
-              <Legend
-                wrapperStyle={{
-                  fontSize: 9,
-                  fontFamily: "'DM Mono',monospace",
-                }}
-                iconType="circle"
-                iconSize={7}
-              />
-              {ids.map((id) => {
-                const color = ATHLETE_META[id]?.color || "#6366f1";
-                return (
-                  <Area
-                    key={id}
-                    type="monotone"
-                    dataKey={id}
-                    name={ATHLETE_META[id]?.name || id}
-                    stackId="load"
-                    stroke={color}
-                    strokeWidth={1.5}
-                    fill={`url(#laGrad${id})`}
-                    isAnimationActive={false}
-                  />
-                );
-              })}
-            </AreaChart>
-          </ResponsiveContainer>
-        </Card>
-      </div>
-
-      {/* Weekly Load Trend */}
-      <Card title="Weekly Load Trend (Rolling Average)" t={t}>
-        <ResponsiveContainer width="100%" height={160}>
-          <LineChart
-            data={weeklyTrend}
-            margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={t.chartGrid}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="label"
-              tick={{
-                fontSize: 8,
-                fill: t.faint,
-                fontFamily: "'DM Mono',monospace",
-              }}
-              tickLine={false}
-              axisLine={false}
-              interval={Math.max(1, Math.floor(weeklyTrend.length / 12))}
-            />
-            <YAxis
-              domain={[0, 200]}
-              tick={{
-                fontSize: 9,
-                fill: t.faint,
-                fontFamily: "'DM Mono',monospace",
-              }}
-              tickLine={false}
-              axisLine={false}
-            />
-            <Tooltip content={<ChartTip t={t} />} />
-            <Legend
-              wrapperStyle={{ fontSize: 9, fontFamily: "'DM Mono',monospace" }}
-              iconType="circle"
-              iconSize={7}
-            />
-            <Line
-              type="monotone"
-              dataKey="load"
-              name="Raw load"
-              stroke={t.muted}
-              strokeWidth={1}
-              dot={false}
-              strokeDasharray="3 2"
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="rolling"
-              name="7-pt rolling avg"
-              stroke={t.accent}
-              strokeWidth={2.5}
-              dot={{ fill: t.accent, r: 3, strokeWidth: 0 }}
-              activeDot={{ r: 5, strokeWidth: 0 }}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="resp"
-              name="Breathing rate"
-              stroke="#f59e0b"
-              strokeWidth={1.5}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </Card>
 
       {/* Fatigue Risk Indicator */}
       {worstRisk && (
@@ -1701,6 +1327,354 @@ export default function FatigueRecovery({ t }) {
           </div>
         </div>
       )}
+
+      {/* Recovery Curve + Gauge */}
+      <div
+        style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 14 }}
+      >
+        <Card
+          title="Recovery Curve (HR)"
+          t={t}
+          right={
+            <span
+              style={{
+                fontSize: 9,
+                color: t.faint,
+                fontFamily: "'DM Mono',monospace",
+              }}
+            >
+              BPM over session progression
+            </span>
+          }
+        >
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart
+              data={recoveryCurveData}
+              margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke={t.chartGrid}
+                vertical={false}
+              />
+              <XAxis
+                dataKey="label"
+                tick={{
+                  fontSize: 9,
+                  fill: t.faint,
+                  fontFamily: "'DM Mono',monospace",
+                }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                domain={[60, 180]}
+                tick={{
+                  fontSize: 9,
+                  fill: t.faint,
+                  fontFamily: "'DM Mono',monospace",
+                }}
+                tickLine={false}
+                axisLine={false}
+                label={{
+                  value: "Training Load",
+                  angle: -90,
+                  position: "insideLeft",
+                  fill: t.faint,
+                  fontSize: 8,
+                  dx: -2,
+                }}
+              />
+              <Tooltip content={<ChartTip t={t} />} />
+              <Legend
+                wrapperStyle={{
+                  fontSize: 9,
+                  fontFamily: "'DM Mono',monospace",
+                }}
+                iconType="circle"
+                iconSize={7}
+              />
+              {ids.map((id, idx) => {
+                const color = ATHLETE_META[id]?.color || "#6366f1";
+                return (
+                  <Line
+                    key={id}
+                    type="monotone"
+                    dataKey={id}
+                    name={ATHLETE_META[id]?.name || id}
+                    stroke={color}
+                    strokeWidth={idx === 0 ? 2.5 : 1.5}
+                    dot={{ fill: color, r: 3, strokeWidth: 0 }}
+                    activeDot={{ r: 5, strokeWidth: 0 }}
+                    strokeDasharray={idx === 0 ? undefined : "4 3"}
+                    connectNulls
+                    isAnimationActive={false}
+                  />
+                );
+              })}
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+
+        <div
+          className="card-fadein"
+          style={{
+            background: t.card,
+            border: `1px solid ${t.border}`,
+            borderRadius: 14,
+            padding: "1.125rem 1.25rem",
+            boxShadow: t.shadow,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            minWidth: 200,
+            justifyContent: "space-between",
+          }}
+        >
+          <p
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.10em",
+              color: t.muted,
+              fontFamily: "'DM Mono',monospace",
+              alignSelf: "flex-start",
+            }}
+          >
+            Recovery Score
+          </p>
+          <RecoveryGauge score={recoveryScore} t={t} />
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            {[
+              ["#10b981", "Good"],
+              ["#f59e0b", "Mod."],
+              ["#ef4444", "Low"],
+            ].map(([c, l]) => (
+              <span
+                key={l}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: t.muted,
+                  fontFamily: "'DM Mono',monospace",
+                }}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: c,
+                  }}
+                />
+                {l}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Scatters */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <Card title="HR vs Breathing (Scatter)" t={t}>
+          <ResponsiveContainer width="100%" height={200}>
+            <ScatterChart margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
+              <XAxis
+                type="number"
+                dataKey="hr"
+                name="HR"
+                domain={[40, 220]}
+                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }}
+                tickLine={false}
+                axisLine={false}
+                label={{ value: "HR (bpm)", position: "insideBottom", offset: -2, fill: t.faint, fontSize: 8 }}
+              />
+              <YAxis
+                type="number"
+                dataKey="resp"
+                name="Resp"
+                domain={[0, 50]}
+                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <ZAxis range={[20, 20]} />
+              <Tooltip
+                cursor={{ strokeDasharray: "3 3", stroke: t.muted }}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0]?.payload;
+                  return (
+                    <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", boxShadow: t.shadow, fontSize: 11, fontFamily: "'DM Mono',monospace" }}>
+                      <p style={{ color: t.muted, marginBottom: 3 }}>HR: <b style={{ color: t.text }}>{d?.hr?.toFixed(0)} bpm</b></p>
+                      <p style={{ color: t.muted }}>Resp: <b style={{ color: t.text }}>{d?.resp?.toFixed(1)} br/min</b></p>
+                    </div>
+                  );
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Mono',monospace" }} iconType="circle" iconSize={8} />
+              {scatterData.map((s) => (
+                <Scatter key={s.id} name={s.name} data={s.points} fill={s.color} opacity={0.7} />
+              ))}
+            </ScatterChart>
+          </ResponsiveContainer>
+        </Card>
+
+        <Card title="HR vs Temperature (Scatter)" t={t}>
+          <ResponsiveContainer width="100%" height={200}>
+            <ScatterChart margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
+              <XAxis
+                type="number"
+                dataKey="hr"
+                name="HR"
+                domain={[40, 220]}
+                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }}
+                tickLine={false}
+                axisLine={false}
+                label={{ value: "HR (bpm)", position: "insideBottom", offset: -2, fill: t.faint, fontSize: 8 }}
+              />
+              <YAxis
+                type="number"
+                dataKey="temp"
+                name="Temp"
+                domain={[32, 40]}
+                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }}
+                tickLine={false}
+                axisLine={false}
+                label={{ value: "°C", angle: -90, position: "insideLeft", fill: t.faint, fontSize: 8, dx: -4 }}
+              />
+              <ZAxis range={[20, 20]} />
+              <Tooltip
+                cursor={{ strokeDasharray: "3 3", stroke: t.muted }}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0]?.payload;
+                  return (
+                    <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", boxShadow: t.shadow, fontSize: 11, fontFamily: "'DM Mono',monospace" }}>
+                      <p style={{ color: t.muted, marginBottom: 3 }}>HR: <b style={{ color: t.text }}>{d?.hr?.toFixed(0)} bpm</b></p>
+                      <p style={{ color: t.muted }}>Temp: <b style={{ color: t.text }}>{d?.temp?.toFixed(1)} °C</b></p>
+                    </div>
+                  );
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Mono',monospace" }} iconType="circle" iconSize={8} />
+              {tempHrData.map((s) => (
+                <Scatter key={s.id} name={s.name} data={s.points} fill={s.color} opacity={0.7} />
+              ))}
+            </ScatterChart>
+          </ResponsiveContainer>
+        </Card>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+        <Card title="Load Accumulation" t={t}>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart
+              data={loadAccumulation}
+              margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
+            >
+              <defs>
+                {ids.map((id) => {
+                  const color = ATHLETE_META[id]?.color || "#6366f1";
+                  return (
+                    <linearGradient key={id} id={`laGrad${id}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={color} stopOpacity={0.4} />
+                      <stop offset="95%" stopColor={color} stopOpacity={0.05} />
+                    </linearGradient>
+                  );
+                })}
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Mono',monospace" }} tickLine={false} axisLine={false} />
+              <Tooltip content={<ChartTip t={t} />} />
+              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Mono',monospace" }} iconType="circle" iconSize={7} />
+              {ids.map((id) => (
+                <Area key={id} type="monotone" dataKey={id} name={ATHLETE_META[id]?.name || id} stackId="load" stroke={ATHLETE_META[id]?.color || "#6366f1"} strokeWidth={1.5} fill={`url(#laGrad${id})`} isAnimationActive={false} />
+              ))}
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
+      </div>
+
+      {/* Weekly Load Trend */}
+      <Card title="Weekly Load Trend (Rolling Average)" t={t}>
+        <ResponsiveContainer width="100%" height={160}>
+          <LineChart
+            data={weeklyTrend}
+            margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={t.chartGrid}
+              vertical={false}
+            />
+            <XAxis
+              dataKey="label"
+              tick={{
+                fontSize: 8,
+                fill: t.faint,
+                fontFamily: "'DM Mono',monospace",
+              }}
+              tickLine={false}
+              axisLine={false}
+              interval={Math.max(1, Math.floor(weeklyTrend.length / 12))}
+            />
+            <YAxis
+              domain={[0, 200]}
+              tick={{
+                fontSize: 9,
+                fill: t.faint,
+                fontFamily: "'DM Mono',monospace",
+              }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip content={<ChartTip t={t} />} />
+            <Legend
+              wrapperStyle={{ fontSize: 9, fontFamily: "'DM Mono',monospace" }}
+              iconType="circle"
+              iconSize={7}
+            />
+            <Line
+              type="monotone"
+              dataKey="load"
+              name="Raw load"
+              stroke={t.muted}
+              strokeWidth={1}
+              dot={false}
+              strokeDasharray="3 2"
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="rolling"
+              name="7-pt rolling avg"
+              stroke={t.accent}
+              strokeWidth={2.5}
+              dot={{ fill: t.accent, r: 3, strokeWidth: 0 }}
+              activeDot={{ r: 5, strokeWidth: 0 }}
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="resp"
+              name="Breathing rate"
+              stroke="#f59e0b"
+              strokeWidth={1.5}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </Card>
+
     </main>
   );
 }

@@ -7,6 +7,9 @@ import {
   Line,
   AreaChart,
   Area,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -425,35 +428,57 @@ export default function PerformanceAnalytics({ t }) {
       if (!d) return;
       const mi = d.getMonth();
       buckets[mi].hrLoad += r?.heart_rate?.bpm_avg || 0;
-      buckets[mi].steps += (r?.motion?.step_count || 0) / 100;
+      buckets[mi].steps += r?.motion?.step_count || 0;
       buckets[mi].motion += motionMag(r) * 50;
       buckets[mi].count++;
     });
     return buckets.map((b) => ({
       month: b.month,
       "Training Load": b.count ? Math.round(b.hrLoad / b.count) : 0,
-      "Steps (÷100)": b.count ? Math.round(b.steps / b.count) : 0,
+      "Avg Steps": b.count ? Math.round(b.steps / b.count) : 0,
       Motion: b.count ? parseFloat((b.motion / b.count).toFixed(1)) : 0,
     }));
   }, [filteredRecords]);
 
-  const seasonalHR = useMemo(() => {
-    const n = filteredRecords.length;
-    if (!n) return [];
-    const seasons = ["Pre-Season", "Off-Season", "In-Season", "Post-Season"];
-    return seasons.map((s, i) => {
-      const slice = filteredRecords.slice(
-        Math.floor((n * i) / 4),
-        Math.floor((n * (i + 1)) / 4),
-      );
-      const hrValues = slice
-        .map((r) => r?.heart_rate?.bpm_avg || 0)
-        .filter(Boolean);
-      return {
-        season: s,
-        avgHR: hrValues.length ? Math.round(avg(hrValues)) : 0,
-      };
+  const monthlyAvgHR = useMemo(() => {
+    const buckets = MONTHS.map((m) => ({ month: m, hrSum: 0, count: 0 }));
+    filteredRecords.forEach((r) => {
+      const d = parseTs(r.timestamp);
+      if (!d) return;
+      const hr = r?.heart_rate?.bpm_avg || 0;
+      if (hr > 0) {
+        buckets[d.getMonth()].hrSum += hr;
+        buckets[d.getMonth()].count++;
+      }
     });
+    return buckets.map((b) => ({
+      month: b.month,
+      avgHR: b.count ? Math.round(b.hrSum / b.count) : 0,
+    }));
+  }, [filteredRecords]);
+
+  const hrZoneDistribution = useMemo(() => {
+    const zones = [
+      { name: "Rest (<60)", min: 0, max: 60, color: "#3b82f6", count: 0 },
+      { name: "Fat Burn (60-120)", min: 60, max: 120, color: "#10b981", count: 0 },
+      { name: "Cardio (120-150)", min: 120, max: 150, color: "#f59e0b", count: 0 },
+      { name: "Peak (150-175)", min: 150, max: 175, color: "#f97316", count: 0 },
+      { name: "Max (>175)", min: 175, max: 999, color: "#ef4444", count: 0 },
+    ];
+    filteredRecords.forEach((r) => {
+      const hr = r?.heart_rate?.bpm_avg || 0;
+      if (hr <= 0) return;
+      for (const z of zones) {
+        if (hr >= z.min && hr < z.max) { z.count++; break; }
+      }
+    });
+    const total = zones.reduce((s, z) => s + z.count, 0);
+    return zones.map((z) => ({
+      name: z.name,
+      value: z.count,
+      pct: total ? Math.round((z.count / total) * 100) : 0,
+      color: z.color,
+    }));
   }, [filteredRecords]);
 
   const breathingTrend = useMemo(() => {
@@ -841,7 +866,7 @@ export default function PerformanceAnalytics({ t }) {
                 fill="#4f46e5"
                 radius={[0, 0, 0, 0]}
               />
-              <Bar dataKey="Steps (÷100)" stackId="a" fill="#f59e0b" />
+              <Bar dataKey="Avg Steps" stackId="a" fill="#f59e0b" />
               <Bar
                 dataKey="Motion"
                 stackId="a"
@@ -852,10 +877,10 @@ export default function PerformanceAnalytics({ t }) {
           </ResponsiveContainer>
         </Card>
 
-        <Card title="Seasonal HR Trend" t={t}>
+        <Card title="Monthly Avg HR Trend" t={t}>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart
-              data={seasonalHR}
+              data={monthlyAvgHR}
               margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
             >
               <CartesianGrid
@@ -864,7 +889,7 @@ export default function PerformanceAnalytics({ t }) {
                 vertical={false}
               />
               <XAxis
-                dataKey="season"
+                dataKey="month"
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
@@ -874,7 +899,7 @@ export default function PerformanceAnalytics({ t }) {
                 axisLine={false}
               />
               <YAxis
-                domain={[80, 200]}
+                domain={[40, 200]}
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
@@ -888,6 +913,7 @@ export default function PerformanceAnalytics({ t }) {
                 y={175}
                 stroke={`${t.danger}50`}
                 strokeDasharray="4 3"
+                label={{ value: "Max HR", position: "right", fontSize: 8, fill: t.danger, fontFamily: "'DM Mono',monospace" }}
               />
               <Line
                 type="monotone"
@@ -1010,6 +1036,56 @@ export default function PerformanceAnalytics({ t }) {
           </ResponsiveContainer>
         </Card>
       </div>
+
+      <Card title="HR Zone Distribution" t={t}>
+        <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
+          <div style={{ width: 220, height: 220, flexShrink: 0 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={hrZoneDistribution}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={90}
+                  paddingAngle={3}
+                  dataKey="value"
+                  isAnimationActive={false}
+                  stroke="none"
+                >
+                  {hrZoneDistribution.map((entry, index) => (
+                    <Cell key={index} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0].payload;
+                    return (
+                      <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", boxShadow: t.shadow, fontSize: 11, fontFamily: "'DM Mono',monospace" }}>
+                        <p style={{ color: d.color, fontWeight: 700, marginBottom: 2 }}>{d.name}</p>
+                        <p style={{ color: t.text }}>{d.value} readings ({d.pct}%)</p>
+                      </div>
+                    );
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, minWidth: 200 }}>
+            {hrZoneDistribution.map((z) => (
+              <div key={z.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: z.color, flexShrink: 0 }} />
+                <span style={{ fontSize: 11, fontWeight: 600, color: t.text, flex: 1, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{z.name}</span>
+                <div style={{ flex: 2, height: 6, borderRadius: 99, background: t.surface2 }}>
+                  <div style={{ height: "100%", borderRadius: 99, width: `${z.pct}%`, background: z.color, transition: "width 0.4s" }} />
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 800, color: z.color, fontFamily: "'DM Mono',monospace", minWidth: 32, textAlign: "right" }}>{z.pct}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
 
       <Card title="Intensity Heatmap (Motion Magnitude)" t={t}>
         <div style={{ overflowX: "auto" }}>

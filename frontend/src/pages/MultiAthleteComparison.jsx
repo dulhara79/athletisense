@@ -640,7 +640,7 @@ export default function MultiAthleteComparison({ t }) {
           value: normalize(a.load, ranges.load.min, ranges.load.max),
         },
         {
-          metric: "Consistency",
+          metric: "HR Stability",
           value: normalize(
             a.consistency,
             ranges.consistency.min,
@@ -660,7 +660,7 @@ export default function MultiAthleteComparison({ t }) {
   }, [athleteStats]);
 
   const rankingData = useMemo(() => {
-    const metrics = ["Max HR", "Avg Resp", "Avg Motion", "Load", "Consistency"];
+    const metrics = ["Max HR", "Avg Resp", "Avg Motion", "Load", "HR Stability"];
     return metrics.map((metric) => {
       const row = { metric };
       athleteStats.forEach((a) => {
@@ -1348,7 +1348,7 @@ export default function MultiAthleteComparison({ t }) {
         </Card>
 
         <Card
-          title="Consistency Trend (Weekly)"
+          title="HR Stability Trend (Weekly)"
           t={t}
           right={
             <div style={{ display: "flex", gap: 8 }}>
@@ -1409,7 +1409,7 @@ export default function MultiAthleteComparison({ t }) {
                 tickLine={false}
                 axisLine={false}
                 label={{
-                  value: "Consistency",
+                  value: "HR Stability",
                   angle: -90,
                   position: "insideLeft",
                   fill: t.faint,
@@ -1470,7 +1470,7 @@ export default function MultiAthleteComparison({ t }) {
                   { key: "load", label: "Load" },
                   { key: "avgResp", label: "Avg Resp" },
                   { key: "motionRate", label: "Motion Rate" },
-                  { key: "consistency", label: "Consistency" },
+                  { key: "consistency", label: "HR Stability" },
                 ].map((col) => (
                   <th
                     key={col.key}

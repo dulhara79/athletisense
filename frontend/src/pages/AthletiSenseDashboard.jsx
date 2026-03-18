@@ -290,7 +290,7 @@ function SessionTimer({ t }) {
   );
 }
 
-function StatusCard({ athlete, wsConnected, t }) {
+function StatusCard({ athlete, wsConnected, steps, t }) {
   return (
     <div
       className="card-fadein"
@@ -321,33 +321,16 @@ function StatusCard({ athlete, wsConnected, t }) {
       <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Activity size={13} color={t.accent} />
-            <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>
-              Training:
-            </span>
-            <span style={{ fontSize: 11, color: t.text, fontWeight: 700 }}>
-              Cardio
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Battery size={13} color={t.success} />
-            <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>
-              Batt:
-            </span>
-            <span style={{ fontSize: 11, color: t.success, fontWeight: 700 }}>
-              85%
-            </span>
-          </div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {wsConnected ? (
               <Wifi size={13} color={t.success} />
             ) : (
               <WifiOff size={13} color={t.danger} />
             )}
-            <span style={{ fontSize: 11, color: t.text, fontWeight: 700 }}>
-              {wsConnected ? "Live" : "Offline"}
+            <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>
+              Connection:
+            </span>
+            <span style={{ fontSize: 11, color: wsConnected ? t.success : t.danger, fontWeight: 700 }}>
+              {wsConnected ? "Live (WS)" : "Offline"}
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -357,6 +340,17 @@ function StatusCard({ athlete, wsConnected, t }) {
             </span>
             <span style={{ fontSize: 11, color: t.text, fontWeight: 700 }}>
               {athlete?.system?.wifi_rssi ?? "--"} dBm
+            </span>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Activity size={13} color={t.accent} />
+            <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>
+              Steps:
+            </span>
+            <span style={{ fontSize: 11, color: t.text, fontWeight: 700 }}>
+              {steps ?? "--"}
             </span>
           </div>
         </div>
@@ -1210,103 +1204,8 @@ export default function AthletiSenseDashboard({ t }) {
       )}
     </div>
 
-        {/* --- Removed the other parts of StatusCard that were manually extracted, they belong here --- */}
-
         <SessionTimer t={t} />
-        <StatusCard athlete={latest} wsConnected={wsConnected} t={t} />
-
-        <div
-          className="card-fadein"
-          style={{
-            background: t.card,
-            border: `1px solid ${t.border}`,
-            borderRadius: 16,
-            padding: "1rem 1.25rem",
-            flex: 1,
-            boxShadow: t.shadow,
-          }}
-        >
-          <p
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.10em",
-              textTransform: "uppercase",
-              color: t.muted,
-              marginBottom: 8,
-              fontFamily: "'DM Mono', monospace",
-            }}
-          >
-            Mode
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {wsConnected ? (
-                <Wifi size={13} color={t.success} />
-              ) : (
-                <WifiOff size={13} color={t.faint} />
-              )}
-              <span style={{ fontSize: 10, color: t.muted, fontWeight: 600 }}>
-                Connection:
-              </span>
-              <span
-                style={{
-                  fontSize: 10,
-                  color: wsConnected ? t.success : t.faint,
-                  fontWeight: 700,
-                }}
-              >
-                {wsConnected ? "Stable (WS)" : "Offline"}
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Signal size={13} color={t.accent} />
-              <span style={{ fontSize: 10, color: t.muted, fontWeight: 600 }}>
-                Steps:
-              </span>
-              <span style={{ fontSize: 10, color: t.text, fontWeight: 700 }}>
-                {steps ?? "--"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-          }}
-        >
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "6px 14px",
-              borderRadius: 99,
-              fontSize: 11,
-              fontWeight: 700,
-              fontFamily: "'DM Mono', monospace",
-              background: wsConnected ? t.successBg : t.dangerBg,
-              color: wsConnected ? t.success : t.danger,
-              border: `1px solid ${wsConnected ? t.success : t.danger}30`,
-            }}
-          >
-            {wsConnected ? (
-              <>
-                <LiveDot t={t} />
-                LIVE
-              </>
-            ) : (
-              <>
-                <WifiOff size={11} />
-                OFFLINE
-              </>
-            )}
-          </span>
-        </div>
+        <StatusCard athlete={latest} wsConnected={wsConnected} steps={steps} t={t} />
       </div>
 
       <div style={{ display: "flex", gap: 12 }}>
@@ -1336,11 +1235,22 @@ export default function AthletiSenseDashboard({ t }) {
           title="Temperature"
           value={fmtTemp(temp)}
           unit="°C"
-          sub={`Skin Temp: ${fmtTemp(temp)}°C`}
+          sub={`Range: ${chartData.length ? fmtTemp(Math.min(...chartData.filter(d => d.temp).map(d => d.temp))) : "--"} - ${chartData.length ? fmtTemp(Math.max(...chartData.filter(d => d.temp).map(d => d.temp))) : "--"}°C`}
           color="#f59e0b"
           icon={Thermometer}
           sparkData={chartData}
           sparkKey="temp"
+          t={t}
+        />
+        <StatCard
+          title="Steps"
+          value={steps ?? "--"}
+          unit="steps"
+          sub={`Max: ${chartData.length ? Math.max(...chartData.map((d) => d.steps || 0)) : "--"}`}
+          color="#8b5cf6"
+          icon={Activity}
+          sparkData={chartData}
+          sparkKey="steps"
           t={t}
         />
       </div>
@@ -1449,16 +1359,6 @@ export default function AthletiSenseDashboard({ t }) {
                 stroke="#10b981"
                 strokeWidth={2}
                 fill="url(#mgAreaGrad)"
-                dot={false}
-                isAnimationActive={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="resp"
-                name="Resp rate (÷10)"
-                stroke="#3b82f6"
-                strokeWidth={1.5}
-                fill="url(#mgArea2)"
                 dot={false}
                 isAnimationActive={false}
               />
@@ -1664,26 +1564,43 @@ export default function AthletiSenseDashboard({ t }) {
             boxShadow: t.shadow,
           }}
         >
-          <p
+          <div
             style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.10em",
-              textTransform: "uppercase",
-              color: t.muted,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
               marginBottom: 12,
-              fontFamily: "'DM Mono', monospace",
             }}
           >
-            Breathing vs Motion
-          </p>
+            <p
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.10em",
+                textTransform: "uppercase",
+                color: t.muted,
+                fontFamily: "'DM Mono', monospace",
+              }}
+            >
+              Breathing Rate Live
+            </p>
+            <span
+              style={{
+                fontSize: 9,
+                color: t.faint,
+                fontFamily: "'DM Mono', monospace",
+              }}
+            >
+              Normal: 12-20 rpm
+            </span>
+          </div>
           <ResponsiveContainer width="100%" height={160}>
-            <ComposedChart
+            <AreaChart
               data={chartData}
-              margin={{ top: 5, right: 30, bottom: 0, left: 0 }}
+              margin={{ top: 5, right: 10, bottom: 0, left: 0 }}
             >
               <defs>
-                <linearGradient id="brGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="brLiveGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
@@ -1704,7 +1621,6 @@ export default function AthletiSenseDashboard({ t }) {
                 axisLine={false}
               />
               <YAxis
-                yAxisId="resp"
                 domain={[0, 50]}
                 tick={{
                   fontSize: 8,
@@ -1714,52 +1630,46 @@ export default function AthletiSenseDashboard({ t }) {
                 tickLine={false}
                 axisLine={false}
                 width={28}
-              />
-              <YAxis
-                yAxisId="mg"
-                orientation="right"
-                domain={[0, 15]}
-                tick={{
-                  fontSize: 8,
+                label={{
+                  value: "br/min",
+                  angle: -90,
+                  position: "insideLeft",
                   fill: t.faint,
-                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 8,
+                  dx: -8,
                 }}
-                tickLine={false}
-                axisLine={false}
-                width={32}
-                tickFormatter={(v) => `${v}g`}
               />
               <Tooltip content={<ChartTip t={t} />} />
-              <Legend
-                wrapperStyle={{
-                  fontSize: 9,
-                  fontFamily: "'DM Mono', monospace",
-                }}
+              <ReferenceLine
+                y={12}
+                stroke="#10b98150"
+                strokeDasharray="4 3"
+                label={{ value: "Low", position: "right", fontSize: 7, fill: "#10b981", fontFamily: "'DM Mono', monospace" }}
+              />
+              <ReferenceLine
+                y={20}
+                stroke="#10b98150"
+                strokeDasharray="4 3"
+                label={{ value: "Normal", position: "right", fontSize: 7, fill: "#10b981", fontFamily: "'DM Mono', monospace" }}
+              />
+              <ReferenceLine
+                y={30}
+                stroke="#f59e0b50"
+                strokeDasharray="4 3"
+                label={{ value: "High", position: "right", fontSize: 7, fill: "#f59e0b", fontFamily: "'DM Mono', monospace" }}
               />
               <Area
-                yAxisId="resp"
                 type="monotone"
                 dataKey="resp"
                 name="Breathing Rate"
                 stroke="#3b82f6"
                 strokeWidth={2}
-                fill="url(#brGrad)"
+                fill="url(#brLiveGrad)"
                 dot={false}
                 isAnimationActive={false}
                 unit=" rpm"
               />
-              <Line
-                yAxisId="mg"
-                type="monotone"
-                dataKey="mg"
-                name="Motion"
-                stroke="#10b981"
-                strokeWidth={1.5}
-                dot={false}
-                isAnimationActive={false}
-                unit="g"
-              />
-            </ComposedChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
