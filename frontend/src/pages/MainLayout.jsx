@@ -17,6 +17,7 @@ import {
   LogOut,
   LogIn,
   Link2,
+  Trash2,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -113,7 +114,7 @@ export default function MainLayout() {
   const [activePage, setActivePage] = useState("monitoring");
 
   // Pull user and logout function from your Auth context
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
 
   // Role-based filtering: athletes cannot access the comparison page
   const isAdmin = user?.role === 'admin';
@@ -331,30 +332,59 @@ export default function MainLayout() {
         </nav>
 
         {/* ── Auth Buttons (Login / Logout) ───────────────── */}
-        <div style={{ padding: "0.75rem", borderTop: `1px solid ${t.border}` }}>
+        <div style={{ padding: "0.75rem", borderTop: `1px solid ${t.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
           {user ? (
-            <button
-              className="auth-btn"
-              onClick={logout}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                width: "100%",
-                padding: "9px",
-                borderRadius: 10,
-                background: t.dangerBg,
-                border: "1px solid transparent",
-                cursor: "pointer",
-                transition: "filter 0.2s",
-              }}
-            >
-              <LogOut size={14} color={t.danger} strokeWidth={2.5} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: t.danger }}>
-                Sign Out
-              </span>
-            </button>
+            <>
+              <button
+                className="auth-btn"
+                onClick={logout}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  width: "100%",
+                  padding: "9px",
+                  borderRadius: 10,
+                  background: t.dangerBg,
+                  border: "1px solid transparent",
+                  cursor: "pointer",
+                  transition: "filter 0.2s",
+                }}
+              >
+                <LogOut size={14} color={t.danger} strokeWidth={2.5} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: t.danger }}>
+                  Sign Out
+                </span>
+              </button>
+              
+              <button
+                className="auth-btn"
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+                    deleteAccount();
+                  }
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  width: "100%",
+                  padding: "9px",
+                  borderRadius: 10,
+                  background: t.dangerBg,
+                  border: "1px solid transparent",
+                  cursor: "pointer",
+                  transition: "filter 0.2s",
+                }}
+              >
+                <Trash2 size={14} color={t.danger} strokeWidth={2.5} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: t.danger }}>
+                  Delete Account
+                </span>
+              </button>
+            </>
           ) : (
             <button
               className="auth-btn"
