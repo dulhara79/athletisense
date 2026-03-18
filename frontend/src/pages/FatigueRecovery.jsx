@@ -473,7 +473,7 @@ function RecoveryGauge({ score, t }) {
 
   return (
     <div
-      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+      style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}
     >
       <svg viewBox="0 0 180 140" style={{ width: "100%", maxWidth: 220 }}>
         {(() => {
