@@ -24,7 +24,7 @@ export default function Sidebar({ active, onChange, connected }) {
       {/* Logo */}
       <div className="p-6 border-b border-premium-100 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-surface-primary border border-indigo-100 flex items-center justify-center shadow-sm">
+          <div className="w-[52px] h-10 rounded-xl bg-surface-primary border border-indigo-100 flex items-center justify-center shadow-sm">
             <Activity size={20} className="text-accent-primary" />
           </div>
           <div>
