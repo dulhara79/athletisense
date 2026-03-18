@@ -459,18 +459,25 @@ export default function PerformanceAnalytics({ t }) {
 
   const hrZoneDistribution = useMemo(() => {
     const zones = [
-      { name: "Rest (<60)", min: 0, max: 60, color: "#3b82f6", count: 0 },
-      { name: "Fat Burn (60-120)", min: 60, max: 120, color: "#10b981", count: 0 },
-      { name: "Cardio (120-150)", min: 120, max: 150, color: "#f59e0b", count: 0 },
-      { name: "Peak (150-175)", min: 150, max: 175, color: "#f97316", count: 0 },
-      { name: "Max (>175)", min: 175, max: 999, color: "#ef4444", count: 0 },
+      { name: "Very Low", color: "#ef4444", count: 0 },
+      { name: "Low", color: "#f59e0b", count: 0 },
+      { name: "Normal", color: "#10b981", count: 0 },
+      { name: "High", color: "#f59e0b", count: 0 },
+      { name: "Very High", color: "#ef4444", count: 0 },
     ];
     filteredRecords.forEach((r) => {
       const hr = r?.heart_rate?.bpm_avg || 0;
       if (hr <= 0) return;
-      for (const z of zones) {
-        if (hr >= z.min && hr < z.max) { z.count++; break; }
-      }
+      
+      const b = motionMag(r) < 1.2 
+        ? { vl: 40, l: 60, h: 80, vh: 100 } 
+        : { vl: 60, l: 90, h: 130, vh: 160 };
+
+      if (hr < b.vl) zones[0].count++;
+      else if (hr < b.l) zones[1].count++;
+      else if (hr <= b.h) zones[2].count++;
+      else if (hr <= b.vh) zones[3].count++;
+      else zones[4].count++;
     });
     const total = zones.reduce((s, z) => s + z.count, 0);
     return zones.map((z) => ({
