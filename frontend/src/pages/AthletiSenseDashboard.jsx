@@ -368,165 +368,7 @@ function MotionGauge({ value = 0, max = 15, t }) {
   }, [pct]);
 
   const color = anim < 0.33 ? "#10b981" : anim < 0.66 ? "#f59e0b" : "#ef4444";
-  const cx = 80,
-    cy = 85,
-    r = 55;
-  const angle = (p, offset = 135) => offset + p * 270;
-
-  function pt(angleDeg, radius = r) {
-    const rad = ((angleDeg - 90) * Math.PI) / 180;
-    return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
-  }
-  function arc(start, end, radius = r) {
-    if (end - start < 0.01) return "";
-    const s = pt(start, radius),
-      e = pt(end, radius);
-    const large = end - start > 180 ? 1 : 0;
-    return `M ${s.x} ${s.y} A ${radius} ${radius} 0 ${large} 1 ${e.x} ${e.y}`;
-  }
-
-  const score = (anim * 10).toFixed(1);
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        width: "100%",
-      }}
-    >
-      <svg viewBox="0 0 160 155" style={{ width: "100%", maxWidth: 220 }}>
-        <defs>
-          <linearGradient id="mgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#10b981" />
-            <stop offset="50%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#ef4444" />
-          </linearGradient>
-        </defs>
-        <path
-          d={arc(135, 405)}
-          fill="none"
-          stroke={t.surface}
-          strokeWidth={14}
-          strokeLinecap="round"
-        />
-        <path
-          d={arc(135, 405)}
-          fill="none"
-          stroke="url(#mgGrad)"
-          strokeWidth={14}
-          strokeLinecap="round"
-          opacity={0.12}
-        />
-        {anim > 0.005 && (
-          <path
-            d={arc(135, 135 + anim * 270)}
-            fill="none"
-            stroke={color}
-            strokeWidth={14}
-            strokeLinecap="round"
-            style={{ transition: "stroke 0.4s ease, d 0.6s ease" }}
-          />
-        )}
-        {[
-          ["LOW", "#10b981", 20, 115],
-          ["MED", "#f59e0b", 80, 28],
-          ["HIGH", "#ef4444", 140, 115],
-        ].map(([l, c, x, y]) => (
-          <text
-            key={l}
-            x={x}
-            y={y}
-            fill={c}
-            fontSize="7.5"
-            fontWeight="800"
-            fontFamily="'DM Mono', monospace"
-            textAnchor="middle"
-          >
-            {l}
-          </text>
-        ))}
-        <g
-          transform={`rotate(${angle(anim) - 90}, ${cx}, ${cy})`}
-          style={{
-            transition: "transform 0.6s cubic-bezier(0.34,1.56,0.64,1)",
-          }}
-        >
-          <line
-            x1={cx}
-            y1={cy}
-            x2={cx}
-            y2={cy - 46}
-            stroke={color}
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-        </g>
-        <circle
-          cx={cx}
-          cy={cy}
-          r={8}
-          fill={t.card}
-          stroke={color}
-          strokeWidth={2.5}
-        />
-        <circle cx={cx} cy={cy} r={3} fill={color} />
-        <text
-          x={cx}
-          y={cy + 32}
-          fill={color}
-          fontSize="24"
-          fontWeight="700"
-          fontFamily="'DM Mono', monospace"
-          textAnchor="middle"
-          letterSpacing="-1"
-        >
-          {score}
-        </text>
-        <text
-          x={cx}
-          y={cy + 47}
-          fill={t.muted}
-          fontSize="7"
-          fontWeight="700"
-          fontFamily="'DM Mono', monospace"
-          textAnchor="middle"
-          letterSpacing="0.08em"
-        >
-          INTENSITY SCORE
-        </text>
-        <text
-          x={cx}
-          y={cy + 58}
-          fill={t.faint}
-          fontSize="7"
-          fontFamily="'DM Mono', monospace"
-          textAnchor="middle"
-        >
-          {value.toFixed(2)}g / {max}g max
-        </text>
-      </svg>
-    </div>
-  );
-}
-
-function HeartRateGauge({ value = 0, max = 220, t }) {
-  const bpm = typeof value === "number" ? Math.round(value) : 0;
-
-  // 5-zone HR color logic
-  function getZone(hr) {
-    if (hr < 50) return { color: "#ef4444", label: "VERY LOW", sublabel: "Risky" };
-    if (hr < 60) return { color: "#f59e0b", label: "LOW", sublabel: "Below Normal" };
-    if (hr <= 100) return { color: "#10b981", label: "NORMAL", sublabel: "Healthy" };
-    if (hr <= 150) return { color: "#f59e0b", label: "HIGH", sublabel: "Elevated" };
-    return { color: "#ef4444", label: "VERY HIGH", sublabel: "Risky" };
-  }
-
-  const zone = getZone(bpm);
-  const cx = 80, cy = 85, r = 55;
-  const totalArc = 270; // degrees of arc
-  const startAngle = 135;
+  const cx = 80, cy = 110, r = 60;
 
   function pt(angleDeg, radius = r) {
     const rad = ((angleDeg - 90) * Math.PI) / 180;
@@ -539,130 +381,97 @@ function HeartRateGauge({ value = 0, max = 220, t }) {
     return `M ${s.x} ${s.y} A ${radius} ${radius} 0 ${large} 1 ${e.x} ${e.y}`;
   }
 
-  // Zone boundaries as fractions of max (220)
-  // 0-50, 50-60, 60-100, 100-150, 150-220
+  const score = (anim * 10).toFixed(1);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+      <svg viewBox="0 0 160 120" style={{ width: "100%", maxWidth: 220 }}>
+        <defs>
+          <linearGradient id="mgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#10b981" />
+            <stop offset="50%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#ef4444" />
+          </linearGradient>
+        </defs>
+        <path d={arc(270, 450)} fill="none" stroke={t.surface} strokeWidth={14} strokeLinecap="round" />
+        <path d={arc(270, 450)} fill="none" stroke="url(#mgGrad)" strokeWidth={14} strokeLinecap="round" opacity={0.12} />
+        {anim > 0.005 && (
+          <path d={arc(270, 270 + anim * 180)} fill="none" stroke={color} strokeWidth={14} strokeLinecap="round" style={{ transition: "stroke 0.4s ease" }} />
+        )}
+        <text x={cx} y={cy - 12} textAnchor="middle" fontSize="36" fontWeight="800" fill={color} style={{ fontVariantNumeric: "tabular-nums" }} fontFamily="'DM Sans', sans-serif" letterSpacing="-1">
+          {score}
+        </text>
+        <text x={cx} y={cy + 6} textAnchor="middle" fontSize="9" fontWeight="700" fill={t.muted} fontFamily="'DM Sans', sans-serif" letterSpacing="0.08em">
+          INTENSITY SCORE
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+function HeartRateGauge({ value = 0, max = 220, t }) {
+  const bpm = typeof value === "number" ? Math.round(value) : 0;
+
+  function getZone(hr) {
+    if (hr < 50) return { color: "#ef4444", label: "VERY LOW", sublabel: "Risky" };
+    if (hr < 60) return { color: "#f59e0b", label: "LOW", sublabel: "Below Normal" };
+    if (hr <= 100) return { color: "#10b981", label: "NORMAL", sublabel: "Healthy" };
+    if (hr <= 150) return { color: "#f59e0b", label: "HIGH", sublabel: "Elevated" };
+    return { color: "#ef4444", label: "VERY HIGH", sublabel: "Risky" };
+  }
+
+  const zone = getZone(bpm);
+  const cx = 80, cy = 110, r = 60;
+  const totalArc = 180;
+  const startAngle = 270;
+
+  function pt(angleDeg, radius = r) {
+    const rad = ((angleDeg - 90) * Math.PI) / 180;
+    return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
+  }
+  function arc(start, end, radius = r) {
+    if (end - start < 0.01) return "";
+    const s = pt(start, radius), e = pt(end, radius);
+    const large = end - start > 180 ? 1 : 0;
+    return `M ${s.x} ${s.y} A ${radius} ${radius} 0 ${large} 1 ${e.x} ${e.y}`;
+  }
+
   const zones = [
-    { frac: 50 / max, color: "#ef4444" },   // very low - red
-    { frac: 60 / max, color: "#f59e0b" },   // low - yellow
-    { frac: 100 / max, color: "#10b981" },  // normal - green
-    { frac: 150 / max, color: "#f59e0b" },  // high - yellow
-    { frac: 1, color: "#ef4444" },           // very high - red
+    { frac: 50 / max, color: "#ef4444" },
+    { frac: 60 / max, color: "#f59e0b" },
+    { frac: 100 / max, color: "#10b981" },
+    { frac: 150 / max, color: "#f59e0b" },
+    { frac: 1, color: "#ef4444" },
   ];
 
-  // Current position on the arc
   const pct = Math.min(bpm / max, 1);
   const needleAngle = startAngle + pct * totalArc;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        width: "100%",
-      }}
-    >
-      <svg viewBox="0 0 160 155" style={{ width: "100%", maxWidth: 220 }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+      <svg viewBox="0 0 160 120" style={{ width: "100%", maxWidth: 220 }}>
         {/* Background track */}
-        <path
-          d={arc(startAngle, startAngle + totalArc)}
-          fill="none"
-          stroke={t.surface}
-          strokeWidth={14}
-          strokeLinecap="round"
-        />
-        {/* 5 colored zone segments */}
+        <path d={arc(startAngle, startAngle + totalArc)} fill="none" stroke={t.surface} strokeWidth={14} strokeLinecap="round" />
+        {/* colored zone segments */}
         {zones.map((z, i) => {
           const prevFrac = i === 0 ? 0 : zones[i - 1].frac;
           const segStart = startAngle + prevFrac * totalArc;
           const segEnd = startAngle + z.frac * totalArc;
           return (
-            <path
-              key={i}
-              d={arc(segStart, segEnd)}
-              fill="none"
-              stroke={z.color}
-              strokeWidth={14}
-              opacity={0.18}
-            />
+            <path key={i} d={arc(segStart, segEnd)} fill="none" stroke={z.color} strokeWidth={14} opacity={0.18} />
           );
         })}
         {/* Active arc fill up to current BPM */}
         {pct > 0.005 && (
-          <path
-            d={arc(startAngle, needleAngle)}
-            fill="none"
-            stroke={zone.color}
-            strokeWidth={14}
-            strokeLinecap="round"
-            style={{ transition: "stroke 0.4s ease" }}
-          />
+          <path d={arc(startAngle, needleAngle)} fill="none" stroke={zone.color} strokeWidth={14} strokeLinecap="round" style={{ transition: "stroke 0.4s ease" }} />
         )}
-        {/* Needle dot at current position */}
-        {pct > 0.005 && (() => {
-          const p = pt(needleAngle);
-          return (
-            <circle
-              cx={p.x}
-              cy={p.y}
-              r={4}
-              fill={t.card}
-              stroke={zone.color}
-              strokeWidth={2.5}
-              style={{ transition: "cx 0.4s ease, cy 0.4s ease" }}
-            />
-          );
-        })()}
         {/* BPM value */}
-        <text
-          x={cx}
-          y={cy + 8}
-          textAnchor="middle"
-          fontSize="30"
-          fontWeight="800"
-          fill={zone.color}
-          fontFamily="'DM Mono', monospace"
-          letterSpacing="-1"
-        >
+        <text x={cx} y={cy - 12} textAnchor="middle" fontSize="36" fontWeight="800" fill={zone.color} style={{ fontVariantNumeric: "tabular-nums" }} fontFamily="'DM Sans', monospace" letterSpacing="-1">
           {bpm || "--"}
         </text>
-        {/* "bpm" label */}
-        <text
-          x={cx}
-          y={cy + 22}
-          textAnchor="middle"
-          fontSize="8"
-          fontWeight="700"
-          fill={t.muted}
-          fontFamily="'DM Mono', monospace"
-          letterSpacing="0.08em"
-        >
-          BPM
-        </text>
         {/* Zone label */}
-        <text
-          x={cx}
-          y={cy + 42}
-          textAnchor="middle"
-          fontSize="8"
-          fontWeight="800"
-          fill={zone.color}
-          fontFamily="'DM Mono', monospace"
-          letterSpacing="0.1em"
-        >
-          {zone.label}
-        </text>
-        {/* Zone sublabel */}
-        <text
-          x={cx}
-          y={cy + 53}
-          textAnchor="middle"
-          fontSize="6.5"
-          fontWeight="600"
-          fill={t.faint}
-          fontFamily="'DM Mono', monospace"
-        >
-          {zone.sublabel}
+        <text x={cx} y={cy + 6} textAnchor="middle" fontSize="9" fontWeight="700" fill={t.muted} fontFamily="'DM Sans', monospace" letterSpacing="0.08em">
+          {zone.label} / {zone.sublabel}
         </text>
       </svg>
     </div>
