@@ -18,6 +18,7 @@ import {
   LogIn,
   Link2,
   Trash2,
+  Eye,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -28,6 +29,8 @@ import AthletiSenseDashboard from "./AthletiSenseDashboard";
 import PerformanceAnalytics from "./PerformanceAnalytics";
 import FatigueRecovery from "./FatigueRecovery";
 import MultiAthleteComparison from "./MultiAthleteComparison";
+import VisualAnalyticsDashboard from "./VisualAnalyticsDashboard";
+import AthletiSenseChat from "../components/AthletiSenseChat";
 
 const THEMES = {
   light: {
@@ -100,6 +103,12 @@ const NAV_ITEMS = [
     label: "Comparison",
     icon: Users,
     desc: "Multi-athlete view",
+  },
+  {
+    id: "analytics",
+    label: "Visual Analytics",
+    icon: Eye,
+    desc: "Insights & storytelling",
   },
   {
     id: "connections",
@@ -421,7 +430,11 @@ export default function MainLayout() {
       {activePage === "performance" && <PerformanceAnalytics t={t} />}
       {activePage === "recovery" && <FatigueRecovery t={t} />}
       {(activePage === "comparison" && isAdmin) && <MultiAthleteComparison t={t} />}
+      {activePage === "analytics" && <VisualAnalyticsDashboard t={t} />}
       {activePage === "connections" && <ManageConnections t={t} />}
+
+      {/* AI Chatbot — floating overlay */}
+      <AthletiSenseChat t={t} />
     </div>
   );
 }
