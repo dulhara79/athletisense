@@ -180,6 +180,10 @@ const wss    = new WebSocketServer({ server });
 app.use(cors());
 app.use(express.json());
 
+// ─── Chat Routes (Gemini AI) ──────────────────────────────────────────────────
+const chatRoutes = require('./chatRoutes');
+app.use('/api', chatRoutes);
+
 // ─── REST routes ──────────────────────────────────────────────────────────────
 
 /**
