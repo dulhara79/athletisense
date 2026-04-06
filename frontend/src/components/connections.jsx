@@ -299,6 +299,7 @@ export function ManageConnections({ t }) {
   const [systemUsers, setSystemUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [localSent, setLocalSent] = useState(new Set());
 
   useEffect(() => {
     async function fetchUsers() {
@@ -319,6 +320,16 @@ export function ManageConnections({ t }) {
     }
     fetchUsers();
   }, []);
+
+  const handleConnect = async (u) => {
+    const res = await sendRequest(u.username);
+    if (res.success) {
+      setLocalSent(new Set([...localSent, u.uid]));
+    } else {
+      alert("Failed to send request: " + res.error);
+    }
+  };
+
   const isAdmin = user?.role === "admin";
   const connections = isAdmin ? connectedAthletes : connectedCoaches;
   const label = isAdmin ? "Connected Athletes" : "Your Coaches";
@@ -539,7 +550,7 @@ export function ManageConnections({ t }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "400px", overflowY: "auto" }}>
             {discoverableUsers.map((u) => {
-              const isPending = pendingRequests.some(pr => pr.to === u.uid);
+              const isPending = pendingRequests.some(pr => pr.to === u.uid) || localSent.has(u.uid);
               return (
                 <div
                   key={u.uid}
@@ -585,7 +596,7 @@ export function ManageConnections({ t }) {
                     <span style={{ fontSize: 11, color: t.muted, fontWeight: 600, padding: "6px 12px", background: t.surface, borderRadius: 8, border: `1px solid ${t.border}` }}>Requested</span>
                   ) : (
                     <button
-                      onClick={() => sendRequest(u.username)}
+                      onClick={() => handleConnect(u)}
                       style={{
                         padding: "6px 12px",
                         borderRadius: 8,
