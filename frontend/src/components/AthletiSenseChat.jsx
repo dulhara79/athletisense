@@ -1,6 +1,7 @@
 // src/components/AthletiSenseChat.jsx
 // Floating AI chat — connects to /api/v1/chat
 import React, { useState, useRef, useCallback } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   MessageCircle,
   X,
@@ -158,6 +159,7 @@ function TypingDots({ t }) {
 }
 
 export default function AthletiSenseChat({ t }) {
+  const { user, connectedAthletes = [] } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -201,7 +203,13 @@ export default function AthletiSenseChat({ t }) {
         const res = await fetch(`${API_BASE}/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: msg, history: messages.slice(-8) }),
+          body: JSON.stringify({ 
+            message: msg, 
+            history: messages.slice(-8),
+            userRole: user?.role,
+            athleteId: user?.athleteId,
+            connectedIds: connectedAthletes.map(a => a.athleteId) 
+          }),
         });
         const data = await res.json();
         setMessages((prev) => [
