@@ -1,5 +1,6 @@
 // src/pages/VisualAnalyticsDashboard.jsx
 import React, { useState, useMemo } from "react";
+import { useAuth } from "../context/AuthContext";
 import { useAthleteData } from "../hooks/useAthleteData";
 import {
   AreaChart,
@@ -223,15 +224,23 @@ function KPICard({ title, value, unit, change, color, icon: Icon, t }) {
 }
 
 export default function VisualAnalyticsDashboard({ t }) {
+  const { user, connectedAthletes = [] } = useAuth();
   const { athletes, liveData, loading, getAthleteData } = useAthleteData();
-  const allIds = athletes.map((a) => a.id);
+  const isAdmin = user?.role === "admin";
+  const connectedAthleteIds = isAdmin ? connectedAthletes.map(a => a.athleteId) : [];
+  
+  const visibleAthletes = isAdmin 
+    ? athletes.filter(a => connectedAthleteIds.includes(a.id))
+    : athletes.filter((a) => a.id === user?.athleteId);
+
+  const allIds = visibleAthletes.map((a) => a.id);
   const [selectedIds, setSelectedIds] = useState([]);
   const [brushedRange, setBrushedRange] = useState(null);
 
   // Auto-select all on load
   React.useEffect(() => {
-    if (athletes.length && selectedIds.length === 0) setSelectedIds(allIds);
-  }, [athletes.length]);
+    if (visibleAthletes.length && selectedIds.length === 0) setSelectedIds(allIds);
+  }, [visibleAthletes.length]);
 
   const toggleAthlete = (id) =>
     setSelectedIds((prev) =>
@@ -290,7 +299,7 @@ export default function VisualAnalyticsDashboard({ t }) {
     () =>
       selectedIds.map((id) => {
         const recs = getAthleteData(id);
-        const a = athletes.find((x) => x.id === id);
+        const a = visibleAthletes.find((x) => x.id === id);
         return {
           id,
           name: a?.name || id,
@@ -340,7 +349,7 @@ export default function VisualAnalyticsDashboard({ t }) {
   // Fatigue leaderboard
   const fatigueBoard = useMemo(
     () =>
-      athletes
+      visibleAthletes
         .map((a) => {
           const recs = getAthleteData(a.id);
           const latest = recs.at(-1) ?? null;
@@ -356,7 +365,7 @@ export default function VisualAnalyticsDashboard({ t }) {
           };
         })
         .sort((a, b) => (b.score ?? -1) - (a.score ?? -1)),
-    [athletes, liveData],
+    [visibleAthletes, liveData],
   );
 
   if (loading)
@@ -407,13 +416,13 @@ export default function VisualAnalyticsDashboard({ t }) {
             VISUAL ANALYTICS
           </h2>
           <p style={{ fontSize: 11, color: t.muted }}>
-            Insights & storytelling · {athletes.length} athletes ·{" "}
+            Insights & storytelling · {visibleAthletes.length} athletes ·{" "}
             {kpis.totalReadings} readings
           </p>
         </div>
         {/* Athlete filter pills */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {athletes.map((a) => {
+          {visibleAthletes.map((a) => {
             const color = athleteColor(a.id, allIds);
             const active = selectedIds.includes(a.id);
             return (
@@ -549,7 +558,7 @@ export default function VisualAnalyticsDashboard({ t }) {
                 label={{ value: "Max", fontSize: 8, fill: t.danger }}
               />
               {selectedIds.map((id) => {
-                const a = athletes.find((x) => x.id === id);
+                const a = visibleAthletes.find((x) => x.id === id);
                 return (
                   <Line
                     key={id}
@@ -824,7 +833,7 @@ export default function VisualAnalyticsDashboard({ t }) {
                   label={{ value: "Elevated", fontSize: 7, fill: t.warning }}
                 />
                 {selectedIds.map((id) => {
-                  const a = athletes.find((x) => x.id === id);
+                  const a = visibleAthletes.find((x) => x.id === id);
                   return (
                     <Line
                       key={id}
