@@ -1,11 +1,12 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+// src/pages/AthletiSenseDashboard.jsx
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useAthleteData } from "../hooks/useAthleteData";
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   ComposedChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -15,74 +16,75 @@ import {
   ReferenceLine,
 } from "recharts";
 import {
-  Activity,
   Heart,
   Wind,
   Thermometer,
+  Activity,
   Wifi,
   WifiOff,
-  AlertTriangle,
-  AlertCircle,
-  Info,
-  ChevronDown,
-  Pause,
-  Play,
-  Battery,
   Signal,
+  AlertCircle,
+  AlertTriangle,
+  Info,
   X,
   Shield,
   Bell,
+  Pause,
+  Play,
+  ChevronDown,
 } from "lucide-react";
+import {
+  timeLabel,
+  getBpm,
+  getTemp,
+  getResp,
+  getMag,
+  getSteps,
+  getRssi,
+  fmtBpm,
+  fmtTemp,
+  fmtResp,
+  initials,
+  athleteColor,
+} from "../utils/dataHelpers";
 
-const API_BASE = "http://localhost:3001";
-const WS_URL = "ws://localhost:3001";
-const MAX_HISTORY_POINTS = 60;
-
-const ATHLETE_META = {
-  ATH_001: { name: "Marcus Thorne", sport: "Elite Runner", avatar: "MT" },
-  ATH_002: { name: "Sarah Chen", sport: "Cyclist", avatar: "SC" },
-  ATH_003: { name: "Diego Ramirez", sport: "Swimmer", avatar: "DR" },
-  ATH_004: { name: "Aisha Patel", sport: "Sprinter", avatar: "AP" },
-};
-
-function motionMagnitude(rec) {
-  if (!rec?.motion) return 0;
-  const { accel_x: ax = 0, accel_y: ay = 0, accel_z: az = 0 } = rec.motion;
-  return Math.sqrt(ax * ax + ay * ay + az * az) / 16384;
-}
-
-function timeLabel(ts) {
-  if (!ts) return "--:--";
-  const parts = ts.split(" ");
-  return parts[1]?.slice(0, 5) || "--:--";
-}
-
-function fmtBpm(v) {
-  return typeof v === "number" ? v.toFixed(0) : "--";
-}
-function fmtTemp(v) {
-  return typeof v === "number" ? v.toFixed(1) : "--";
-}
-function fmtResp(v) {
-  return typeof v === "number" ? v.toFixed(0) : "--";
-}
-
-function LiveDot({ t }) {
+/* ── Shared chart tooltip ─────────────────────────────────────── */
+function ChartTip({ active, payload, label, t }) {
+  if (!active || !payload?.length) return null;
   return (
-    <span
+    <div
       style={{
-        display: "inline-block",
-        width: 7,
-        height: 7,
-        borderRadius: "50%",
-        background: t.success,
-        marginRight: 5,
-        animation: "pulse-dot 1.6s ease-in-out infinite",
+        background: t.card,
+        border: `1px solid ${t.border}`,
+        borderRadius: 10,
+        padding: "8px 12px",
+        boxShadow: t.shadow,
       }}
-    />
+    >
+      <p
+        style={{
+          fontSize: 10,
+          color: t.muted,
+          marginBottom: 4,
+          fontFamily: "'DM Mono',monospace",
+        }}
+      >
+        {label}
+      </p>
+      {payload.map((p) => (
+        <p
+          key={p.dataKey}
+          style={{ fontSize: 11, color: p.color, fontWeight: 700 }}
+        >
+          {p.name}: {typeof p.value === "number" ? p.value.toFixed(1) : p.value}
+          {p.unit ?? ""}
+        </p>
+      ))}
+    </div>
   );
 }
 
+/* ── StatCard with sparkline ──────────────────────────────────── */
 function StatCard({
   title,
   value,
@@ -94,10 +96,8 @@ function StatCard({
   sparkKey,
   t,
 }) {
-  const gradStart = color + "30";
   return (
     <div
-      className="card-fadein"
       style={{
         background: t.card,
         border: `1px solid ${t.border}`,
@@ -117,7 +117,7 @@ function StatCard({
           left: 0,
           right: 0,
           height: 3,
-          background: `linear-gradient(90deg, ${color}, ${color}40)`,
+          background: `linear-gradient(90deg,${color},${color}40)`,
         }}
       />
       <p
@@ -128,7 +128,7 @@ function StatCard({
           textTransform: "uppercase",
           color: t.muted,
           marginBottom: 6,
-          fontFamily: "'DM Sans', monospace",
+          fontFamily: "'DM Mono',monospace",
         }}
       >
         {title}
@@ -147,7 +147,7 @@ function StatCard({
             fontWeight: 800,
             lineHeight: 1,
             color,
-            fontFamily: "'DM Sans', monospace",
+            fontFamily: "'DM Mono',monospace",
             letterSpacing: "-2px",
           }}
         >
@@ -203,15 +203,14 @@ function StatCard({
   );
 }
 
+/* ── Session Timer ────────────────────────────────────────────── */
 function SessionTimer({ t }) {
   const { timerSecs, setTimerSecs, timerRunning, setTimerRunning } = useAuth();
-  
   const h = String(Math.floor(timerSecs / 3600)).padStart(2, "0");
   const m = String(Math.floor((timerSecs % 3600) / 60)).padStart(2, "0");
   const s = String(timerSecs % 60).padStart(2, "0");
   return (
     <div
-      className="card-fadein"
       style={{
         background: t.card,
         border: `1px solid ${t.border}`,
@@ -232,7 +231,7 @@ function SessionTimer({ t }) {
           textTransform: "uppercase",
           color: t.muted,
           marginBottom: 6,
-          fontFamily: "'DM Sans', monospace",
+          fontFamily: "'DM Mono',monospace",
         }}
       >
         Session Timer
@@ -245,6 +244,7 @@ function SessionTimer({ t }) {
             color: t.text,
             letterSpacing: "-1px",
             fontVariantNumeric: "tabular-nums",
+            fontFamily: "'DM Mono',monospace",
           }}
         >
           {h}:{m}:{s}
@@ -261,13 +261,15 @@ function SessionTimer({ t }) {
               color: t.muted,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center"
             }}
           >
             {timerRunning ? <Pause size={14} /> : <Play size={14} />}
           </button>
           <button
-            onClick={() => { setTimerRunning(false); setTimerSecs(0); }}
+            onClick={() => {
+              setTimerRunning(false);
+              setTimerSecs(0);
+            }}
             style={{
               background: t.surface,
               border: `1px solid ${t.border}`,
@@ -277,10 +279,6 @@ function SessionTimer({ t }) {
               color: t.muted,
               fontSize: 10,
               fontWeight: 700,
-              fontFamily: "'DM Sans', monospace",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
             }}
           >
             RST
@@ -291,260 +289,262 @@ function SessionTimer({ t }) {
   );
 }
 
-function StatusCard({ athlete, wsConnected, steps, t }) {
-  return (
-    <div
-      className="card-fadein"
-      style={{
-        background: t.card,
-        border: `1px solid ${t.border}`,
-        borderRadius: 16,
-        padding: "1rem 1.25rem",
-        flex: 1,
-        boxShadow: t.shadow,
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-      }}
-    >
-      <p
-        style={{
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: "0.10em",
-          textTransform: "uppercase",
-          color: t.muted,
-          fontFamily: "'DM Sans', monospace",
-        }}
-      >
-        Status
-      </p>
-      <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {wsConnected ? (
-              <Wifi size={13} color={t.success} />
-            ) : (
-              <WifiOff size={13} color={t.danger} />
-            )}
-            <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>
-              Connection:
-            </span>
-            <span style={{ fontSize: 11, color: wsConnected ? t.success : t.danger, fontWeight: 700 }}>
-              {wsConnected ? "Live (WS)" : "Offline"}
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Signal size={13} color={t.accent} />
-            <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>
-              RSSI:
-            </span>
-            <span style={{ fontSize: 11, color: t.text, fontWeight: 700 }}>
-              {athlete?.system?.wifi_rssi ?? "--"} dBm
-            </span>
-          </div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Activity size={13} color={t.accent} />
-            <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>
-              Steps:
-            </span>
-            <span style={{ fontSize: 11, color: t.text, fontWeight: 700 }}>
-              {steps ?? "--"}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MotionGauge({ value = 0, max = 15, t }) {
-  const pct = Math.min(value / max, 1);
-  const [anim, setAnim] = useState(0);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setAnim(pct));
-    return () => cancelAnimationFrame(id);
-  }, [pct]);
-
-  const color = anim < 0.33 ? "#10b981" : anim < 0.66 ? "#f59e0b" : "#ef4444";
-  const cx = 80, cy = 110, r = 60;
-
-  function pt(angleDeg, radius = r) {
-    const rad = ((angleDeg - 90) * Math.PI) / 180;
-    return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
-  }
-  function arc(start, end, radius = r) {
-    if (end - start < 0.01) return "";
-    const s = pt(start, radius), e = pt(end, radius);
-    const large = end - start > 180 ? 1 : 0;
-    return `M ${s.x} ${s.y} A ${radius} ${radius} 0 ${large} 1 ${e.x} ${e.y}`;
-  }
-
-  const score = (anim * 10).toFixed(1);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-      <svg viewBox="0 0 160 120" style={{ width: "100%", maxWidth: 220 }}>
-        <defs>
-          <linearGradient id="mgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#10b981" />
-            <stop offset="50%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#ef4444" />
-          </linearGradient>
-        </defs>
-        <path d={arc(270, 450)} fill="none" stroke={t.surface} strokeWidth={14} strokeLinecap="round" />
-        <path d={arc(270, 450)} fill="none" stroke="url(#mgGrad)" strokeWidth={14} strokeLinecap="round" opacity={0.12} />
-        {anim > 0.005 && (
-          <path d={arc(270, 270 + anim * 180)} fill="none" stroke={color} strokeWidth={14} strokeLinecap="round" style={{ transition: "stroke 0.4s ease" }} />
-        )}
-        <text x={cx} y={cy - 12} textAnchor="middle" fontSize="36" fontWeight="800" fill={color} style={{ fontVariantNumeric: "tabular-nums" }} fontFamily="'DM Sans', sans-serif" letterSpacing="-1">
-          {score}
-        </text>
-        <text x={cx} y={cy + 6} textAnchor="middle" fontSize="9" fontWeight="700" fill={t.muted} fontFamily="'DM Sans', sans-serif" letterSpacing="0.08em">
-          INTENSITY SCORE
-        </text>
-      </svg>
-    </div>
-  );
-}
-
-function HeartRateGauge({ value = 0, max = 220, isResting = false, t }) {
-  const bpm = typeof value === "number" ? Math.round(value) : 0;
-  
-  const b = isResting 
-    ? { vl: 40, l: 60, h: 80, vh: 100 } 
+/* ── HR Gauge ─────────────────────────────────────────────────── */
+function HRGauge({ bpm = 0, isResting = false, t }) {
+  const b = isResting
+    ? { vl: 40, l: 60, h: 80, vh: 100 }
     : { vl: 60, l: 90, h: 130, vh: 160 };
-
-  function getZone(hr) {
-    if (hr < b.vl) return { color: "#ef4444", label: "VERY LOW", sublabel: "Risky" };
-    if (hr < b.l) return { color: "#f59e0b", label: "LOW", sublabel: "Below Normal" };
-    if (hr <= b.h) return { color: "#10b981", label: "NORMAL", sublabel: "Healthy" };
-    if (hr <= b.vh) return { color: "#f59e0b", label: "HIGH", sublabel: "Elevated" };
-    return { color: "#ef4444", label: "VERY HIGH", sublabel: "Risky" };
-  }
-
-  const zone = getZone(bpm);
-  const cx = 80, cy = 110, r = 60;
-  const totalArc = 180;
-  const startAngle = 270;
-
-  function pt(angleDeg, radius = r) {
-    const rad = ((angleDeg - 90) * Math.PI) / 180;
-    return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
-  }
-  function arc(start, end, radius = r) {
-    if (end - start < 0.01) return "";
-    const s = pt(start, radius), e = pt(end, radius);
-    const large = end - start > 180 ? 1 : 0;
-    return `M ${s.x} ${s.y} A ${radius} ${radius} 0 ${large} 1 ${e.x} ${e.y}`;
-  }
-
-  const zones = [
-    { frac: b.vl / max, color: "#ef4444" },
-    { frac: b.l / max, color: "#f59e0b" },
-    { frac: b.h / max, color: "#10b981" },
-    { frac: b.vh / max, color: "#f59e0b" },
-    { frac: 1, color: "#ef4444" },
-  ];
-
-  const pct = Math.min(bpm / max, 1);
-  const needleAngle = startAngle + pct * totalArc;
-
+  const zone =
+    bpm < b.vl
+      ? { color: "#ef4444", label: "VERY LOW" }
+      : bpm < b.l
+        ? { color: "#f59e0b", label: "LOW" }
+        : bpm <= b.h
+          ? { color: "#10b981", label: "NORMAL" }
+          : bpm <= b.vh
+            ? { color: "#f59e0b", label: "HIGH" }
+            : { color: "#ef4444", label: "VERY HIGH" };
+  const pct = Math.min(bpm / 220, 1);
+  const cx = 80,
+    cy = 110,
+    r = 60;
+  const pt = (deg) => {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  };
+  const arc = (s, e) => {
+    if (e - s < 0.01) return "";
+    const sp = pt(s),
+      ep = pt(e);
+    return `M ${sp.x} ${sp.y} A ${r} ${r} 0 ${e - s > 180 ? 1 : 0} 1 ${ep.x} ${ep.y}`;
+  };
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-      <svg viewBox="0 0 160 120" style={{ width: "100%", maxWidth: 220 }}>
-        {/* Background track */}
-        <path d={arc(startAngle, startAngle + totalArc)} fill="none" stroke={t.surface} strokeWidth={14} strokeLinecap="round" />
-        {/* colored zone segments */}
-        {zones.map((z, i) => {
-          const prevFrac = i === 0 ? 0 : zones[i - 1].frac;
-          const segStart = startAngle + prevFrac * totalArc;
-          const segEnd = startAngle + z.frac * totalArc;
-          return (
-            <path key={i} d={arc(segStart, segEnd)} fill="none" stroke={z.color} strokeWidth={14} opacity={0.18} />
-          );
-        })}
-        {/* Active arc fill up to current BPM */}
-        {pct > 0.005 && (
-          <path d={arc(startAngle, needleAngle)} fill="none" stroke={zone.color} strokeWidth={14} strokeLinecap="round" style={{ transition: "stroke 0.4s ease" }} />
-        )}
-        {/* BPM value */}
-        <text x={cx} y={cy - 12} textAnchor="middle" fontSize="36" fontWeight="800" fill={zone.color} style={{ fontVariantNumeric: "tabular-nums" }} fontFamily="'DM Sans', monospace" letterSpacing="-1">
-          {bpm || "--"}
-        </text>
-        {/* Zone label */}
-        <text x={cx} y={cy + 6} textAnchor="middle" fontSize="9" fontWeight="700" fill={t.muted} fontFamily="'DM Sans', monospace" letterSpacing="0.08em">
-          {zone.label} / {zone.sublabel}
-        </text>
-      </svg>
-    </div>
+    <svg viewBox="0 0 160 120" style={{ width: "100%", maxWidth: 220 }}>
+      <path
+        d={arc(270, 450)}
+        fill="none"
+        stroke={t.surface}
+        strokeWidth={14}
+        strokeLinecap="round"
+      />
+      {pct > 0.005 && (
+        <path
+          d={arc(270, 270 + pct * 180)}
+          fill="none"
+          stroke={zone.color}
+          strokeWidth={14}
+          strokeLinecap="round"
+        />
+      )}
+      <text
+        x={cx}
+        y={cy - 12}
+        textAnchor="middle"
+        fontSize="36"
+        fontWeight="800"
+        fill={zone.color}
+        fontFamily="'DM Mono',monospace"
+        letterSpacing="-1"
+      >
+        {bpm || "--"}
+      </text>
+      <text
+        x={cx}
+        y={cy + 6}
+        textAnchor="middle"
+        fontSize="9"
+        fontWeight="700"
+        fill={t.muted}
+        fontFamily="'DM Mono',monospace"
+        letterSpacing="0.08em"
+      >
+        {zone.label}
+      </text>
+    </svg>
   );
 }
 
+/* ── Motion Gauge ─────────────────────────────────────────────── */
+function MotionGaugeViz({ value = 0, t }) {
+  const pct = Math.min(value / 15, 1);
+  const color = pct < 0.33 ? "#10b981" : pct < 0.66 ? "#f59e0b" : "#ef4444";
+  const cx = 80,
+    cy = 110,
+    r = 60;
+  const pt = (deg) => {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  };
+  const arc = (s, e) => {
+    if (e - s < 0.01) return "";
+    const sp = pt(s),
+      ep = pt(e);
+    return `M ${sp.x} ${sp.y} A ${r} ${r} 0 ${e - s > 180 ? 1 : 0} 1 ${ep.x} ${ep.y}`;
+  };
+  return (
+    <svg viewBox="0 0 160 120" style={{ width: "100%", maxWidth: 220 }}>
+      <path
+        d={arc(270, 450)}
+        fill="none"
+        stroke={t.surface}
+        strokeWidth={14}
+        strokeLinecap="round"
+      />
+      {pct > 0.005 && (
+        <path
+          d={arc(270, 270 + pct * 180)}
+          fill="none"
+          stroke={color}
+          strokeWidth={14}
+          strokeLinecap="round"
+        />
+      )}
+      <text
+        x={cx}
+        y={cy - 12}
+        textAnchor="middle"
+        fontSize="36"
+        fontWeight="800"
+        fill={color}
+        fontFamily="'DM Mono',monospace"
+      >
+        {(pct * 10).toFixed(1)}
+      </text>
+      <text
+        x={cx}
+        y={cy + 6}
+        textAnchor="middle"
+        fontSize="9"
+        fontWeight="700"
+        fill={t.muted}
+        fontFamily="'DM Mono',monospace"
+        letterSpacing="0.08em"
+      >
+        INTENSITY
+      </text>
+    </svg>
+  );
+}
 
-function getAlerts(latest, t) {
+/* ── Alerts ───────────────────────────────────────────────────── */
+function getAlerts(latest) {
   if (!latest) return [];
+  const bpm = getBpm(latest) ?? 0;
+  const temp = getTemp(latest) ?? 0;
+  const mag = getMag(latest) ?? 0;
+  const isMoving = mag > 1.2;
   const out = [];
-  const bpm = latest?.heart_rate?.bpm_avg ?? 0;
-  const temp = latest?.temperature?.celsius ?? 0;
-  const mg = motionMagnitude(latest);
-  const leads = latest?.heart_rate?.leads_connected;
-
-  const isMoving = mg > 1.2;
-
   if (isMoving) {
-    if (bpm > 185) out.push({ id: `hr-c`, level: "critical", title: "Critical: Active HR Too High", msg: `${fmtBpm(bpm)} bpm - limit 185 bpm` });
-    else if (bpm > 165) out.push({ id: `hr-w`, level: "warning", title: "Warning: High Active HR", msg: `${fmtBpm(bpm)} bpm - monitor intensity` });
-    else if (bpm > 0 && bpm < 70 && mg > 3.0) out.push({ id: `hr-a`, level: "warning", title: "Anomaly: Low HR vs High Motion", msg: `${fmtBpm(bpm)} bpm despite activity` });
-
-    if (temp > 38.5) out.push({ id: `tp-c`, level: "critical", title: "Critical: High Active Temp", msg: `${fmtTemp(temp)}°C - heat exhaustion risk` });
-    else if (temp > 38.0) out.push({ id: `tp-w`, level: "warning", title: "Warning: Elevated Active Temp", msg: `${fmtTemp(temp)}°C - monitor cooling` });
+    if (bpm > 185)
+      out.push({
+        id: "hr-c",
+        level: "critical",
+        title: "Critical: Active HR Too High",
+        msg: `${fmtBpm(bpm)} bpm — limit 185 bpm`,
+      });
+    else if (bpm > 165)
+      out.push({
+        id: "hr-w",
+        level: "warning",
+        title: "Warning: High Active HR",
+        msg: `${fmtBpm(bpm)} bpm — monitor intensity`,
+      });
+    if (temp > 38.5)
+      out.push({
+        id: "tp-c",
+        level: "critical",
+        title: "Critical: High Active Temp",
+        msg: `${fmtTemp(temp)}°C — heat risk`,
+      });
+    else if (temp > 38.0)
+      out.push({
+        id: "tp-w",
+        level: "warning",
+        title: "Warning: Elevated Temp",
+        msg: `${fmtTemp(temp)}°C — monitor cooling`,
+      });
   } else {
-    if (bpm > 120) out.push({ id: `hr-c`, level: "critical", title: "Critical: Resting Tachycardia", msg: `${fmtBpm(bpm)} bpm while inactive` });
-    else if (bpm > 100) out.push({ id: `hr-w`, level: "warning", title: "Warning: Elevated Resting HR", msg: `${fmtBpm(bpm)} bpm while inactive` });
-    else if (bpm > 0 && bpm < 40) out.push({ id: `hr-br`, level: "warning", title: "Warning: Resting Bradycardia", msg: `Unusually low HR: ${fmtBpm(bpm)} bpm` });
-
-    if (temp > 38.0) out.push({ id: `tp-c`, level: "critical", title: "Critical: High Resting Temp", msg: `${fmtTemp(temp)}°C - fever risk` });
-    else if (temp > 37.5 && temp > 0) out.push({ id: `tp-w`, level: "warning", title: "Warning: Elevated Resting Temp", msg: `${fmtTemp(temp)}°C - possible illness` });
+    if (bpm > 120)
+      out.push({
+        id: "hr-c",
+        level: "critical",
+        title: "Critical: Resting Tachycardia",
+        msg: `${fmtBpm(bpm)} bpm while inactive`,
+      });
+    else if (bpm > 100)
+      out.push({
+        id: "hr-w",
+        level: "warning",
+        title: "Warning: Elevated Resting HR",
+        msg: `${fmtBpm(bpm)} bpm`,
+      });
+    else if (bpm > 0 && bpm < 40)
+      out.push({
+        id: "hr-br",
+        level: "warning",
+        title: "Warning: Bradycardia",
+        msg: `Low HR: ${fmtBpm(bpm)} bpm`,
+      });
+    if (temp > 38.0)
+      out.push({
+        id: "tp-c",
+        level: "critical",
+        title: "Critical: High Resting Temp",
+        msg: `${fmtTemp(temp)}°C — fever risk`,
+      });
+    else if (temp > 37.5)
+      out.push({
+        id: "tp-w",
+        level: "warning",
+        title: "Warning: Elevated Temp",
+        msg: `${fmtTemp(temp)}°C`,
+      });
   }
-
-  if (mg > 11) out.push({ id: `mg-w`, level: "warning", title: "Warning: High Impact Detected", msg: `Shock impact: ${mg.toFixed(1)}g` });
-  if (leads === false) out.push({ id: `ld-w`, level: "warning", title: "Warning: ECG Leads Disconnected", msg: "Electrode contact lost - check strap placement" });
-  if (!out.length) out.push({ id: `ok`, level: "info", title: "All Systems Normal", msg: "All biometric metrics within healthy ranges" });
-
+  if (mag > 11)
+    out.push({
+      id: "mg-w",
+      level: "warning",
+      title: "Warning: High Impact",
+      msg: `${mag.toFixed(1)} g`,
+    });
+  if (!out.length)
+    out.push({
+      id: "ok",
+      level: "info",
+      title: "All Systems Normal",
+      msg: "All biometrics within healthy ranges",
+    });
   return out;
 }
 
-function AlertsPanel({ latest, t, dismissed, setDismissed }) {
-  const alerts = useMemo(() => {
-    return getAlerts(latest, t).filter((a) => !dismissed.has(a.id));
-  }, [latest, dismissed]);
-
-  const colors = {
+function AlertsPanel({ latest, t }) {
+  const [dismissed, setDismissed] = useState(new Set());
+  const alerts = useMemo(
+    () => getAlerts(latest).filter((a) => !dismissed.has(a.id)),
+    [latest, dismissed],
+  );
+  const cfg = {
     critical: {
       bg: t.dangerBg,
-      border: `rgba(225,29,72,0.2)`,
+      border: "rgba(225,29,72,0.2)",
       text: t.danger,
       Icon: AlertCircle,
     },
     warning: {
       bg: t.warningBg,
-      border: `rgba(217,119,6,0.2)`,
+      border: "rgba(217,119,6,0.2)",
       text: t.warning,
       Icon: AlertTriangle,
     },
     info: {
       bg: t.accentBg,
-      border: `rgba(79,70,229,0.2)`,
+      border: "rgba(79,70,229,0.2)",
       text: t.accent,
       Icon: Info,
     },
   };
-
   return (
-    <div style={{ marginTop: 8 }}>
+    <div>
       <div
         style={{
           display: "flex",
@@ -561,7 +561,7 @@ function AlertsPanel({ latest, t, dismissed, setDismissed }) {
             textTransform: "uppercase",
             letterSpacing: "0.10em",
             color: t.muted,
-            fontFamily: "'DM Sans', monospace",
+            fontFamily: "'DM Mono',monospace",
           }}
         >
           Alerts Panel
@@ -574,7 +574,6 @@ function AlertsPanel({ latest, t, dismissed, setDismissed }) {
             borderRadius: 6,
             background: t.accentBg,
             color: t.accent,
-            fontFamily: "'DM Sans', monospace",
           }}
         >
           {alerts.length} active
@@ -582,7 +581,7 @@ function AlertsPanel({ latest, t, dismissed, setDismissed }) {
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         {alerts.map((a) => {
-          const c = colors[a.level];
+          const c = cfg[a.level];
           const { Icon } = c;
           return (
             <div
@@ -596,7 +595,6 @@ function AlertsPanel({ latest, t, dismissed, setDismissed }) {
                 borderRadius: 12,
                 background: c.bg,
                 border: `1px solid ${c.border}`,
-                position: "relative",
               }}
             >
               <Icon
@@ -604,7 +602,7 @@ function AlertsPanel({ latest, t, dismissed, setDismissed }) {
                 color={c.text}
                 style={{ marginTop: 1, flexShrink: 0 }}
               />
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: 1 }}>
                 <p
                   style={{
                     fontSize: 11,
@@ -625,8 +623,6 @@ function AlertsPanel({ latest, t, dismissed, setDismissed }) {
                   cursor: "pointer",
                   color: t.faint,
                   padding: 0,
-                  marginTop: 1,
-                  flexShrink: 0,
                 }}
               >
                 <X size={12} />
@@ -639,10 +635,11 @@ function AlertsPanel({ latest, t, dismissed, setDismissed }) {
   );
 }
 
-function NotificationBell({ history, dismissed, onDismiss, t }) {
+/* ── Bell notification ────────────────────────────────────────── */
+function NotificationBell({ history, t }) {
   const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(new Set());
   const ref = useRef();
-  
   useEffect(() => {
     const h = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
@@ -650,29 +647,25 @@ function NotificationBell({ history, dismissed, onDismiss, t }) {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
-
-  const activeCount = history.filter(n => !dismissed.has(n.histId)).length;
-
+  const count = history.filter((n) => !dismissed.has(n.histId)).length;
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((o) => !o)}
         style={{
           background: t.surface,
           border: `1px solid ${t.border}`,
           borderRadius: 10,
-          padding: "8px",
+          padding: 8,
           cursor: "pointer",
           position: "relative",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
           color: t.muted,
-          transition: "all 0.2s"
         }}
       >
         <Bell size={18} />
-        {activeCount > 0 && (
+        {count > 0 && (
           <span
             style={{
               position: "absolute",
@@ -688,83 +681,98 @@ function NotificationBell({ history, dismissed, onDismiss, t }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: `2px solid ${t.bg}`
+              border: `2px solid ${t.bg}`,
             }}
           >
-            {activeCount}
+            {count}
           </span>
         )}
       </button>
-
       {open && (
         <div
           style={{
             position: "absolute",
             top: "calc(100% + 8px)",
             right: 0,
-            width: 320,
+            width: 300,
             background: t.card,
             border: `1px solid ${t.border}`,
             borderRadius: 14,
             boxShadow: t.shadowHover,
             zIndex: 1000,
-            overflow: "hidden"
+            overflow: "hidden",
           }}
         >
-          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${t.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: t.text, textTransform: "uppercase", letterSpacing: "0.05em" }}>Recent Alerts</p>
+          <div
+            style={{
+              padding: "12px 16px",
+              borderBottom: `1px solid ${t.border}`,
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <p style={{ fontSize: 11, fontWeight: 700, color: t.text }}>
+              Recent Alerts
+            </p>
             <span style={{ fontSize: 10, color: t.faint }}>Latest 10</span>
           </div>
-          <div style={{ maxHeight: 360, overflowY: "auto" }}>
+          <div style={{ maxHeight: 340, overflowY: "auto" }}>
             {history.length === 0 ? (
-              <div style={{ padding: "24px", textAlign: "center" }}>
-                <p style={{ fontSize: 12, color: t.faint }}>No notification history</p>
-              </div>
+              <p
+                style={{
+                  padding: 24,
+                  textAlign: "center",
+                  fontSize: 12,
+                  color: t.faint,
+                }}
+              >
+                No alerts yet
+              </p>
             ) : (
-              history.map((n) => {
-                const isDismissed = dismissed.has(n.histId);
-                return (
-                  <div
-                    key={n.histId}
-                    style={{
-                      padding: "12px 16px",
-                      borderBottom: `1px solid ${t.border}`,
-                      background: isDismissed ? "transparent" : t.accentBg,
-                      opacity: isDismissed ? 0.6 : 1,
-                      display: "flex",
-                      gap: 12,
-                      cursor: "pointer",
-                      transition: "background 0.2s"
-                    }}
-                    onClick={() => {
-                      document.getElementById('alerts-panel-section')?.scrollIntoView({ behavior: 'smooth' });
-                      setOpen(false);
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: t.text, marginBottom: 2 }}>{n.title}</p>
-                      <p style={{ fontSize: 11, color: t.muted }}>{n.msg}</p>
-                      <p style={{ fontSize: 9, color: t.faint, marginTop: 4, fontFamily: "'DM Mono', monospace" }}>{n.timestamp}</p>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDismiss(n.histId);
-                      }}
+              history.map((n) => (
+                <div
+                  key={n.histId}
+                  style={{
+                    padding: "10px 16px",
+                    borderBottom: `1px solid ${t.border}`,
+                    display: "flex",
+                    gap: 10,
+                    background: dismissed.has(n.histId)
+                      ? "transparent"
+                      : t.accentBg,
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: t.text }}>
+                      {n.title}
+                    </p>
+                    <p style={{ fontSize: 11, color: t.muted }}>{n.msg}</p>
+                    <p
                       style={{
-                        background: "none",
-                        border: "none",
-                        padding: 0,
-                        cursor: "pointer",
+                        fontSize: 9,
                         color: t.faint,
-                        height: "fit-content"
+                        marginTop: 2,
+                        fontFamily: "'DM Mono',monospace",
                       }}
                     >
-                      <X size={14} strokeWidth={2.5} />
-                    </button>
+                      {n.timestamp}
+                    </p>
                   </div>
-                );
-              })
+                  <button
+                    onClick={() =>
+                      setDismissed((d) => new Set([...d, n.histId]))
+                    }
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: t.faint,
+                    }}
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))
             )}
           </div>
         </div>
@@ -773,185 +781,94 @@ function NotificationBell({ history, dismissed, onDismiss, t }) {
   );
 }
 
-function ChartTip({ active, payload, label, t }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div
-      style={{
-        background: t.card,
-        border: `1px solid ${t.border}`,
-        borderRadius: 10,
-        padding: "8px 12px",
-        boxShadow: t.shadow,
-      }}
-    >
-      <p
-        style={{
-          fontSize: 10,
-          color: t.muted,
-          marginBottom: 4,
-          fontFamily: "'DM Sans', monospace",
-        }}
-      >
-        {label}
-      </p>
-      {payload.map((p) => (
-        <p
-          key={p.dataKey}
-          style={{ fontSize: 11, color: p.color, fontWeight: 700 }}
-        >
-          {p.name}: {typeof p.value === "number" ? p.value.toFixed(1) : p.value}
-          {p.unit ?? ""}
-        </p>
-      ))}
-    </div>
-  );
-}
-
+/* ── Main Dashboard ───────────────────────────────────────────── */
 export default function AthletiSenseDashboard({ t }) {
-  const [athletes, setAthletes] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
-  const [liveLatest, setLiveLatest] = useState({});
-  const [history, setHistory] = useState({});
-  const [wsConnected, setWsConnected] = useState(false);
-  const [notificationHistory, setNotificationHistory] = useState([]);
-  const [notificationDismissed, setNotificationDismissed] = useState(new Set());
-  const [alertsDismissed, setAlertsDismissed] = useState(new Set());
-  const [dropOpen, setDropOpen] = useState(false);
-  const wsRef = useRef(null);
-
-  // Role-based filtering
   const { user, connectedCoaches = [] } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const { athletes, liveData, connected, loading, getAthleteData, getLatest } =
+    useAthleteData();
+  const isAdmin = user?.role === "admin";
   const myAthleteId = user?.athleteId;
+  const allIds = athletes.map((a) => a.id);
 
+  // Role-filter: athletes only see themselves
+  const visible = isAdmin
+    ? athletes
+    : athletes.filter((a) => a.id === myAthleteId);
+  const [selectedId, setSelectedId] = useState(null);
+  const [dropOpen, setDropOpen] = useState(false);
+  const [notifHist, setNotifHist] = useState([]);
+
+  // Auto-select first visible athlete
   useEffect(() => {
-    fetch(`${API_BASE}/api/athletes`)
-      .then((r) => r.json())
-      .then(({ athletes: list }) => {
-        // Role-based filter: athletes only see their own data
-        const filtered = (!isAdmin && myAthleteId)
-          ? (list || []).filter(a => a.id === myAthleteId)
-          : (list || []);
-        setAthletes(filtered);
-        if (filtered.length) {
-          const first = filtered[0];
-          setSelectedId(first.id);
-          const latestMap = {};
-          filtered.forEach((a) => {
-            if (a.latest) latestMap[a.id] = a.latest;
-          });
-          setLiveLatest(latestMap);
-        }
-      })
-      .catch((err) => console.error("[REST] athletes:", err));
-  }, []);
+    if (!selectedId && visible.length) setSelectedId(visible[0].id);
+  }, [visible.length]);
 
-  useEffect(() => {
-    if (!selectedId || history[selectedId]?.length) return;
-    fetch(`${API_BASE}/api/athletes/${selectedId}/history?limit=60`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.readings) {
-          setHistory((h) => ({ ...h, [selectedId]: data.readings.reverse() }));
-        }
-      })
-      .catch((err) => console.error("[REST] history:", err));
-  }, [selectedId]);
+  const latest = getLatest(selectedId);
+  const records = getAthleteData(selectedId);
 
-  useEffect(() => {
-    function connect() {
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
-
-      ws.onopen = () => setWsConnected(true);
-      ws.onclose = () => {
-        setWsConnected(false);
-        setTimeout(connect, 3000);
-      };
-      ws.onerror = () => ws.close();
-
-      ws.onmessage = (evt) => {
-        try {
-          const msg = JSON.parse(evt.data);
-          if (msg.type === "snapshot") {
-            const latestMap = {};
-            msg.athletes?.forEach((a) => {
-              if (a.latest) latestMap[a.id] = a.latest;
-            });
-            setLiveLatest((prev) => ({ ...prev, ...latestMap }));
-          }
-          if (msg.type === "live_update") {
-            const { athlete_id: id, data } = msg;
-            if (!id || !data) return;
-            setLiveLatest((prev) => ({ ...prev, [id]: data }));
-            setHistory((prev) => {
-              const existing = prev[id] || [];
-              const updated = [...existing, data].slice(-MAX_HISTORY_POINTS);
-              return { ...prev, [id]: updated };
-            });
-          }
-        } catch (e) {}
-      };
-    }
-    connect();
-    return () => wsRef.current?.close();
-  }, []);
-
-  const latest = liveLatest[selectedId] ?? null;
-  const records = history[selectedId] ?? [];
-
-  // Update Notification History
+  // Notification history
   useEffect(() => {
     if (!latest) return;
-    const currentActive = getAlerts(latest, t).filter(a => a.level !== 'info');
-    if (currentActive.length === 0) return;
-
-    setNotificationHistory(prev => {
-      let updated = [...prev];
+    const active = getAlerts(latest).filter((a) => a.level !== "info");
+    if (!active.length) return;
+    setNotifHist((prev) => {
+      const next = [...prev];
       let changed = false;
-
-      currentActive.forEach(alert => {
-        // Create a unique-ish ID for this specific occurrence in history
-        const histId = `${alert.id}-${latest.timestamp}`;
-        if (!updated.some(n => n.histId === histId)) {
-          updated.unshift({
-            ...alert,
+      active.forEach((a) => {
+        const histId = `${a.id}-${latest.timestamp}`;
+        if (!next.some((n) => n.histId === histId)) {
+          next.unshift({
+            ...a,
             histId,
-            timestamp: new Date().toLocaleTimeString()
+            timestamp: new Date().toLocaleTimeString(),
           });
           changed = true;
         }
       });
-
-      return changed ? updated.slice(0, 10) : prev;
+      return changed ? next.slice(0, 10) : prev;
     });
-  }, [latest, t]);
+  }, [latest]);
 
   const chartData = useMemo(
     () =>
       records.map((r) => ({
         time: timeLabel(r.timestamp),
-        bpm: r?.heart_rate?.bpm_avg ?? null,
-        resp: r?.respiration?.rate_avg ?? null,
-        temp: r?.temperature?.celsius ?? null,
-        mg: parseFloat(motionMagnitude(r).toFixed(2)),
-        steps: r?.motion?.step_count ?? null,
+        bpm: getBpm(r),
+        resp: getResp(r),
+        temp: getTemp(r),
+        mg: parseFloat((getMag(r) ?? 0).toFixed(2)),
+        steps: getSteps(r),
       })),
     [records],
   );
 
-  const currentAthlete = athletes.find((a) => a.id === selectedId);
-  const meta = ATHLETE_META[selectedId] ?? {
-    name: selectedId,
-    sport: "Athlete",
-    avatar: "?",
-  };
-  const bpm = latest?.heart_rate?.bpm_avg ?? null;
-  const resp = latest?.respiration?.rate_avg ?? null;
-  const temp = latest?.temperature?.celsius ?? null;
-  const mg = motionMagnitude(latest ?? {});
-  const steps = latest?.motion?.step_count ?? null;
+  const bpm = getBpm(latest);
+  const temp = getTemp(latest);
+  const resp = getResp(latest);
+  const mag = getMag(latest) ?? 0;
+  const steps = getSteps(latest);
+  const rssi = getRssi(latest);
+
+  // Athlete meta from live data
+  const selectedAthlete = athletes.find((a) => a.id === selectedId);
+  const athleteName = selectedAthlete?.name || selectedId || "—";
+  const athleteSport = selectedAthlete?.sport || "Athlete";
+  const avatar = initials(athleteName);
+  const color = athleteColor(selectedId, allIds);
+
+  if (loading)
+    return (
+      <main
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <p style={{ color: t.muted, fontSize: 13 }}>Connecting to Firebase…</p>
+      </main>
+    );
 
   return (
     <main
@@ -964,20 +881,64 @@ export default function AthletiSenseDashboard({ t }) {
         gap: 14,
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+      {/* ── Header ── */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <div>
-          <h2 style={{ fontSize: 24, fontWeight: 400, color: t.text, fontFamily: "'Bebas Neue','Syne', sans-serif", letterSpacing: "0.06em" }}>LIVE MONITORING</h2>
-          <p style={{ fontSize: 11, color: t.muted }}>Real-time biometric data stream</p>
+          <h2
+            style={{
+              fontSize: 24,
+              fontWeight: 400,
+              color: t.text,
+              fontFamily: "'Bebas Neue','Syne',sans-serif",
+              letterSpacing: "0.06em",
+            }}
+          >
+            LIVE MONITORING
+          </h2>
+          <p style={{ fontSize: 11, color: t.muted }}>
+            Real-time biometric data stream · {records.length} readings
+          </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <NotificationBell
-            history={notificationHistory}
-            dismissed={notificationDismissed}
-            onDismiss={(id) => setNotificationDismissed(prev => new Set([...prev, id]))}
-            t={t}
-          />
+          {connected ? (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: t.success,
+                background: t.successBg,
+                padding: "4px 10px",
+                borderRadius: 20,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: t.success,
+                  animation: "pulse-dot 1.6s ease-in-out infinite",
+                }}
+              />
+              LIVE
+            </span>
+          ) : (
+            <span style={{ fontSize: 10, color: t.muted }}>Offline</span>
+          )}
+          <NotificationBell history={notifHist} t={t} />
         </div>
       </div>
+
+      {/* ── Athlete selector + timer + status ── */}
       <div
         style={{
           display: "flex",
@@ -986,208 +947,281 @@ export default function AthletiSenseDashboard({ t }) {
           flexWrap: "wrap",
         }}
       >
-    <div
-      className="card-fadein"
-      style={{
-        background: t.card,
-        border: `1px solid ${t.border}`,
-        borderRadius: 16,
-        padding: "1rem 1.25rem",
-        flex: 1,
-        boxShadow: t.shadow,
-        position: "relative",
-        minWidth: 200,
-      }}
-    >
-      <p
-        style={{
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: "0.10em",
-          textTransform: "uppercase",
-          color: t.muted,
-          marginBottom: 8,
-          fontFamily: "'DM Sans', monospace",
-        }}
-      >
-        {isAdmin ? 'Athlete Select' : 'Connection Sync'}
-      </p>
-
-      {isAdmin ? (
-        // Admin View: Athlete Dropdown
-        <button
-          onClick={() => setDropOpen((o) => !o)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            width: "100%",
-            background: t.surface,
-            border: `1px solid ${t.border}`,
-            borderRadius: 10,
-            padding: "8px 12px",
-            cursor: "pointer",
-          }}
-        >
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: `linear-gradient(135deg, ${t.accent}30, ${t.accent}15)`,
-              border: `1px solid ${t.accent}30`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 11,
-              fontWeight: 800,
-              color: t.accent,
-              fontFamily: "'DM Sans', monospace",
-              flexShrink: 0,
-            }}
-          >
-            {meta.avatar}
-          </div>
-          <div style={{ textAlign: "left", flex: 1 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: t.text }}>
-              {meta.name}
-            </p>
-            <p style={{ fontSize: 10, color: t.muted }}>{meta.sport}</p>
-          </div>
-          <ChevronDown size={14} color={t.muted} />
-        </button>
-      ) : (
-        // Athlete View: Coach Display
-        <div style={{
-          display: "flex", alignItems: "center", gap: 10,
-          width: "100%", background: t.surface,
-          border: `1px solid ${t.border}`, borderRadius: 10,
-          padding: "8px 12px",
-        }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: connectedCoaches.length ? `linear-gradient(135deg, ${t.accent}30, ${t.accent}15)` : t.bg,
-            border: `1px solid ${t.accent}30`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 11, fontWeight: 800, color: t.accent, flexShrink: 0,
-          }}>
-            {connectedCoaches.length ? <Shield size={14} /> : '💪'}
-          </div>
-          <div style={{ textAlign: "left", flex: 1 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: t.text }}>
-              {connectedCoaches.length 
-                ? connectedCoaches.map(c => c.name).join(', ') 
-                : "You are your own Coach!"}
-            </p>
-            <p style={{ fontSize: 10, color: t.muted }}>
-              {connectedCoaches.length ? "Monitoring active" : "Independent Athlete Yay!"}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {isAdmin && dropOpen && (
+        {/* Selector */}
         <div
           style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            zIndex: 100,
             background: t.card,
             border: `1px solid ${t.border}`,
-            borderRadius: 12,
-            marginTop: 4,
-            boxShadow: t.shadowHover,
-            overflow: "hidden",
+            borderRadius: 16,
+            padding: "1rem 1.25rem",
+            flex: 1,
+            boxShadow: t.shadow,
+            position: "relative",
+            minWidth: 200,
           }}
         >
-          {athletes.map((a) => {
-            const m = ATHLETE_META[a.id] ?? {
-              name: a.id,
-              sport: "Athlete",
-              avatar: "?",
-            };
-            return (
+          <p
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.10em",
+              textTransform: "uppercase",
+              color: t.muted,
+              marginBottom: 8,
+              fontFamily: "'DM Mono',monospace",
+            }}
+          >
+            {isAdmin ? "Athlete Select" : "Viewing As"}
+          </p>
+          {isAdmin ? (
+            <>
               <button
-                key={a.id}
-                onClick={() => {
-                  setSelectedId(a.id);
-                  setDropOpen(false);
-                }}
+                onClick={() => setDropOpen((o) => !o)}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 10,
                   width: "100%",
-                  padding: "10px 14px",
-                  background:
-                    a.id === selectedId ? t.accentBg : "transparent",
-                  border: "none",
+                  background: t.surface,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 10,
+                  padding: "8px 12px",
                   cursor: "pointer",
-                  transition: "background 0.15s",
                 }}
               >
                 <div
                   style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: 7,
-                    background: `linear-gradient(135deg, ${t.accent}25, ${t.accent}10)`,
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    background: `${color}20`,
+                    border: `1px solid ${color}40`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     fontSize: 10,
                     fontWeight: 800,
-                    color: t.accent,
-                    fontFamily: "'DM Sans', monospace",
+                    color,
+                    flexShrink: 0,
                   }}
                 >
-                  {m.avatar}
+                  {avatar}
                 </div>
-                <div style={{ textAlign: "left" }}>
-                  <p
-                    style={{ fontSize: 12, fontWeight: 600, color: t.text }}
-                  >
-                    {m.name}
+                <div style={{ textAlign: "left", flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: t.text }}>
+                    {athleteName}
                   </p>
                   <p style={{ fontSize: 10, color: t.muted }}>
-                    {a.id} · {m.sport}
+                    {athleteSport} · {selectedId}
                   </p>
                 </div>
-                {wsConnected && (
-                  <span
-                    style={{
-                      marginLeft: "auto",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      fontSize: 9,
-                      color: t.success,
-                      fontFamily: "'DM Sans', monospace",
-                      fontWeight: 700,
-                    }}
-                  >
-                    <LiveDot t={t} /> LIVE
-                  </span>
-                )}
+                <ChevronDown size={14} color={t.muted} />
               </button>
-            );
-          })}
+              {dropOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    zIndex: 100,
+                    background: t.card,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 12,
+                    marginTop: 4,
+                    boxShadow: t.shadowHover,
+                    overflow: "hidden",
+                  }}
+                >
+                  {visible.map((a) => {
+                    const c = athleteColor(a.id, allIds);
+                    return (
+                      <button
+                        key={a.id}
+                        onClick={() => {
+                          setSelectedId(a.id);
+                          setDropOpen(false);
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          width: "100%",
+                          padding: "10px 14px",
+                          background:
+                            a.id === selectedId ? t.accentBg : "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: 7,
+                            background: `${c}20`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 10,
+                            fontWeight: 800,
+                            color: c,
+                          }}
+                        >
+                          {initials(a.name)}
+                        </div>
+                        <div style={{ textAlign: "left" }}>
+                          <p
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: t.text,
+                            }}
+                          >
+                            {a.name}
+                          </p>
+                          <p style={{ fontSize: 10, color: t.muted }}>
+                            {a.id} · {a.sport}
+                          </p>
+                        </div>
+                        {connected && (
+                          <span
+                            style={{
+                              marginLeft: "auto",
+                              fontSize: 9,
+                              color: t.success,
+                              fontWeight: 700,
+                            }}
+                          >
+                            ● LIVE
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                borderRadius: 10,
+                padding: "8px 12px",
+              }}
+            >
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: `${color}20`,
+                  border: `1px solid ${color}40`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color,
+                }}
+              >
+                {avatar}
+              </div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: t.text }}>
+                  {athleteName}
+                </p>
+                <p style={{ fontSize: 10, color: t.muted }}>
+                  {connectedCoaches.length
+                    ? `Coached by ${connectedCoaches.map((c) => c.name).join(", ")}`
+                    : "Independent Athlete"}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
-
         <SessionTimer t={t} />
-        <StatusCard athlete={latest} wsConnected={wsConnected} steps={steps} t={t} />
+        {/* Status */}
+        <div
+          style={{
+            background: t.card,
+            border: `1px solid ${t.border}`,
+            borderRadius: 16,
+            padding: "1rem 1.25rem",
+            flex: 1,
+            boxShadow: t.shadow,
+          }}
+        >
+          <p
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.10em",
+              textTransform: "uppercase",
+              color: t.muted,
+              marginBottom: 8,
+              fontFamily: "'DM Mono',monospace",
+            }}
+          >
+            Status
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {connected ? (
+                <Wifi size={13} color={t.success} />
+              ) : (
+                <WifiOff size={13} color={t.danger} />
+              )}
+              <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>
+                Connection:
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: connected ? t.success : t.danger,
+                  fontWeight: 700,
+                }}
+              >
+                {connected ? "Firebase Live" : "Offline"}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Signal size={13} color={t.accent} />
+              <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>
+                RSSI:
+              </span>
+              <span style={{ fontSize: 11, color: t.text, fontWeight: 700 }}>
+                {rssi ?? "--"} dBm
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Activity size={13} color={t.accent} />
+              <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>
+                Steps:
+              </span>
+              <span style={{ fontSize: 11, color: t.text, fontWeight: 700 }}>
+                {steps ?? "--"}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* ── Metric cards ── */}
       <div style={{ display: "flex", gap: 12 }}>
         <StatCard
           title="Heart Rate"
           value={fmtBpm(bpm)}
           unit="bpm"
-          sub={`Max: ${chartData.length ? Math.max(...chartData.map((d) => d.bpm || 0)).toFixed(0) : "--"}`}
+          sub={
+            chartData.length
+              ? `Max: ${Math.max(...chartData.map((d) => d.bpm || 0)).toFixed(0)} bpm`
+              : null
+          }
           color="#ef4444"
           icon={Heart}
           sparkData={chartData}
@@ -1197,8 +1231,12 @@ export default function AthletiSenseDashboard({ t }) {
         <StatCard
           title="Breathing Rate"
           value={fmtResp(resp)}
-          unit="rpm"
-          sub={`Avg: ${chartData.length ? (chartData.reduce((s, d) => s + (d.resp || 0), 0) / Math.max(chartData.length, 1)).toFixed(0) : "--"}`}
+          unit="br/min"
+          sub={
+            chartData.length
+              ? `Avg: ${(chartData.reduce((s, d) => s + (d.resp || 0), 0) / chartData.length).toFixed(0)} br/min`
+              : null
+          }
           color="#3b82f6"
           icon={Wind}
           sparkData={chartData}
@@ -1206,10 +1244,14 @@ export default function AthletiSenseDashboard({ t }) {
           t={t}
         />
         <StatCard
-          title="Temperature"
+          title="Skin Temperature"
           value={fmtTemp(temp)}
           unit="°C"
-          sub={`Range: ${chartData.length ? fmtTemp(Math.min(...chartData.filter(d => d.temp).map(d => d.temp))) : "--"} - ${chartData.length ? fmtTemp(Math.max(...chartData.filter(d => d.temp).map(d => d.temp))) : "--"}°C`}
+          sub={
+            chartData.filter((d) => d.temp).length
+              ? `Range: ${Math.min(...chartData.filter((d) => d.temp).map((d) => d.temp)).toFixed(1)}–${Math.max(...chartData.filter((d) => d.temp).map((d) => d.temp)).toFixed(1)} °C`
+              : null
+          }
           color="#f59e0b"
           icon={Thermometer}
           sparkData={chartData}
@@ -1217,10 +1259,14 @@ export default function AthletiSenseDashboard({ t }) {
           t={t}
         />
         <StatCard
-          title="Steps"
+          title="Step Count"
           value={steps ?? "--"}
           unit="steps"
-          sub={`Max: ${chartData.length ? Math.max(...chartData.map((d) => d.steps || 0)) : "--"}`}
+          sub={
+            chartData.length
+              ? `Max: ${Math.max(...chartData.map((d) => d.steps || 0))} steps`
+              : null
+          }
           color="#8b5cf6"
           icon={Activity}
           sparkData={chartData}
@@ -1229,9 +1275,9 @@ export default function AthletiSenseDashboard({ t }) {
         />
       </div>
 
+      {/* ── Gauges + Motion chart ── */}
       <div style={{ display: "flex", gap: 12 }}>
         <div
-          className="card-fadein"
           style={{
             flex: 1,
             background: t.card,
@@ -1253,16 +1299,14 @@ export default function AthletiSenseDashboard({ t }) {
               color: t.muted,
               marginBottom: 8,
               alignSelf: "flex-start",
-              fontFamily: "'DM Sans', monospace",
+              fontFamily: "'DM Mono',monospace",
             }}
           >
             HR Gauge
           </p>
-          <HeartRateGauge value={bpm} max={220} isResting={mg < 1.2} t={t} />
+          <HRGauge bpm={bpm || 0} isResting={mag < 1.2} t={t} />
         </div>
-
         <div
-          className="card-fadein"
           style={{
             flex: 3,
             background: t.card,
@@ -1275,7 +1319,6 @@ export default function AthletiSenseDashboard({ t }) {
           <div
             style={{
               display: "flex",
-              alignItems: "center",
               justifyContent: "space-between",
               marginBottom: 12,
             }}
@@ -1287,19 +1330,19 @@ export default function AthletiSenseDashboard({ t }) {
                 letterSpacing: "0.10em",
                 textTransform: "uppercase",
                 color: t.muted,
-                fontFamily: "'DM Sans', monospace",
+                fontFamily: "'DM Mono',monospace",
               }}
             >
-              Motion Live Chart
+              Motion Chart
             </p>
             <span
               style={{
                 fontSize: 9,
                 color: t.faint,
-                fontFamily: "'DM Sans', monospace",
+                fontFamily: "'DM Mono',monospace",
               }}
             >
-              last {chartData.length} readings
+              {chartData.length} readings
             </span>
           </div>
           <ResponsiveContainer width="100%" height={200}>
@@ -1308,13 +1351,9 @@ export default function AthletiSenseDashboard({ t }) {
               margin={{ top: 5, right: 10, bottom: 0, left: 0 }}
             >
               <defs>
-                <linearGradient id="mgAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="mgGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="mgArea2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid
@@ -1327,52 +1366,32 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Sans', monospace",
+                  fontFamily: "'DM Mono',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Sans', monospace",
-                }}
+                tick={{ fontSize: 9, fill: t.faint }}
                 tickLine={false}
                 axisLine={false}
                 width={30}
-                label={{
-                  value: "Magnitude (g)",
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: t.faint,
-                  fontSize: 8,
-                  dx: -8,
-                }}
               />
               <Tooltip content={<ChartTip t={t} />} />
-              <Legend
-                wrapperStyle={{
-                  fontSize: 10,
-                  fontFamily: "'DM Sans', monospace",
-                }}
-              />
               <Area
                 type="monotone"
                 dataKey="mg"
-                name="Acceleration"
+                name="Accel (g)"
                 stroke="#10b981"
                 strokeWidth={2}
-                fill="url(#mgAreaGrad)"
+                fill="url(#mgGrad)"
                 dot={false}
                 isAnimationActive={false}
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-
         <div
-          className="card-fadein"
           style={{
             flex: 1,
             background: t.card,
@@ -1394,18 +1413,18 @@ export default function AthletiSenseDashboard({ t }) {
               color: t.muted,
               marginBottom: 8,
               alignSelf: "flex-start",
-              fontFamily: "'DM Sans', monospace",
+              fontFamily: "'DM Mono',monospace",
             }}
           >
             Motion Gauge
           </p>
-          <MotionGauge value={mg} max={15} t={t} />
+          <MotionGaugeViz value={mag} t={t} />
         </div>
       </div>
 
+      {/* ── HR vs Motion + Breathing ── */}
       <div style={{ display: "flex", gap: 12 }}>
         <div
-          className="card-fadein"
           style={{
             flex: 1,
             background: t.card,
@@ -1423,7 +1442,7 @@ export default function AthletiSenseDashboard({ t }) {
               textTransform: "uppercase",
               color: t.muted,
               marginBottom: 12,
-              fontFamily: "'DM Sans', monospace",
+              fontFamily: "'DM Mono',monospace",
             }}
           >
             HR vs Motion
@@ -1449,7 +1468,7 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 8,
                   fill: t.faint,
-                  fontFamily: "'DM Sans', monospace",
+                  fontFamily: "'DM Mono',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1457,11 +1476,7 @@ export default function AthletiSenseDashboard({ t }) {
               <YAxis
                 yAxisId="hr"
                 domain={[40, 220]}
-                tick={{
-                  fontSize: 8,
-                  fill: t.faint,
-                  fontFamily: "'DM Sans', monospace",
-                }}
+                tick={{ fontSize: 8, fill: t.faint }}
                 tickLine={false}
                 axisLine={false}
                 width={28}
@@ -1470,34 +1485,23 @@ export default function AthletiSenseDashboard({ t }) {
                 yAxisId="mg"
                 orientation="right"
                 domain={[0, 15]}
-                tick={{
-                  fontSize: 8,
-                  fill: t.faint,
-                  fontFamily: "'DM Sans', monospace",
-                }}
+                tick={{ fontSize: 8, fill: t.faint }}
                 tickLine={false}
                 axisLine={false}
                 width={32}
                 tickFormatter={(v) => `${v}g`}
               />
               <Tooltip content={<ChartTip t={t} />} />
-              <Legend
-                wrapperStyle={{
-                  fontSize: 9,
-                  fontFamily: "'DM Sans', monospace",
-                }}
-              />
               <ReferenceLine
                 yAxisId="hr"
                 y={175}
                 stroke={`${t.danger}60`}
                 strokeDasharray="4 3"
                 label={{
-                  value: "Max HR",
+                  value: "Max",
                   position: "right",
                   fontSize: 8,
                   fill: t.danger,
-                  fontFamily: "'DM Sans', monospace",
                 }}
               />
               <Area
@@ -1526,9 +1530,7 @@ export default function AthletiSenseDashboard({ t }) {
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-
         <div
-          className="card-fadein"
           style={{
             flex: 1,
             background: t.card,
@@ -1541,7 +1543,6 @@ export default function AthletiSenseDashboard({ t }) {
           <div
             style={{
               display: "flex",
-              alignItems: "center",
               justifyContent: "space-between",
               marginBottom: 12,
             }}
@@ -1553,19 +1554,13 @@ export default function AthletiSenseDashboard({ t }) {
                 letterSpacing: "0.10em",
                 textTransform: "uppercase",
                 color: t.muted,
-                fontFamily: "'DM Sans', monospace",
+                fontFamily: "'DM Mono',monospace",
               }}
             >
-              Breathing Rate Live
+              Breathing Rate
             </p>
-            <span
-              style={{
-                fontSize: 9,
-                color: t.faint,
-                fontFamily: "'DM Sans', monospace",
-              }}
-            >
-              Normal: 12-20 rpm
+            <span style={{ fontSize: 9, color: t.faint }}>
+              Normal: 12–20 br/min
             </span>
           </div>
           <ResponsiveContainer width="100%" height={160}>
@@ -1574,7 +1569,7 @@ export default function AthletiSenseDashboard({ t }) {
               margin={{ top: 5, right: 10, bottom: 0, left: 0 }}
             >
               <defs>
-                <linearGradient id="brLiveGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="brGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
@@ -1589,68 +1584,70 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 8,
                   fill: t.faint,
-                  fontFamily: "'DM Sans', monospace",
+                  fontFamily: "'DM Mono',monospace",
                 }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
                 domain={[0, 50]}
-                tick={{
-                  fontSize: 8,
-                  fill: t.faint,
-                  fontFamily: "'DM Sans', monospace",
-                }}
+                tick={{ fontSize: 8, fill: t.faint }}
                 tickLine={false}
                 axisLine={false}
                 width={28}
-                label={{
-                  value: "br/min",
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: t.faint,
-                  fontSize: 8,
-                  dx: -8,
-                }}
               />
               <Tooltip content={<ChartTip t={t} />} />
               <ReferenceLine
                 y={12}
                 stroke="#10b98150"
                 strokeDasharray="4 3"
-                label={{ value: "Low", position: "right", fontSize: 7, fill: "#10b981", fontFamily: "'DM Sans', monospace" }}
+                label={{
+                  value: "Low",
+                  position: "right",
+                  fontSize: 7,
+                  fill: "#10b981",
+                }}
               />
               <ReferenceLine
                 y={20}
                 stroke="#10b98150"
                 strokeDasharray="4 3"
-                label={{ value: "Normal", position: "right", fontSize: 7, fill: "#10b981", fontFamily: "'DM Sans', monospace" }}
+                label={{
+                  value: "Normal",
+                  position: "right",
+                  fontSize: 7,
+                  fill: "#10b981",
+                }}
               />
               <ReferenceLine
                 y={30}
                 stroke="#f59e0b50"
                 strokeDasharray="4 3"
-                label={{ value: "High", position: "right", fontSize: 7, fill: "#f59e0b", fontFamily: "'DM Sans', monospace" }}
+                label={{
+                  value: "High",
+                  position: "right",
+                  fontSize: 7,
+                  fill: "#f59e0b",
+                }}
               />
               <Area
                 type="monotone"
                 dataKey="resp"
-                name="Breathing Rate"
+                name="Breathing"
                 stroke="#3b82f6"
                 strokeWidth={2}
-                fill="url(#brLiveGrad)"
+                fill="url(#brGrad)"
                 dot={false}
                 isAnimationActive={false}
-                unit=" rpm"
+                unit=" br/min"
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
 
+      {/* ── Alerts ── */}
       <div
-        id="alerts-panel-section"
-        className="card-fadein"
         style={{
           background: t.card,
           border: `1px solid ${t.border}`,
@@ -1659,12 +1656,7 @@ export default function AthletiSenseDashboard({ t }) {
           boxShadow: t.shadow,
         }}
       >
-        <AlertsPanel 
-          latest={latest} 
-          t={t} 
-          dismissed={alertsDismissed}
-          setDismissed={(d) => setAlertsDismissed(new Set([...alertsDismissed, ...d]))}
-        />
+        <AlertsPanel latest={latest} t={t} />
       </div>
     </main>
   );
