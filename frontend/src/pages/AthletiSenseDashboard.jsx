@@ -1214,7 +1214,7 @@ export default function AthletiSenseDashboard({ t }) {
       </div>
 
       {/* ── Metric cards ── */}
-      <div style={{ display: "flex", gap: 12 }}>
+      <div className="flex flex-col lg:flex-row gap-3 w-full">
         <StatCard
           title="Heart Rate"
           value={fmtBpm(bpm)}
@@ -1278,7 +1278,7 @@ export default function AthletiSenseDashboard({ t }) {
       </div>
 
       {/* ── Gauges + Motion chart ── */}
-      <div style={{ display: "flex", gap: 12 }}>
+      <div className="flex flex-col lg:flex-row gap-3 w-full">
         <div
           style={{
             flex: 1,
@@ -1425,7 +1425,7 @@ export default function AthletiSenseDashboard({ t }) {
       </div>
 
       {/* ── HR vs Motion + Breathing ── */}
-      <div style={{ display: "flex", gap: 12 }}>
+      <div className="flex flex-col lg:flex-row gap-3 w-full">
         <div
           style={{
             flex: 1,
