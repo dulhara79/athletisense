@@ -455,7 +455,7 @@ export default function PerformanceAnalytics({ t }) {
       </div>
 
       {/* KPI Summary from real data */}
-      <div style={{ display: "flex", gap: 12 }}>
+      <div className="flex flex-col lg:flex-row gap-3 w-full">
         {[
           {
             label: "Avg HR",
@@ -616,7 +616,7 @@ export default function PerformanceAnalytics({ t }) {
         )}
       </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* Monthly averages */}
         <Card title="Monthly Averages" t={t}>
           {monthlyData.length === 0 ? (
@@ -680,7 +680,7 @@ export default function PerformanceAnalytics({ t }) {
               No HR data
             </p>
           ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div className="flex flex-col md:flex-row items-center gap-4">
               <ResponsiveContainer width="50%" height={180}>
                 <PieChart>
                   <Pie
