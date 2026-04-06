@@ -159,7 +159,7 @@ function TypingDots({ t }) {
 }
 
 export default function AthletiSenseChat({ t }) {
-  const { user, connectedAthletes = [] } = useAuth();
+  const { user, connectedAthletes = [], connectedCoaches = [] } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -208,7 +208,13 @@ export default function AthletiSenseChat({ t }) {
             history: messages.slice(-8),
             userRole: user?.role,
             athleteId: user?.athleteId,
-            connectedIds: connectedAthletes.map(a => a.athleteId) 
+            connectedIds: connectedAthletes.map(a => a.athleteId),
+            userContext: {
+              name: user?.name,
+              role: user?.role,
+              connectedAthletes: connectedAthletes.map(a => `${a.name || a.username} (${a.athleteId || 'No ID'})`),
+              connectedCoaches: connectedCoaches.map(c => c.name || c.username)
+            }
           }),
         });
         const data = await res.json();
@@ -231,7 +237,7 @@ export default function AthletiSenseChat({ t }) {
         setLoading(false);
       }
     },
-    [input, messages],
+    [input, messages, user, connectedAthletes, connectedCoaches],
   );
 
   const s = {
