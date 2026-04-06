@@ -206,9 +206,11 @@ async function buildSummary() {
 /**
  * Builds the context string injected into the AI system prompt.
  * Also resolves user-friendly names from /users.
+ * @param {object} options Role-based access options
  * @returns {Promise<string>}
  */
-async function buildAIDataContext() {
+async function buildAIDataContext(options = {}) {
+  const { userRole, athleteId, connectedIds = [] } = options;
   try {
     // Optional: pull display names from /users node
     const usersSnap = await db.ref("users").once("value");
@@ -227,6 +229,9 @@ async function buildAIDataContext() {
     const lines = [];
 
     for (const [aid, node] of Object.entries(records)) {
+      if (userRole === "admin" && !connectedIds.includes(aid)) continue;
+      if (userRole === "athlete" && aid !== athleteId) continue;
+
       const lat = node?.latest;
       if (!lat) continue;
 
