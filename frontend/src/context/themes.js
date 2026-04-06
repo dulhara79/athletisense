@@ -1,0 +1,51 @@
+// src/context/themes.js
+// ─────────────────────────────────────────────────────────────
+// Single source of truth for both THEMES used across all pages.
+// MainLayout, LoginPage, and all dashboard pages all import from here.
+
+export const THEMES = {
+  light: {
+    bg:         "#f5f4f1",
+    card:       "#ffffff",
+    sidebar:    "#ffffff",
+    border:     "#e4e2dd",
+    text:       "#1a1917",
+    muted:      "#6b6a66",
+    faint:      "#9e9c97",
+    surface:    "#f0eeed",
+    surface2:   "#e8e6e1",
+    accent:     "#4f46e5",
+    accentBg:   "rgba(79,70,229,0.08)",
+    danger:     "#e11d48",
+    dangerBg:   "rgba(225,29,72,0.08)",
+    warning:    "#d97706",
+    warningBg:  "rgba(217,119,6,0.08)",
+    success:    "#059669",
+    successBg:  "rgba(5,150,105,0.08)",
+    chartGrid:  "#ece9e4",
+    shadow:     "0 1px 3px rgba(0,0,0,0.07),0 4px 16px rgba(0,0,0,0.04)",
+    shadowHover:"0 8px 30px rgba(0,0,0,0.10)",
+  },
+  dark: {
+    bg:         "#0e0d0c",
+    card:       "#191816",
+    sidebar:    "#131210",
+    border:     "#282624",
+    text:       "#f0eeea",
+    muted:      "#8a8880",
+    faint:      "#5c5a57",
+    surface:    "#211f1d",
+    surface2:   "#2a2826",
+    accent:     "#6366f1",
+    accentBg:   "rgba(99,102,241,0.12)",
+    danger:     "#fb4570",
+    dangerBg:   "rgba(251,69,112,0.10)",
+    warning:    "#fbbf24",
+    warningBg:  "rgba(251,191,36,0.10)",
+    success:    "#34d399",
+    successBg:  "rgba(52,211,153,0.10)",
+    chartGrid:  "#282624",
+    shadow:     "0 1px 3px rgba(0,0,0,0.3),0 4px 16px rgba(0,0,0,0.2)",
+    shadowHover:"0 8px 30px rgba(0,0,0,0.4)",
+  },
+};

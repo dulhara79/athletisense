@@ -1,122 +1,143 @@
-/**
- * AthletiSenseChat.jsx
- * ─────────────────────────────────────────────────────────────
- * Floating AI chatbot widget powered by Google Gemini.
- * Supports natural-language queries about athlete data,
- * trend explanations, anomaly identification, and
- * dashboard guidance.
- * ─────────────────────────────────────────────────────────────
- */
+// src/components/AthletiSenseChat.jsx
+// Floating AI chat — connects to /api/v1/chat
+import React, { useState, useRef, useCallback } from "react";
+import { useAuth } from "../context/AuthContext";
+import {
+  MessageCircle,
+  X,
+  Send,
+  Sparkles,
+  ChevronDown,
+  Bot,
+  User,
+  Lightbulb,
+} from "lucide-react";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { MessageCircle, X, Send, Sparkles, ChevronDown, Bot, User, Lightbulb } from "lucide-react";
+const API_BASE = (
+  import.meta.env.VITE_API_BASE || "http://localhost:3001/api"
+).replace(/\/api$/, "/api/v1");
 
-const API_BASE = "http://localhost:3001/api";
-
-/* ── Simple markdown renderer ────────────────────────────────── */
 function renderMarkdown(text, t) {
   if (!text) return null;
-
   const lines = text.split("\n");
-  const elements = [];
-  let inList = false;
+  const els = [];
   let listItems = [];
-
   const flushList = () => {
     if (listItems.length) {
-      elements.push(
-        <ul key={`ul-${elements.length}`} style={{ margin: "6px 0", paddingLeft: 18 }}>
+      els.push(
+        <ul
+          key={`ul-${els.length}`}
+          style={{ margin: "6px 0", paddingLeft: 18 }}
+        >
           {listItems.map((li, i) => (
-            <li key={i} style={{ fontSize: 12.5, lineHeight: 1.6, color: t.text, marginBottom: 2 }}>
+            <li
+              key={i}
+              style={{
+                fontSize: 12.5,
+                lineHeight: 1.6,
+                color: t.text,
+                marginBottom: 2,
+              }}
+            >
               {formatInline(li, t)}
             </li>
           ))}
-        </ul>
+        </ul>,
       );
       listItems = [];
     }
-    inList = false;
   };
-
   lines.forEach((line, idx) => {
-    const trimmed = line.trim();
-
-    // Headings
-    if (trimmed.startsWith("### ")) {
+    const tr = line.trim();
+    if (tr.startsWith("### ")) {
       flushList();
-      elements.push(
-        <p key={idx} style={{ fontSize: 12, fontWeight: 800, color: t.text, margin: "10px 0 4px" }}>
-          {formatInline(trimmed.slice(4), t)}
-        </p>
+      els.push(
+        <p
+          key={idx}
+          style={{
+            fontSize: 12,
+            fontWeight: 800,
+            color: t.text,
+            margin: "10px 0 4px",
+          }}
+        >
+          {formatInline(tr.slice(4), t)}
+        </p>,
       );
-    } else if (trimmed.startsWith("## ")) {
+    } else if (tr.startsWith("## ")) {
       flushList();
-      elements.push(
-        <p key={idx} style={{ fontSize: 13, fontWeight: 800, color: t.text, margin: "10px 0 4px" }}>
-          {formatInline(trimmed.slice(3), t)}
-        </p>
+      els.push(
+        <p
+          key={idx}
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            color: t.text,
+            margin: "10px 0 4px",
+          }}
+        >
+          {formatInline(tr.slice(3), t)}
+        </p>,
       );
-    } else if (trimmed.startsWith("# ")) {
+    } else if (tr.startsWith("# ")) {
       flushList();
-      elements.push(
-        <p key={idx} style={{ fontSize: 14, fontWeight: 800, color: t.text, margin: "10px 0 4px" }}>
-          {formatInline(trimmed.slice(2), t)}
-        </p>
+      els.push(
+        <p
+          key={idx}
+          style={{
+            fontSize: 14,
+            fontWeight: 800,
+            color: t.text,
+            margin: "10px 0 4px",
+          }}
+        >
+          {formatInline(tr.slice(2), t)}
+        </p>,
       );
-    }
-    // List items
-    else if (/^[-*•]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed)) {
-      inList = true;
-      const content = trimmed.replace(/^[-*•]\s*/, "").replace(/^\d+\.\s*/, "");
-      listItems.push(content);
-    }
-    // Empty line
-    else if (!trimmed) {
+    } else if (/^[-*•]\s/.test(tr) || /^\d+\.\s/.test(tr)) {
+      listItems.push(tr.replace(/^[-*•]\s*/, "").replace(/^\d+\.\s*/, ""));
+    } else if (!tr) {
       flushList();
-      elements.push(<div key={idx} style={{ height: 6 }} />);
-    }
-    // Regular paragraph
-    else {
+      els.push(<div key={idx} style={{ height: 6 }} />);
+    } else {
       flushList();
-      elements.push(
-        <p key={idx} style={{ fontSize: 12.5, lineHeight: 1.65, color: t.text, margin: "3px 0" }}>
-          {formatInline(trimmed, t)}
-        </p>
+      els.push(
+        <p
+          key={idx}
+          style={{
+            fontSize: 12.5,
+            lineHeight: 1.65,
+            color: t.text,
+            margin: "3px 0",
+          }}
+        >
+          {formatInline(tr, t)}
+        </p>,
       );
     }
   });
-
   flushList();
-  return elements;
+  return els;
 }
 
 function formatInline(text, t) {
-  // Bold **text**
   const parts = [];
   const regex = /\*\*(.+?)\*\*/g;
-  let lastIndex = 0;
-  let match;
-
+  let lastIndex = 0,
+    match;
   while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
-    }
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
     parts.push(
       <strong key={match.index} style={{ fontWeight: 700, color: t.text }}>
         {match[1]}
-      </strong>
+      </strong>,
     );
     lastIndex = regex.lastIndex;
   }
-
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
   return parts.length ? parts : text;
 }
 
-/* ── Typing indicator ────────────────────────────────────────── */
 function TypingDots({ t }) {
   return (
     <div style={{ display: "flex", gap: 4, padding: "8px 0" }}>
@@ -129,7 +150,7 @@ function TypingDots({ t }) {
             borderRadius: "50%",
             background: t.accent,
             opacity: 0.5,
-            animation: `chatDotPulse 1.2s ease-in-out ${i * 0.15}s infinite`,
+            animation: `chatDot 1.2s ease-in-out ${i * 0.15}s infinite`,
           }}
         />
       ))}
@@ -137,235 +158,160 @@ function TypingDots({ t }) {
   );
 }
 
-/* ── Main chat component ─────────────────────────────────────── */
 export default function AthletiSenseChat({ t }) {
+  const { user, connectedAthletes = [], connectedCoaches = [] } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       role: "assistant",
       content:
-        "👋 Hi! I'm **AthletiSense AI**, your intelligent sports performance assistant.\n\nI can help you:\n- Analyze athlete biometric data\n- Identify trends and anomalies\n- Compare athlete performance\n- Explain dashboard visualizations\n\nAsk me anything about your athletes' data!",
+        "👋 Hi! I'm **AthletiSense AI**.\n\nAsk me anything about your athletes' biometric data, trends, or performance!",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [showSugg, setShowSugg] = useState(false);
+  const messagesEnd = useRef();
 
-  const scrollRef = useRef(null);
-  const inputRef = useRef(null);
+  const scrollToBottom = () =>
+    messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
 
-  // Fetch suggested questions
-  useEffect(() => {
-    fetch(`${API_BASE}/chat/suggestions`)
-      .then((r) => r.json())
-      .then((d) => setSuggestions(d.suggestions || []))
-      .catch(() => {
-        setSuggestions([
-          "What's the current status of all athletes?",
-          "Are there any anomalies?",
-          "Which athlete needs recovery?",
-          "Compare performance metrics",
-        ]);
-      });
-  }, []);
-
-  // Auto-scroll on new messages
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+  React.useEffect(() => {
+    scrollToBottom();
   }, [messages, loading]);
 
-  // Focus input when opened
-  useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 300);
+  // Load suggestions on first open
+  React.useEffect(() => {
+    if (isOpen && suggestions.length === 0) {
+      fetch(`${API_BASE}/chat/suggestions`)
+        .then((r) => r.json())
+        .then((d) => setSuggestions(d.suggestions || []))
+        .catch(() => {});
     }
   }, [isOpen]);
 
-  const sendMessage = useCallback(
-    async (msg) => {
-      const text = (msg || input).trim();
-      if (!text || loading) return;
-
+  const send = useCallback(
+    async (text) => {
+      const msg = (text || input).trim();
+      if (!msg) return;
       setInput("");
-      setShowSuggestions(false);
-      setMessages((prev) => [...prev, { role: "user", content: text }]);
+      setShowSugg(false);
+      setMessages((prev) => [...prev, { role: "user", content: msg }]);
       setLoading(true);
-
       try {
-        const history = messages.slice(-8).map((m) => ({
-          role: m.role,
-          content: m.content,
-        }));
-
         const res = await fetch(`${API_BASE}/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text, history }),
+          body: JSON.stringify({ 
+            message: msg, 
+            history: messages.slice(-8),
+            userRole: user?.role,
+            athleteId: user?.athleteId,
+            connectedIds: connectedAthletes.map(a => a.athleteId),
+            userContext: {
+              name: user?.name,
+              role: user?.role,
+              connectedAthletes: connectedAthletes.map(a => `${a.name || a.username} (${a.athleteId || 'No ID'})`),
+              connectedCoaches: connectedCoaches.map(c => c.name || c.username)
+            }
+          }),
         });
-
         const data = await res.json();
-
-        if (data.error) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: `⚠️ ${data.error}${data.fallback ? "\n\n💡 **Tip:** Make sure a valid OPENAI_API_KEY is set in the backend .env file." : ""}`,
-            },
-          ]);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: data.response },
-          ]);
-        }
-      } catch (err) {
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content:
-              "⚠️ Unable to reach the AI service. Make sure the backend server is running on port 3001.",
+            content: data.response || data.error || "No response.",
+          },
+        ]);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "⚠️ Could not reach the AI server. Check your connection.",
           },
         ]);
       } finally {
         setLoading(false);
       }
     },
-    [input, loading, messages]
+    [input, messages, user, connectedAthletes, connectedCoaches],
   );
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+  const s = {
+    btn: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: 52,
+      height: 52,
+      borderRadius: "50%",
+      background: `linear-gradient(135deg,${t.accent},#7c3aed)`,
+      border: "none",
+      cursor: "pointer",
+      boxShadow: `0 4px 20px ${t.accent}50`,
+      color: "#fff",
+    },
+    win: {
+      position: "fixed",
+      bottom: 80,
+      right: 24,
+      width: 380,
+      height: 560,
+      background: t.card,
+      border: `1px solid ${t.border}`,
+      borderRadius: 20,
+      boxShadow: t.shadowHover,
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+      zIndex: 1000,
+    },
   };
 
   return (
-    <>
-      {/* ── CSS Keyframes ───────────────────────────────────── */}
-      <style>{`
-        @keyframes chatSlideUp {
-          from { opacity: 0; transform: translateY(20px) scale(0.95); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes chatDotPulse {
-          0%, 100% { opacity: 0.3; transform: scale(0.8); }
-          50%      { opacity: 1;   transform: scale(1); }
-        }
-        @keyframes chatBtnPulse {
-          0%   { box-shadow: 0 4px 20px rgba(99,102,241,0.3); }
-          50%  { box-shadow: 0 4px 30px rgba(99,102,241,0.5); }
-          100% { box-shadow: 0 4px 20px rgba(99,102,241,0.3); }
-        }
-        .chat-msg:hover { filter: brightness(0.97); }
-        .chat-suggestion:hover {
-          background: ${t.accentBg} !important;
-          border-color: ${t.accent}30 !important;
-        }
-        .chat-send:hover { filter: brightness(1.1); }
-      `}</style>
-
-      {/* ── Floating Toggle Button ──────────────────────────── */}
-      {!isOpen && (
-        <button
-          id="chat-toggle-btn"
-          onClick={() => setIsOpen(true)}
-          style={{
-            position: "fixed",
-            bottom: 24,
-            right: 24,
-            width: 56,
-            height: 56,
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            animation: "chatBtnPulse 3s ease-in-out infinite",
-            transition: "transform 0.2s",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-        >
-          <Sparkles size={24} color="#fff" />
-        </button>
-      )}
-
-      {/* ── Chat Panel ──────────────────────────────────────── */}
+    <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 1001 }}>
+      <style>{`@keyframes chatDot{0%,80%,100%{opacity:0.5;transform:scale(1)}40%{opacity:1;transform:scale(1.3)}}`}</style>
       {isOpen && (
-        <div
-          id="chat-panel"
-          style={{
-            position: "fixed",
-            bottom: 24,
-            right: 24,
-            width: 400,
-            height: 580,
-            maxHeight: "calc(100vh - 48px)",
-            background: t.card,
-            border: `1px solid ${t.border}`,
-            borderRadius: 20,
-            boxShadow:
-              "0 20px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.05) inset",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            zIndex: 9999,
-            animation: "chatSlideUp 0.3s ease-out",
-          }}
-        >
-          {/* ── Header ──────────────────────────────────────── */}
+        <div style={s.win}>
+          {/* Header */}
           <div
             style={{
-              padding: "16px 20px",
-              background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+              padding: "14px 16px",
+              background: `linear-gradient(135deg,${t.accent},#7c3aed)`,
               display: "flex",
               alignItems: "center",
-              gap: 12,
-              flexShrink: 0,
+              gap: 10,
             }}
           >
             <div
               style={{
-                width: 36,
-                height: 36,
+                width: 32,
+                height: 32,
                 borderRadius: 10,
                 background: "rgba(255,255,255,0.2)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                backdropFilter: "blur(10px)",
               }}
             >
-              <Bot size={20} color="#fff" />
+              <Sparkles size={16} color="#fff" />
             </div>
             <div style={{ flex: 1 }}>
               <p
                 style={{
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: 800,
                   color: "#fff",
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  lineHeight: 1,
                 }}
               >
                 AthletiSense AI
               </p>
-              <p
-                style={{
-                  fontSize: 10,
-                  color: "rgba(255,255,255,0.7)",
-                  fontWeight: 600,
-                }}
-              >
-                Powered by OpenAI · Always analyzing
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)" }}>
+                Powered by GPT-4o mini
               </p>
             </div>
             <button
@@ -376,105 +322,99 @@ export default function AthletiSenseChat({ t }) {
                 borderRadius: 8,
                 padding: 6,
                 cursor: "pointer",
+                color: "#fff",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
               }}
             >
-              <X size={16} color="#fff" />
+              <X size={14} />
             </button>
           </div>
 
-          {/* ── Messages Area ───────────────────────────────── */}
+          {/* Messages */}
           <div
-            ref={scrollRef}
             style={{
               flex: 1,
               overflowY: "auto",
-              padding: "16px",
+              padding: "12px 14px",
               display: "flex",
               flexDirection: "column",
-              gap: 14,
+              gap: 10,
             }}
           >
-            {messages.map((msg, idx) => (
+            {messages.map((m, i) => (
               <div
-                key={idx}
-                className="chat-msg"
+                key={i}
                 style={{
                   display: "flex",
-                  gap: 10,
-                  flexDirection: msg.role === "user" ? "row-reverse" : "row",
+                  gap: 8,
+                  flexDirection: m.role === "user" ? "row-reverse" : "row",
                   alignItems: "flex-start",
                 }}
               >
-                {/* Avatar */}
                 <div
                   style={{
                     width: 28,
                     height: 28,
                     borderRadius: 8,
+                    flexShrink: 0,
                     background:
-                      msg.role === "user"
-                        ? "linear-gradient(135deg, #10b981, #059669)"
-                        : "linear-gradient(135deg, #6366f1, #4f46e5)",
+                      m.role === "user" ? t.accentBg : `${t.accent}20`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    flexShrink: 0,
                   }}
                 >
-                  {msg.role === "user" ? (
-                    <User size={14} color="#fff" />
+                  {m.role === "user" ? (
+                    <User size={13} color={t.accent} />
                   ) : (
-                    <Bot size={14} color="#fff" />
+                    <Bot size={13} color={t.accent} />
                   )}
                 </div>
-
-                {/* Bubble */}
                 <div
                   style={{
-                    maxWidth: "80%",
-                    padding: "10px 14px",
+                    maxWidth: "78%",
+                    padding: "10px 13px",
                     borderRadius:
-                      msg.role === "user"
-                        ? "14px 14px 4px 14px"
-                        : "14px 14px 14px 4px",
-                    background:
-                      msg.role === "user" ? t.accentBg : t.surface,
-                    border: `1px solid ${
-                      msg.role === "user"
-                        ? "rgba(99,102,241,0.15)"
-                        : t.border
-                    }`,
+                      m.role === "user"
+                        ? "16px 4px 16px 16px"
+                        : "4px 16px 16px 16px",
+                    background: m.role === "user" ? t.accent : t.surface,
+                    border: `1px solid ${t.border}`,
                   }}
                 >
-                  {renderMarkdown(msg.content, t)}
+                  {m.role === "user" ? (
+                    <p
+                      style={{ fontSize: 12.5, color: "#fff", lineHeight: 1.5 }}
+                    >
+                      {m.content}
+                    </p>
+                  ) : (
+                    <div>{renderMarkdown(m.content, t)}</div>
+                  )}
                 </div>
               </div>
             ))}
-
-            {/* Typing indicator */}
             {loading && (
-              <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <div
+                style={{ display: "flex", gap: 8, alignItems: "flex-start" }}
+              >
                 <div
                   style={{
                     width: 28,
                     height: 28,
                     borderRadius: 8,
-                    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+                    background: `${t.accent}20`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    flexShrink: 0,
                   }}
                 >
-                  <Bot size={14} color="#fff" />
+                  <Bot size={13} color={t.accent} />
                 </div>
                 <div
                   style={{
-                    padding: "12px 16px",
-                    borderRadius: "14px 14px 14px 4px",
+                    padding: "8px 13px",
+                    borderRadius: "4px 16px 16px 16px",
                     background: t.surface,
                     border: `1px solid ${t.border}`,
                   }}
@@ -483,139 +423,130 @@ export default function AthletiSenseChat({ t }) {
                 </div>
               </div>
             )}
+            <div ref={messagesEnd} />
           </div>
 
-          {/* ── Suggested Questions ─────────────────────────── */}
-          {showSuggestions && suggestions.length > 0 && messages.length <= 1 && (
+          {/* Suggestions */}
+          {showSugg && suggestions.length > 0 && (
             <div
               style={{
-                padding: "0 16px 8px",
+                padding: "8px 14px",
+                borderTop: `1px solid ${t.border}`,
                 display: "flex",
                 flexDirection: "column",
-                gap: 6,
+                gap: 4,
                 maxHeight: 160,
                 overflowY: "auto",
-                flexShrink: 0,
               }}
             >
-              <div
+              <p
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginBottom: 2,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: t.muted,
+                  marginBottom: 4,
                 }}
               >
-                <Lightbulb size={12} color={t.warning} />
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    color: t.muted,
-                  }}
-                >
-                  Suggested Questions
-                </span>
-              </div>
-              {suggestions.slice(0, 4).map((s, i) => (
+                Suggestions
+              </p>
+              {suggestions.slice(0, 5).map((s, i) => (
                 <button
                   key={i}
-                  className="chat-suggestion"
-                  onClick={() => sendMessage(s)}
+                  onClick={() => send(s)}
                   style={{
-                    padding: "8px 12px",
-                    borderRadius: 10,
+                    textAlign: "left",
+                    padding: "7px 10px",
+                    borderRadius: 8,
                     background: t.surface,
                     border: `1px solid ${t.border}`,
                     cursor: "pointer",
-                    fontSize: 11,
-                    fontWeight: 600,
+                    fontSize: 12,
                     color: t.text,
-                    textAlign: "left",
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    transition: "all 0.15s",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    fontWeight: 500,
                   }}
                 >
-                  {s}
+                  💡 {s}
                 </button>
               ))}
             </div>
           )}
 
-          {/* ── Input Area ──────────────────────────────────── */}
+          {/* Input */}
           <div
             style={{
-              padding: "12px 16px 16px",
+              padding: "10px 14px",
               borderTop: `1px solid ${t.border}`,
               display: "flex",
-              gap: 10,
+              gap: 8,
               alignItems: "flex-end",
-              flexShrink: 0,
-              background: t.card,
             }}
           >
+            <button
+              onClick={() => setShowSugg((v) => !v)}
+              style={{
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                borderRadius: 10,
+                padding: 8,
+                cursor: "pointer",
+                color: t.muted,
+                display: "flex",
+                alignItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Lightbulb size={15} />
+            </button>
             <textarea
-              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about athlete data..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send();
+                }
+              }}
+              placeholder="Ask about athlete data…"
               rows={1}
               style={{
                 flex: 1,
-                padding: "10px 14px",
+                padding: "9px 12px",
                 borderRadius: 12,
                 border: `1px solid ${t.border}`,
                 background: t.surface,
+                fontSize: 12.5,
                 color: t.text,
-                fontSize: 13,
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
                 outline: "none",
                 resize: "none",
+                fontFamily: "'Plus Jakarta Sans',sans-serif",
+                lineHeight: 1.5,
                 maxHeight: 80,
-                lineHeight: 1.4,
+                overflowY: "auto",
               }}
-              onFocus={(e) =>
-                (e.target.style.borderColor = t.accent)
-              }
-              onBlur={(e) =>
-                (e.target.style.borderColor = t.border)
-              }
             />
             <button
-              className="chat-send"
-              onClick={() => sendMessage()}
+              onClick={() => send()}
               disabled={loading || !input.trim()}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                background:
-                  loading || !input.trim()
-                    ? t.surface
-                    : "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                background: t.accent,
                 border: "none",
-                cursor: loading || !input.trim() ? "not-allowed" : "pointer",
+                borderRadius: 10,
+                padding: 9,
+                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
+                opacity: loading || !input.trim() ? 0.5 : 1,
                 flexShrink: 0,
-                transition: "all 0.2s",
               }}
             >
-              <Send
-                size={16}
-                color={loading || !input.trim() ? t.faint : "#fff"}
-              />
+              <Send size={15} color="#fff" />
             </button>
           </div>
         </div>
       )}
-    </>
+      <button onClick={() => setIsOpen((o) => !o)} style={s.btn}>
+        {isOpen ? <X size={20} /> : <MessageCircle size={22} />}
+      </button>
+    </div>
   );
 }

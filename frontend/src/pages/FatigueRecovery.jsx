@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+// src/pages/FatigueRecovery.jsx
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useAthleteData } from "../hooks/useAthleteData";
 import {
   AreaChart,
   Area,
@@ -17,112 +19,26 @@ import {
 } from "recharts";
 import {
   RefreshCw,
-  Filter,
-  WifiOff,
-  AlertTriangle,
   CheckCircle,
+  AlertTriangle,
   ChevronDown,
   Zap,
 } from "lucide-react";
+import {
+  getBpm,
+  getTemp,
+  getResp,
+  getMag,
+  getSteps,
+  timeLabel,
+  parseTs,
+  avg,
+  pearson,
+  fatigueScore,
+  athleteColor,
+  initials,
+} from "../utils/dataHelpers";
 
-const API_BASE = "http://localhost:3001";
-const WS_URL = "ws://localhost:3001";
-
-const ATHLETE_META = {
-  ATH_001: {
-    name: "Marcus Thorne",
-    sport: "Elite Runner",
-    color: "#ef4444",
-    avatar: "MT",
-  },
-  ATH_002: {
-    name: "Sarah Chen",
-    sport: "Cyclist",
-    color: "#3b82f6",
-    avatar: "SC",
-  },
-  ATH_003: {
-    name: "Diego Ramirez",
-    sport: "Swimmer",
-    color: "#10b981",
-    avatar: "DR",
-  },
-  ATH_004: {
-    name: "Aisha Patel",
-    sport: "Sprinter",
-    color: "#f59e0b",
-    avatar: "AP",
-  },
-};
-
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-// ─── Helpers ──────────────────────────────────────────────────
-function motionMag(r) {
-  if (!r?.motion) return 0;
-  const { accel_x: ax = 0, accel_y: ay = 0, accel_z: az = 0 } = r.motion;
-  return parseFloat(
-    (Math.sqrt(ax * ax + ay * ay + az * az) / 16384).toFixed(3),
-  );
-}
-
-/**
- * FIX 1 - parseTs
- * ─────────────────────────────────────────────────────────────
- * The original assumed "DD/MM/YYYY HH:MM:SS" format exactly, but
- * Firebase records coming back from the backend sometimes arrive as
- * ISO strings (from Date.toISOString) or with missing time portions.
- * If a timestamp is purely invalid, `new Date()` results in "Invalid Date" and
- * `.getMonth()` returns NaN - which when used as an array index gives
- * "Cannot set properties of undefined (setting 'hr')".
- *
- * Fix: handle both slash-delimited and ISO formats, and return null
- * for anything that doesn't produce a valid Date.
- */
-function parseTs(ts) {
-  if (!ts || typeof ts !== "string") return null;
-  let d;
-  if (ts.includes("/")) {
-    const [datePart, timePart] = ts.split(" ");
-    if (!datePart) return null;
-    const parts = datePart.split("/");
-    if (parts.length !== 3) return null;
-    const [dd, mm, yyyy] = parts;
-    d = new Date(
-      `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}T${timePart || "00:00:00"}`,
-    );
-  } else {
-    d = new Date(ts); // ISO 8601 and anything the browser can natively parse
-  }
-  // isNaN guard - rejects Invalid Date before it reaches any index operation
-  return isNaN(d.getTime()) ? null : d;
-}
-
-function avg(arr) {
-  return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-}
-
-function rollingAvg(arr, window = 7) {
-  return arr.map((_, i) => {
-    const slice = arr.slice(Math.max(0, i - window + 1), i + 1);
-    return parseFloat(avg(slice).toFixed(1));
-  });
-}
-
-// ─── Shared UI ────────────────────────────────────────────────
 function ChartTip({ active, payload, label, t }) {
   if (!active || !payload?.length) return null;
   return (
@@ -134,22 +50,13 @@ function ChartTip({ active, payload, label, t }) {
         padding: "8px 12px",
         boxShadow: t.shadow,
         fontSize: 11,
-        fontFamily: "'DM Sans',monospace",
-        zIndex: 50,
       }}
     >
       <p style={{ color: t.muted, marginBottom: 5, fontWeight: 700 }}>
         {label}
       </p>
       {payload.map((p, i) => (
-        <p
-          key={i}
-          style={{
-            color: p.color || p.stroke,
-            fontWeight: 700,
-            marginBottom: 2,
-          }}
-        >
+        <p key={i} style={{ color: p.color || p.stroke, fontWeight: 700 }}>
           {p.name}:{" "}
           <span style={{ color: t.text }}>
             {typeof p.value === "number" ? p.value.toFixed(1) : p.value}
@@ -163,7 +70,6 @@ function ChartTip({ active, payload, label, t }) {
 function Card({ title, children, t, right }) {
   return (
     <div
-      className="card-fadein"
       style={{
         background: t.card,
         border: `1px solid ${t.border}`,
@@ -187,7 +93,7 @@ function Card({ title, children, t, right }) {
             textTransform: "uppercase",
             letterSpacing: "0.10em",
             color: t.muted,
-            fontFamily: "'DM Sans',monospace",
+            fontFamily: "'DM Mono',monospace",
           }}
         >
           {title}
@@ -199,7 +105,7 @@ function Card({ title, children, t, right }) {
   );
 }
 
-function MultiSelect({ label, options, value, onChange, t }) {
+function AthleteDropdown({ athletes, value, onChange, allIds, t }) {
   const [open, setOpen] = useState(false);
   const ref = useRef();
   useEffect(() => {
@@ -209,27 +115,16 @@ function MultiSelect({ label, options, value, onChange, t }) {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
-  const display =
-    value.length === 0
-      ? label
-      : value.length === options.length
-        ? "All Athletes"
-        : `${value.length} selected`;
-
+  const selected = athletes.find((a) => a.id === value);
   return (
-    <div
-      ref={ref}
-      style={{ position: "relative", flex: "1 1 200px", minWidth: 180 }}
-    >
+    <div ref={ref} style={{ position: "relative", minWidth: 180 }}>
       <button
         onClick={() => setOpen((o) => !o)}
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
           gap: 8,
-          width: "100%",
-          padding: "8px 12px",
+          padding: "7px 12px",
           borderRadius: 10,
           background: t.surface,
           border: `1px solid ${t.border}`,
@@ -237,164 +132,35 @@ function MultiSelect({ label, options, value, onChange, t }) {
           fontSize: 12,
           fontWeight: 600,
           color: t.text,
-          fontFamily: "'Plus Jakarta Sans',sans-serif",
-        }}
-      >
-        <span
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {display}
-        </span>
-        <ChevronDown
-          size={13}
-          color={t.muted}
-          style={{
-            flexShrink: 0,
-            transform: open ? "rotate(180deg)" : "none",
-            transition: "transform 0.2s",
-          }}
-        />
-      </button>
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            zIndex: 200,
-            background: t.card,
-            border: `1px solid ${t.border}`,
-            borderRadius: 12,
-            boxShadow: t.shadowHover,
-            maxHeight: 220,
-            overflowY: "auto",
-          }}
-        >
-          {options.map((opt) => {
-            const sel = value.includes(opt.value);
-            return (
-              <button
-                key={opt.value}
-                onClick={() =>
-                  onChange(
-                    sel
-                      ? value.filter((v) => v !== opt.value)
-                      : [...value, opt.value],
-                  )
-                }
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  width: "100%",
-                  padding: "9px 14px",
-                  background: sel ? t.accentBg : "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: sel ? 700 : 500,
-                  color: sel ? t.accent : t.text,
-                  fontFamily: "'Plus Jakarta Sans',sans-serif",
-                  transition: "background 0.15s",
-                }}
-              >
-                <div
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: 4,
-                    border: `2px solid ${sel ? t.accent : t.border}`,
-                    background: sel ? t.accent : "transparent",
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {sel && (
-                    <span
-                      style={{ color: "#fff", fontSize: 9, fontWeight: 900 }}
-                    >
-                      ✓
-                    </span>
-                  )}
-                </div>
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: opt.color || t.muted,
-                    flexShrink: 0,
-                  }}
-                />
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DateRangeSelect({ value, onChange, t }) {
-  const opts = [
-    { value: "all", label: "All Time" },
-    { value: "7d", label: "Last 7 days" },
-    { value: "30d", label: "Last 30 days" },
-    { value: "90d", label: "Last 90 days" },
-    { value: "365d", label: "Last year" },
-  ];
-  const [open, setOpen] = useState(false);
-  const ref = useRef();
-  useEffect(() => {
-    const h = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  const display = opts.find((o) => o.value === value)?.label || "Date Range";
-
-  return (
-    <div
-      ref={ref}
-      style={{ position: "relative", flex: "1 1 180px", minWidth: 160 }}
-    >
-      <button
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
           width: "100%",
-          padding: "8px 12px",
-          borderRadius: 10,
-          background: t.surface,
-          border: `1px solid ${t.border}`,
-          cursor: "pointer",
-          fontSize: 12,
-          fontWeight: 600,
-          color: t.text,
-          fontFamily: "'Plus Jakarta Sans',sans-serif",
         }}
       >
-        <span>{display}</span>
-        <ChevronDown
-          size={13}
-          color={t.muted}
-          style={{
-            transform: open ? "rotate(180deg)" : "none",
-            transition: "transform 0.2s",
-          }}
-        />
+        {selected ? (
+          <div
+            style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}
+          >
+            <div
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 5,
+                background: `${athleteColor(selected.id, allIds)}20`,
+                fontSize: 9,
+                fontWeight: 800,
+                color: athleteColor(selected.id, allIds),
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {initials(selected.name)}
+            </div>
+            <span>{selected.name || selected.id}</span>
+          </div>
+        ) : (
+          <span>Select Athlete</span>
+        )}
+        <ChevronDown size={13} color={t.muted} />
       </button>
       {open && (
         <div
@@ -411,29 +177,44 @@ function DateRangeSelect({ value, onChange, t }) {
             overflow: "hidden",
           }}
         >
-          {opts.map((opt) => (
+          {athletes.map((a) => (
             <button
-              key={opt.value}
+              key={a.id}
               onClick={() => {
-                onChange(opt.value);
+                onChange(a.id);
                 setOpen(false);
               }}
               style={{
                 display: "flex",
                 alignItems: "center",
+                gap: 8,
                 width: "100%",
                 padding: "9px 14px",
-                background: value === opt.value ? t.accentBg : "transparent",
+                background: a.id === value ? t.accentBg : "transparent",
                 border: "none",
                 cursor: "pointer",
                 fontSize: 12,
-                fontWeight: value === opt.value ? 700 : 500,
-                color: value === opt.value ? t.accent : t.text,
-                fontFamily: "'Plus Jakarta Sans',sans-serif",
-                transition: "background 0.15s",
+                color: t.text,
+                textAlign: "left",
               }}
             >
-              {opt.label}
+              <div
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 5,
+                  background: `${athleteColor(a.id, allIds)}20`,
+                  fontSize: 9,
+                  fontWeight: 800,
+                  color: athleteColor(a.id, allIds),
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {initials(a.name)}
+              </div>
+              <span>{a.name || a.id}</span>
             </button>
           ))}
         </div>
@@ -442,519 +223,90 @@ function DateRangeSelect({ value, onChange, t }) {
   );
 }
 
-function RecoveryGauge({ score, t }) {
-  const clamp = Math.max(0, Math.min(100, score));
-  const color = clamp > 70 ? "#10b981" : clamp > 40 ? "#f59e0b" : "#ef4444";
-  const label = clamp > 70 ? "GOOD" : clamp > 40 ? "MODERATE" : "NEEDS REST";
-  const cx = 90,
-    cy = 90,
-    r = 62;
-
-  function pt(deg) {
-    const rad = ((deg - 90) * Math.PI) / 180;
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-  }
-  function arc(start, end) {
-    if (Math.abs(end - start) < 0.01) return "";
-    const s = pt(start),
-      e = pt(end);
-    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${Math.abs(end - start) > 180 ? 1 : 0} ${end > start ? 1 : 0} ${e.x} ${e.y}`;
-  }
-
-  const START = -60,
-    END = 240;
-  const filledEnd = START + (clamp / 100) * (END - START);
-  const needleDeg = START + (clamp / 100) * (END - START);
-  const zones = [
-    { pct: 0.4, c: "#ef4444" },
-    { pct: 0.7, c: "#f59e0b" },
-    { pct: 1.0, c: "#10b981" },
-  ];
-
-  return (
-    <div
-      style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}
-    >
-      <svg viewBox="0 0 180 140" style={{ width: "100%", maxWidth: 220 }}>
-        {(() => {
-          let prev = START;
-          return zones.map((z) => {
-            const end = START + z.pct * (END - START);
-            const el = (
-              <path
-                key={z.c}
-                d={arc(prev, end)}
-                fill="none"
-                stroke={z.c}
-                strokeWidth={14}
-                strokeLinecap="butt"
-                opacity={0.25}
-              />
-            );
-            prev = end;
-            return el;
-          });
-        })()}
-        <path
-          d={arc(START, END)}
-          fill="none"
-          stroke={t.surface2}
-          strokeWidth={14}
-          strokeLinecap="round"
-          opacity={0.4}
-        />
-        {clamp > 0 && (
-          <path
-            d={arc(START, filledEnd)}
-            fill="none"
-            stroke={color}
-            strokeWidth={14}
-            strokeLinecap="round"
-            style={{ transition: "stroke 0.4s" }}
-          />
-        )}
-        <text
-          x={22}
-          y={118}
-          fill="#ef4444"
-          fontSize="8"
-          fontWeight="800"
-          fontFamily="'DM Sans',monospace"
-          textAnchor="middle"
-        >
-          0
-        </text>
-        <text
-          x={158}
-          y={118}
-          fill="#10b981"
-          fontSize="8"
-          fontWeight="800"
-          fontFamily="'DM Sans',monospace"
-          textAnchor="middle"
-        >
-          100
-        </text>
-        <g
-          style={{
-            transform: `rotate(${needleDeg - 90}deg)`,
-            transformOrigin: `${cx}px ${cy}px`,
-            transition: "transform 0.8s cubic-bezier(0.34,1.56,0.64,1)",
-          }}
-        >
-          <line
-            x1={cx}
-            y1={cy}
-            x2={cx}
-            y2={cy - r + 8}
-            stroke={t.muted}
-            strokeWidth={2.5}
-            strokeLinecap="round"
-          />
-        </g>
-        <circle
-          cx={cx}
-          cy={cy}
-          r={7}
-          fill={t.card}
-          stroke={t.border}
-          strokeWidth={2}
-        />
-        <circle cx={cx} cy={cy} r={3} fill={color} />
-        <text
-          x={cx}
-          y={cy + 28}
-          fill={color}
-          fontSize="30"
-          fontWeight="800"
-          fontFamily="'DM Sans',monospace"
-          textAnchor="middle"
-          letterSpacing="-1"
-        >
-          {clamp.toFixed(0)}
-        </text>
-        <text
-          x={cx}
-          y={cy + 44}
-          fill={t.muted}
-          fontSize="8"
-          fontWeight="700"
-          fontFamily="'DM Sans',monospace"
-          textAnchor="middle"
-          letterSpacing="0.1em"
-        >
-          {label}
-        </text>
-      </svg>
-    </div>
-  );
-}
-
-// ─── Main ─────────────────────────────────────────────────────
 export default function FatigueRecovery({ t }) {
-  const [athletes, setAthletes] = useState([]);
-  const [allRecords, setAllRecords] = useState({});
-  const [liveLatest, setLiveLatest] = useState({});
-  const [wsConnected, setWsConnected] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const wsRef = useRef(null);
+  const { user, connectedAthletes = [] } = useAuth();
+  const { athletes, connected, loading, getAthleteData, getLatest } =
+    useAthleteData();
+  const isAdmin = user?.role === "admin";
+  const connectedAthleteIds = isAdmin ? connectedAthletes.map(a => a.athleteId) : [];
 
-  const [filterAthletes, setFilterAthletes] = useState([]);
-  const [dateRange, setDateRange] = useState("all");
+  const visible = isAdmin
+    ? athletes.filter(a => connectedAthleteIds.includes(a.id))
+    : athletes.filter((a) => a.id === user?.athleteId);
+    
+  const allIds = visible.map((a) => a.id);
 
-  // Role-based filtering
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
-  const myAthleteId = user?.athleteId;
-
-  // Fetch athletes + histories
+  const [selectedId, setSelectedId] = useState(null);
   useEffect(() => {
-    setLoading(true);
-    fetch(`${API_BASE}/api/athletes`)
-      .then((r) => r.json())
-      .then(async ({ athletes: list }) => {
-        // Role-based filter: athletes only see their own data
-        const filtered = (!isAdmin && myAthleteId)
-          ? (list || []).filter(a => a.id === myAthleteId)
-          : (list || []);
-        setAthletes(filtered);
-        setFilterAthletes(filtered.map((a) => a.id));
-        const latMap = {};
-        list?.forEach((a) => {
-          if (a.latest) latMap[a.id] = a.latest;
-        });
-        setLiveLatest(latMap);
+    if (!selectedId && visible.length) setSelectedId(visible[0].id);
+  }, [visible.length]);
 
-        const hists = await Promise.all(
-          (list || []).map((a) =>
-            fetch(`${API_BASE}/api/athletes/${a.id}/history?limit=200`)
-              .then((r) => r.json())
-              .then((d) => ({
-                id: a.id,
-                readings: (d.readings || []).reverse(),
-              }))
-              .catch(() => ({ id: a.id, readings: [] })),
-          ),
-        );
-        const rec = {};
-        hists.forEach((h) => {
-          rec[h.id] = h.readings;
-        });
-        setAllRecords(rec);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+  const records = getAthleteData(selectedId);
+  const latest = getLatest(selectedId);
+  const { score: fatigue, recovery, status } = fatigueScore(latest);
 
-  /**
-   * FIX 2 - WebSocket StrictMode double-invoke crash
-   * In React 18 StrictMode, useEffect runs twice. If we append to `last20` arrayictMode mounts → unmounts → re-mounts every component
-   * in development.  The original code called wsRef.current?.close()
-   * in the cleanup, but then the setTimeout inside onclose fired and
-   * called connect() again on the already-destroyed instance, producing
-   * "WebSocket is closed before the connection is established".
-   *
-   * Fix: use a `destroyed` boolean captured by the closure.  Every
-   * async callback checks it before touching state or re-connecting.
-   */
-  useEffect(() => {
-    let destroyed = false;
-
-    function connect() {
-      if (destroyed) return;
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        if (!destroyed) setWsConnected(true);
-      };
-      ws.onclose = () => {
-        if (!destroyed) {
-          setWsConnected(false);
-          setTimeout(connect, 3000);
-        }
-      };
-      ws.onerror = () => ws.close();
-      ws.onmessage = (evt) => {
-        if (destroyed) return;
-        try {
-          const msg = JSON.parse(evt.data);
-          if (msg.type === "live_update" && msg.athlete_id && msg.data) {
-            const { athlete_id: id, data } = msg;
-            setLiveLatest((p) => ({ ...p, [id]: data }));
-            setAllRecords((p) => ({
-              ...p,
-              [id]: [...(p[id] || []), data].slice(-200),
-            }));
-          }
-        } catch (_) {}
-      };
-    }
-
-    connect();
-    return () => {
-      destroyed = true;
-      wsRef.current?.close();
-    };
-  }, []);
-
-  const cutoff = useMemo(() => {
-    if (dateRange === "all") return null;
-    const days = parseInt(dateRange);
-    const d = new Date();
-    d.setDate(d.getDate() - days);
-    return d;
-  }, [dateRange]);
-
-  const filteredRecords = useMemo(() => {
-    const ids = filterAthletes.length
-      ? filterAthletes
-      : athletes.map((a) => a.id);
-    return ids.flatMap((id) =>
-      (allRecords[id] || [])
-        .filter((r) => {
-          if (!cutoff) return true;
-          const d = parseTs(r.timestamp);
-          return d && d >= cutoff;
-        })
-        .map((r) => ({ ...r, _id: id })),
-    );
-  }, [allRecords, filterAthletes, athletes, cutoff]);
-
-  // Recovery curve
-  const recoveryCurveData = useMemo(() => {
-    const ids = filterAthletes.length
-      ? filterAthletes
-      : athletes.map((a) => a.id);
-    const BUCKETS = 8;
-    const labels = [
-      "start",
-      "1 hr",
-      "2 hr",
-      "3 hr",
-      "4 hr",
-      "5 hr",
-      "6 hr",
-      "7 hr",
-    ];
-    return labels.map((label, b) => {
-      const bucket = { label };
-      ids.forEach((id) => {
-        const recs = (allRecords[id] || []).slice(-BUCKETS * 4);
-        if (!recs.length) {
-          bucket[id] = null;
-          return;
-        }
-        const s = Math.floor((recs.length * b) / BUCKETS);
-        const e = Math.floor((recs.length * (b + 1)) / BUCKETS);
-        const hrVals = recs
-          .slice(s, e)
-          .map((r) => r?.heart_rate?.bpm_avg || 0)
-          .filter(Boolean);
-        bucket[id] = hrVals.length ? Math.round(avg(hrVals)) : null;
-      });
-      return bucket;
-    });
-  }, [allRecords, filterAthletes, athletes]);
-
-  // Recovery score
-  const recoveryScore = useMemo(() => {
-    const ids = filterAthletes.length
-      ? filterAthletes
-      : athletes.map((a) => a.id);
-    if (!ids.length) return 0;
-    const scores = ids.map((id) => {
-      const lat = liveLatest[id];
-      if (!lat) return 50;
-      const hr = lat?.heart_rate?.bpm_avg || 70;
-      const temp = lat?.temperature?.celsius || 36;
-      const mg = motionMag(lat);
-      return (
-        Math.max(0, 100 - (hr - 60) * 0.7) * 0.5 +
-        Math.max(0, 100 - Math.abs(temp - 33) * 12) * 0.3 +
-        Math.max(0, 100 - mg * 8) * 0.2
-      );
-    });
-    return Math.round(avg(scores));
-  }, [liveLatest, filterAthletes, athletes]);
-
-  // Scatter
-  const scatterData = useMemo(() => {
-    const ids = filterAthletes.length
-      ? filterAthletes
-      : athletes.map((a) => a.id);
-    return ids.map((id) => ({
-      id,
-      color: ATHLETE_META[id]?.color || "#6366f1",
-      name: ATHLETE_META[id]?.name || id,
-      points: (allRecords[id] || [])
-        .slice(-60)
-        .map((r) => ({
-          hr: r?.heart_rate?.bpm_avg || null,
-          resp: r?.respiration?.rate_avg || null,
-        }))
-        .filter((p) => p.hr && p.resp),
-    }));
-  }, [allRecords, filterAthletes, athletes]);
-
-  // Temp vs HR Scatter
-  const tempHrData = useMemo(() => {
-    const ids = filterAthletes.length
-      ? filterAthletes
-      : athletes.map((a) => a.id);
-    return ids.map((id) => ({
-      id,
-      color: ATHLETE_META[id]?.color || "#6366f1",
-      name: ATHLETE_META[id]?.name || id,
-      points: (allRecords[id] || [])
-        .slice(-60)
-        .map((r) => ({
-          hr: r?.heart_rate?.bpm_avg || null,
-          temp: r?.temperature?.celsius || null,
-        }))
-        .filter((p) => p.hr && p.temp),
-    }));
-  }, [allRecords, filterAthletes, athletes]);
-
-  /**
-   * FIX 3 - loadAccumulation "Cannot set properties of undefined"
-   * The original code looped over `MONTHS` (12 items) and then inside that loop, * Three issues in the original:
-   *
- * FIX 1 - parseTs
- * Ensures `timestamp` values coming from Firebase (like "2023-11-20T...")
- * are parsed cleanly without `.replace(' ', 'T')` unless needed. → property write crashed.
-   *    Fixed in parseTs (FIX 1 above); also added an explicit range
-   *    guard here as a second safety net.
-   *
-   * b) The denominator   * Instead of scanning `filteredRecords` 12 times, we scan it ONCE.
-   *    the outer forEach - O(n²) and it re-scanned filteredRecords for
-   *    every single month.record.  Replaced with a per-(athlete,month) counter
-   *    array that is O(n) total.
-   *
-   * c) Removed the stray console.log that was printing every record.
-   */
-  const loadAccumulation = useMemo(() => {
-    const ids = filterAthletes.length
-      ? filterAthletes
-      : athletes.map((a) => a.id);
-
-    // 1. Initialize empty buckets
-    // 12 plain objects, one per month - always exactly 12 entries
-    const buckets = Array.from({ length: 12 }, (_, i) => ({ month: MONTHS[i] }));
-    const cumul = {}; // cumulative load per athlete
-    const counts = {}; // record count per athlete per month
-
-    ids.forEach((id) => {
-      cumul[id] = 0;
-      counts[id] = new Array(12).fill(0);
-    });
-
-    filteredRecords.forEach((r) => {
-      const d = parseTs(r.timestamp);
-      if (!d) return; // invalid timestamp → skip
-
-      const mi = d.getMonth();
-      if (mi < 0 || mi > 11) return; // out-of-range month → skip
-
-      const id = r._id;
-      if (!ids.includes(id)) return;
-
-      const load = (r?.heart_rate?.bpm_avg || 0) + motionMag(r) * 20;
-      cumul[id] += load;
-      counts[id][mi] += 1;
-
-      // buckets[mi] is guaranteed to exist - MONTHS always has 12 entries
-      buckets[mi][id] = Math.round(cumul[id] / counts[id][mi]);
-    });
-
-    return buckets;
-  }, [filteredRecords, filterAthletes, athletes]);
-
-  // Weekly trend
-  const weeklyTrend = useMemo(() => {
-    const merged = filteredRecords
-      .filter((r) => r?.heart_rate?.bpm_avg)
-      .slice(-60)
-      .map((r, i) => {
-        const d = parseTs(r.timestamp);
-        return {
-          label: d
-            ? `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
-            : `${i}`,
-          load: Math.round((r?.heart_rate?.bpm_avg || 0) + motionMag(r) * 10),
-          resp: r?.respiration?.rate_avg || null,
-        };
-      });
-    const rolling = rollingAvg(
-      merged.map((m) => m.load),
-      7,
-    );
-    return merged.map((m, i) => ({ ...m, rolling: rolling[i] }));
-  }, [filteredRecords]);
-
-  // Fatigue risk
-  const fatigueRisk = useMemo(() => {
-    const ids = filterAthletes.length
-      ? filterAthletes
-      : athletes.map((a) => a.id);
-    return ids.map((id) => {
-      const lat = liveLatest[id];
-      if (!lat)
-        return {
-          id,
-          level: "low",
-          score: 0,
-          hr: 0,
-          temp: "0.0",
-          mg: "0.00",
-          name: ATHLETE_META[id]?.name || id,
-        };
-
-      const hr = lat?.heart_rate?.bpm_avg || 70;
-      const temp = lat?.temperature?.celsius || 36;
-      const mg = motionMag(lat);
-      const recs = allRecords[id] || [];
-      const recentHrs = recs
-        .slice(-10)
-        .map((r) => r?.heart_rate?.bpm_avg || 0)
-        .filter(Boolean);
-      const hrTrend =
-        recentHrs.length > 1 ? recentHrs.at(-1) - recentHrs[0] : 0;
-
-      let score = 0;
-      if (hr > 160) score += 30;
-      else if (hr > 140) score += 15;
-      if (temp > 38) score += 25;
-      else if (temp > 37.5) score += 12;
-      if (mg > 10) score += 20;
-      else if (mg > 7) score += 10;
-      if (hrTrend > 15) score += 25;
-
-      return {
-        id,
-        score,
-        level: score > 50 ? "high" : score > 25 ? "moderate" : "low",
-        hr,
-        temp: temp.toFixed(1),
-        mg: mg.toFixed(2),
-        name: ATHLETE_META[id]?.name || id,
-      };
-    });
-  }, [liveLatest, allRecords, filterAthletes, athletes]);
-
-  const worstRisk = useMemo(
+  // Chart data
+  const chartData = useMemo(
     () =>
-      fatigueRisk.length
-        ? fatigueRisk.reduce((a, b) => (a.score > b.score ? a : b))
-        : null,
-    [fatigueRisk],
+      records.map((r) => ({
+        time: timeLabel(r.timestamp),
+        bpm: getBpm(r),
+        temp: getTemp(r),
+        resp: getResp(r),
+        mag: parseFloat((getMag(r) ?? 0).toFixed(2)),
+        steps: getSteps(r),
+        fatigue: (() => {
+          const { score } = fatigueScore(r);
+          return score;
+        })(),
+      })),
+    [records],
   );
 
-  const ids = filterAthletes.length
-    ? filterAthletes
-    : athletes.map((a) => a.id);
+  // Scatter: HR vs motion for correlation viz
+  const scatterData = useMemo(
+    () =>
+      records
+        .map((r) => ({
+          bpm: getBpm(r),
+          mag: parseFloat((getMag(r) ?? 0).toFixed(2)),
+          temp: getTemp(r),
+        }))
+        .filter((d) => d.bpm != null && d.mag != null),
+    [records],
+  );
 
-  // ─── Render ──────────────────────────────────────────────────
+  // Compute correlations from real data
+  const hrVals = records.map(getBpm).filter(Number.isFinite);
+  const magVals = records.map((r) => getMag(r) ?? 0).filter(Number.isFinite);
+  const tmpVals = records.map(getTemp).filter(Number.isFinite);
+  const rspVals = records.map(getResp).filter(Number.isFinite);
+  const hrMagCorr = pearson(hrVals, magVals);
+  const hrTmpCorr = pearson(hrVals, tmpVals);
+  const hrRspCorr = pearson(hrVals, rspVals);
+
+  const statusColor =
+    status === "Optimal"
+      ? t.success
+      : status === "Moderate"
+        ? t.warning
+        : t.danger;
+  const selectedAthlete = athletes.find((a) => a.id === selectedId);
+
+  if (loading)
+    return (
+      <main
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <p style={{ color: t.muted }}>Loading data…</p>
+      </main>
+    );
+
   return (
     <main
       style={{
@@ -970,171 +322,72 @@ export default function FatigueRecovery({ t }) {
       <div
         style={{
           display: "flex",
-          alignItems: "center",
           justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12,
         }}
       >
         <div>
-          <h1
+          <h2
             style={{
-              fontFamily: "'Syne',sans-serif",
-              fontSize: 20,
-              fontWeight: 800,
+              fontSize: 24,
+              fontWeight: 400,
               color: t.text,
-              letterSpacing: "0.02em",
+              fontFamily: "'Bebas Neue','Syne',sans-serif",
+              letterSpacing: "0.06em",
             }}
           >
-            Fatigue &amp; Recovery Analysis
-          </h1>
-          <p style={{ fontSize: 11, color: t.muted, marginTop: 2 }}>
-            {filteredRecords.length} records · {ids.length} athlete(s)
-            {loading && " · loading…"}
-          </p>
-        </div>
-        <span
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            padding: "5px 12px",
-            borderRadius: 99,
-            fontSize: 10,
-            fontWeight: 700,
-            fontFamily: "'DM Sans',monospace",
-            background: wsConnected ? t.successBg : t.dangerBg,
-            color: wsConnected ? t.success : t.danger,
-            border: `1px solid ${wsConnected ? t.success + "30" : t.danger + "30"}`,
-          }}
-        >
-          {wsConnected ? (
-            <>
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: t.success,
-                  animation: "pulse 1.6s infinite",
-                }}
-              />{" "}
-              LIVE
-            </>
-          ) : (
-            <>
-              <WifiOff size={10} /> OFFLINE
-            </>
-          )}
-        </span>
-      </div>
-
-      {/* Filters */}
-      <div
-        className="card-fadein"
-        style={{
-          background: t.card,
-          border: `1px solid ${t.border}`,
-          borderRadius: 14,
-          padding: "1rem 1.25rem",
-          boxShadow: t.shadow,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          <Filter size={13} color={t.muted} />
-          <p
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.10em",
-              color: t.muted,
-              fontFamily: "'DM Sans',monospace",
-            }}
-          >
-            Filters Panel
+            FATIGUE & RECOVERY
+          </h2>
+          <p style={{ fontSize: 11, color: t.muted }}>
+            {selectedAthlete?.name || selectedId} · {records.length} readings
           </p>
         </div>
         <div
           style={{
             display: "flex",
             gap: 10,
-            flexWrap: "wrap",
             alignItems: "center",
+            flexWrap: "wrap",
           }}
         >
-          {isAdmin && <MultiSelect
-            label="Athlete Multi-select"
-            options={athletes.map((a) => ({
-              value: a.id,
-              label: ATHLETE_META[a.id]?.name || a.id,
-              color: ATHLETE_META[a.id]?.color,
-            }))}
-            value={filterAthletes}
-            onChange={setFilterAthletes}
-            t={t}
-          />}
-          <DateRangeSelect value={dateRange} onChange={setDateRange} t={t} />
-          <button
-            onClick={() => {
-              setFilterAthletes(athletes.map((a) => a.id));
-              setDateRange("all");
-            }}
-            style={{
-              padding: "8px 18px",
-              borderRadius: 10,
-              cursor: "pointer",
-              background: t.accent,
-              border: "none",
-              color: "#fff",
-              fontSize: 12,
-              fontWeight: 700,
-              fontFamily: "'Plus Jakarta Sans',sans-serif",
-              boxShadow: `0 4px 12px ${t.accent}40`,
-            }}
-          >
-            Apply Filters
-          </button>
-          <button
-            onClick={() => {
-              setFilterAthletes(athletes.map((a) => a.id));
-              setDateRange("all");
-            }}
-            style={{
-              padding: "8px 12px",
-              borderRadius: 10,
-              cursor: "pointer",
-              background: "transparent",
-              border: `1px solid ${t.border}`,
-              color: t.muted,
-              fontSize: 12,
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-            }}
-          >
-          </button>
+          {isAdmin && (
+            <AthleteDropdown
+              athletes={visible}
+              value={selectedId}
+              onChange={setSelectedId}
+              allIds={allIds}
+              t={t}
+            />
+          )}
         </div>
       </div>
 
-      {/* Fatigue Risk Indicator */}
-      {worstRisk && (
+      {/* Fatigue score hero */}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <div
-          className="card-fadein"
           style={{
+            flex: "1 1 220px",
             background: t.card,
             border: `1px solid ${t.border}`,
-            borderRadius: 14,
-            padding: "1.125rem 1.25rem",
+            borderRadius: 16,
+            padding: "1.5rem",
             boxShadow: t.shadow,
+            position: "relative",
+            overflow: "hidden",
           }}
         >
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 3,
+              background: `linear-gradient(90deg,${statusColor},${statusColor}40)`,
+            }}
+          />
           <p
             style={{
               fontSize: 10,
@@ -1142,215 +395,220 @@ export default function FatigueRecovery({ t }) {
               textTransform: "uppercase",
               letterSpacing: "0.10em",
               color: t.muted,
-              marginBottom: 14,
-              fontFamily: "'DM Sans',monospace",
+              marginBottom: 12,
+              fontFamily: "'DM Mono',monospace",
             }}
           >
-            Fatigue Risk Indicator
+            Fatigue Score
           </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                background: `${statusColor}15`,
+                border: `3px solid ${statusColor}`,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 24,
+                  fontWeight: 900,
+                  color: statusColor,
+                  fontFamily: "'DM Mono',monospace",
+                  lineHeight: 1,
+                }}
+              >
+                {fatigue ?? "--"}
+              </span>
+              <span style={{ fontSize: 9, color: t.muted, fontWeight: 600 }}>
+                / 100
+              </span>
+            </div>
+            <div>
+              <p
+                style={{
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: statusColor,
+                  marginBottom: 4,
+                }}
+              >
+                {status}
+              </p>
+              <p style={{ fontSize: 11, color: t.muted }}>
+                Recovery:{" "}
+                <strong style={{ color: t.success }}>
+                  {recovery ?? "--"}%
+                </strong>
+              </p>
+              <p style={{ fontSize: 11, color: t.muted, marginTop: 4 }}>
+                {status === "Optimal"
+                  ? "✅ Ready for high intensity"
+                  : status === "Moderate"
+                    ? "⚡ Light training recommended"
+                    : status === "High"
+                      ? "⚠️ Reduce training load"
+                      : "🛑 Rest day required"}
+              </p>
+            </div>
+          </div>
+        </div>
 
+        {/* Latest vitals */}
+        {[
+          {
+            label: "Heart Rate",
+            value:
+              getBpm(latest) != null ? `${getBpm(latest)?.toFixed(0)}` : "--",
+            unit: "bpm",
+            color: "#ef4444",
+          },
+          {
+            label: "Temperature",
+            value: getTemp(latest) != null ? getTemp(latest)?.toFixed(1) : "--",
+            unit: "°C",
+            color: "#f59e0b",
+          },
+          {
+            label: "Breathing",
+            value:
+              getResp(latest) != null ? `${getResp(latest)?.toFixed(0)}` : "--",
+            unit: "br/min",
+            color: "#3b82f6",
+          },
+        ].map((k) => (
           <div
+            key={k.label}
             style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 16,
-              padding: "14px 18px",
-              borderRadius: 12,
-              marginBottom: 14,
-              background:
-                worstRisk.level === "high"
-                  ? t.dangerBg
-                  : worstRisk.level === "moderate"
-                    ? t.warningBg
-                    : t.successBg,
-              border: `1px solid ${
-                worstRisk.level === "high"
-                  ? t.danger + "30"
-                  : worstRisk.level === "moderate"
-                    ? t.warning + "30"
-                    : t.success + "30"
-              }`,
+              flex: "1 1 140px",
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: 16,
+              padding: "1.25rem",
+              boxShadow: t.shadow,
+              position: "relative",
+              overflow: "hidden",
             }}
           >
             <div
               style={{
-                width: 48,
-                height: 48,
-                borderRadius: 12,
-                flexShrink: 0,
-                background:
-                  worstRisk.level === "high"
-                    ? "#ef4444"
-                    : worstRisk.level === "moderate"
-                      ? "#f59e0b"
-                      : "#10b981",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: `0 4px 12px ${
-                  worstRisk.level === "high"
-                    ? "#ef444460"
-                    : worstRisk.level === "moderate"
-                      ? "#f59e0b60"
-                      : "#10b98160"
-                }`,
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                background: `linear-gradient(90deg,${k.color},${k.color}40)`,
+              }}
+            />
+            <p
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.10em",
+                color: t.muted,
+                marginBottom: 6,
+                fontFamily: "'DM Mono',monospace",
               }}
             >
-              {worstRisk.level === "high" ? (
-                <AlertTriangle size={22} color="#fff" strokeWidth={2.5} />
-              ) : worstRisk.level === "moderate" ? (
-                <Zap size={22} color="#fff" strokeWidth={2.5} />
-              ) : (
-                <CheckCircle size={22} color="#fff" strokeWidth={2.5} />
-              )}
-            </div>
-            <div style={{ flex: 1 }}>
-              <p
+              {k.label}
+            </p>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 4 }}>
+              <span
                 style={{
-                  fontSize: 13,
+                  fontSize: 30,
                   fontWeight: 800,
-                  color: t.text,
-                  marginBottom: 4,
+                  color: k.color,
+                  fontFamily: "'DM Mono',monospace",
+                  letterSpacing: "-1px",
                 }}
               >
-                {worstRisk.level === "high"
-                  ? `High Fatigue Risk - ${worstRisk.name}`
-                  : worstRisk.level === "moderate"
-                    ? `Moderate Fatigue Load - ${worstRisk.name}`
-                    : "All Athletes Within Safe Recovery Range"}
-              </p>
-              <p style={{ fontSize: 11, color: t.muted, lineHeight: 1.6 }}>
-                {worstRisk.level === "high"
-                  ? `Composite risk index elevated. HR: ${worstRisk.hr} bpm · Temp: ${worstRisk.temp}°C · Motion: ${worstRisk.mg}g. Reduce intensity by 25% and monitor next 15 min.`
-                  : worstRisk.level === "moderate"
-                    ? `Moderate load. HR: ${worstRisk.hr} bpm · Temp: ${worstRisk.temp}°C. Avoid escalation; hydrate.`
-                    : `All metrics within healthy bounds. Recovery score: ${recoveryScore}/100.`}
-              </p>
+                {k.value}
+              </span>
+              <span style={{ fontSize: 12, color: t.muted, marginBottom: 3 }}>
+                {k.unit}
+              </span>
             </div>
-            <span
-              style={{
-                padding: "4px 12px",
-                borderRadius: 8,
-                fontSize: 11,
-                fontWeight: 800,
-                fontFamily: "'DM Sans',monospace",
-                background:
-                  worstRisk.level === "high"
-                    ? t.danger
-                    : worstRisk.level === "moderate"
-                      ? t.warning
-                      : t.success,
-                color: "#fff",
-                flexShrink: 0,
-              }}
-            >
-              {worstRisk.level.toUpperCase()}
-            </span>
           </div>
+        ))}
+      </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {fatigueRisk.map((r) => {
-              const color =
-                r.level === "high"
-                  ? t.danger
-                  : r.level === "moderate"
-                    ? t.warning
-                    : t.success;
-              const bg =
-                r.level === "high"
-                  ? t.dangerBg
-                  : r.level === "moderate"
-                    ? t.warningBg
-                    : t.successBg;
-              return (
-                <div
-                  key={r.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "8px 14px",
-                    borderRadius: 10,
-                    background: bg,
-                    border: `1px solid ${color}25`,
-                    flex: "1 1 200px",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 8,
-                      background: `${color}20`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 11,
-                      fontWeight: 800,
-                      color,
-                      fontFamily: "'DM Sans',monospace",
-                    }}
-                  >
-                    {ATHLETE_META[r.id]?.avatar || "?"}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: t.text }}>
-                      {r.name}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: 9,
-                        color: t.muted,
-                        fontFamily: "'DM Sans',monospace",
-                      }}
-                    >
-                      HR:{r.hr} · Temp:{r.temp}°C · Mg:{r.mg}g
-                    </p>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 800,
-                      padding: "2px 8px",
-                      borderRadius: 6,
-                      background: color,
-                      color: "#fff",
-                      fontFamily: "'DM Sans',monospace",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {r.level.toUpperCase()}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Recovery Curve + Gauge */}
-      <div
-        style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 14 }}
-      >
-        <Card
-          title="Recovery Curve (HR)"
-          t={t}
-          right={
-            <span
-              style={{
-                fontSize: 9,
-                color: t.faint,
-                fontFamily: "'DM Sans',monospace",
-              }}
+      {/* Fatigue trend */}
+      <Card title="Fatigue Index Over Time" t={t}>
+        {chartData.length === 0 ? (
+          <p
+            style={{
+              color: t.muted,
+              fontSize: 12,
+              textAlign: "center",
+              padding: 20,
+            }}
+          >
+            No data yet
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart
+              data={chartData}
+              margin={{ top: 5, right: 10, bottom: 0, left: 0 }}
             >
-              BPM over session progression
-            </span>
-          }
-        >
+              <defs>
+                <linearGradient id="fatGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={statusColor} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={statusColor} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke={t.chartGrid}
+                vertical={false}
+              />
+              <XAxis
+                dataKey="time"
+                tick={{
+                  fontSize: 9,
+                  fill: t.faint,
+                  fontFamily: "'DM Mono',monospace",
+                }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tick={{ fontSize: 9, fill: t.faint }}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+              />
+              <Tooltip content={<ChartTip t={t} />} />
+              <Area
+                type="monotone"
+                dataKey="fatigue"
+                name="Fatigue Score"
+                stroke={statusColor}
+                strokeWidth={2}
+                fill="url(#fatGrad)"
+                dot={false}
+                isAnimationActive={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </Card>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {/* HR + Temp overlay */}
+        <Card title="HR & Temperature Trend" t={t}>
           <ResponsiveContainer width="100%" height={180}>
             <LineChart
-              data={recoveryCurveData}
-              margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
+              data={chartData}
+              margin={{ top: 5, right: 30, bottom: 0, left: 0 }}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -1358,323 +616,300 @@ export default function FatigueRecovery({ t }) {
                 vertical={false}
               />
               <XAxis
-                dataKey="label"
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Sans',monospace",
-                }}
+                dataKey="time"
+                tick={{ fontSize: 8, fill: t.faint }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                domain={[60, 180]}
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Sans',monospace",
-                }}
+                yAxisId="hr"
+                domain={[40, 220]}
+                tick={{ fontSize: 8, fill: t.faint }}
                 tickLine={false}
                 axisLine={false}
-                label={{
-                  value: "Training Load",
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: t.faint,
-                  fontSize: 8,
-                  dx: -2,
-                }}
+                width={28}
+              />
+              <YAxis
+                yAxisId="temp"
+                orientation="right"
+                domain={[34, 42]}
+                tick={{ fontSize: 8, fill: t.faint }}
+                tickLine={false}
+                axisLine={false}
+                width={32}
+                tickFormatter={(v) => `${v}°`}
               />
               <Tooltip content={<ChartTip t={t} />} />
-              <Legend
-                wrapperStyle={{
-                  fontSize: 9,
-                  fontFamily: "'DM Sans',monospace",
-                }}
-                iconType="circle"
-                iconSize={7}
+              <Legend wrapperStyle={{ fontSize: 9 }} />
+              <Line
+                yAxisId="hr"
+                type="monotone"
+                dataKey="bpm"
+                name="HR"
+                stroke="#ef4444"
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
               />
-              {ids.map((id, idx) => {
-                const color = ATHLETE_META[id]?.color || "#6366f1";
-                return (
-                  <Line
-                    key={id}
-                    type="monotone"
-                    dataKey={id}
-                    name={ATHLETE_META[id]?.name || id}
-                    stroke={color}
-                    strokeWidth={idx === 0 ? 2.5 : 1.5}
-                    dot={{ fill: color, r: 3, strokeWidth: 0 }}
-                    activeDot={{ r: 5, strokeWidth: 0 }}
-                    strokeDasharray={idx === 0 ? undefined : "4 3"}
-                    connectNulls
-                    isAnimationActive={false}
-                  />
-                );
-              })}
+              <Line
+                yAxisId="temp"
+                type="monotone"
+                dataKey="temp"
+                name="Temp"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
+              />
             </LineChart>
           </ResponsiveContainer>
         </Card>
 
-        <div
-          className="card-fadein"
-          style={{
-            background: t.card,
-            border: `1px solid ${t.border}`,
-            borderRadius: 14,
-            padding: "1.125rem 1.25rem",
-            boxShadow: t.shadow,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            minWidth: 200,
-            justifyContent: "space-between",
-          }}
+        {/* HR vs Motion scatter */}
+        <Card
+          title="HR vs Motion Correlation"
+          t={t}
+          right={
+            <span style={{ fontSize: 10, color: t.muted }}>
+              r = {hrMagCorr.toFixed(2)}
+            </span>
+          }
         >
-          <p
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.10em",
-              color: t.muted,
-              fontFamily: "'DM Sans',monospace",
-              alignSelf: "flex-start",
-            }}
-          >
-            Recovery Score
-          </p>
-          <RecoveryGauge score={recoveryScore} t={t} />
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            {[
-              ["#10b981", "Good"],
-              ["#f59e0b", "Mod."],
-              ["#ef4444", "Low"],
-            ].map(([c, l]) => (
-              <span
-                key={l}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 9,
-                  fontWeight: 700,
-                  color: t.muted,
-                  fontFamily: "'DM Sans',monospace",
-                }}
-              >
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: c,
+          {scatterData.length === 0 ? (
+            <p
+              style={{
+                color: t.muted,
+                fontSize: 12,
+                textAlign: "center",
+                padding: 20,
+              }}
+            >
+              No data
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={180}>
+              <ScatterChart margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
+                <XAxis
+                  type="number"
+                  dataKey="mag"
+                  name="Motion (g)"
+                  tick={{ fontSize: 8, fill: t.faint }}
+                  tickLine={false}
+                  axisLine={false}
+                  label={{
+                    value: "Motion (g)",
+                    position: "insideBottom",
+                    fontSize: 8,
+                    fill: t.faint,
+                    dy: 8,
                   }}
                 />
-                {l}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Scatters */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <Card title="HR vs Breathing (Scatter)" t={t}>
-          <ResponsiveContainer width="100%" height={200}>
-            <ScatterChart margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
-              <XAxis
-                type="number"
-                dataKey="hr"
-                name="HR"
-                domain={[40, 220]}
-                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }}
-                tickLine={false}
-                axisLine={false}
-                label={{ value: "HR (bpm)", position: "insideBottom", offset: -2, fill: t.faint, fontSize: 8 }}
-              />
-              <YAxis
-                type="number"
-                dataKey="resp"
-                name="Resp"
-                domain={[0, 50]}
-                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <ZAxis range={[20, 20]} />
-              <Tooltip
-                cursor={{ strokeDasharray: "3 3", stroke: t.muted }}
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0]?.payload;
-                  return (
-                    <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", boxShadow: t.shadow, fontSize: 11, fontFamily: "'DM Sans',monospace" }}>
-                      <p style={{ color: t.muted, marginBottom: 3 }}>HR: <b style={{ color: t.text }}>{d?.hr?.toFixed(0)} bpm</b></p>
-                      <p style={{ color: t.muted }}>Resp: <b style={{ color: t.text }}>{d?.resp?.toFixed(1)} br/min</b></p>
-                    </div>
-                  );
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Sans',monospace" }} iconType="circle" iconSize={8} />
-              {scatterData.map((s) => (
-                <Scatter key={s.id} name={s.name} data={s.points} fill={s.color} opacity={0.7} />
-              ))}
-            </ScatterChart>
-          </ResponsiveContainer>
+                <YAxis
+                  type="number"
+                  dataKey="bpm"
+                  name="HR"
+                  tick={{ fontSize: 8, fill: t.faint }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={28}
+                  domain={[40, 220]}
+                />
+                <ZAxis type="number" dataKey="temp" range={[20, 100]} />
+                <Tooltip
+                  cursor={{ strokeDasharray: "3 3" }}
+                  content={<ChartTip t={t} />}
+                />
+                <Scatter
+                  name="HR vs Motion"
+                  data={scatterData}
+                  fill={t.accent}
+                  fillOpacity={0.6}
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+          )}
         </Card>
 
-        <Card title="HR vs Temperature (Scatter)" t={t}>
-          <ResponsiveContainer width="100%" height={200}>
-            <ScatterChart margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
-              <XAxis
-                type="number"
-                dataKey="hr"
-                name="HR"
-                domain={[40, 220]}
-                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }}
-                tickLine={false}
-                axisLine={false}
-                label={{ value: "HR (bpm)", position: "insideBottom", offset: -2, fill: t.faint, fontSize: 8 }}
-              />
-              <YAxis
-                type="number"
-                dataKey="temp"
-                name="Temp"
-                domain={[32, 40]}
-                tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }}
-                tickLine={false}
-                axisLine={false}
-                label={{ value: "°C", angle: -90, position: "insideLeft", fill: t.faint, fontSize: 8, dx: -4 }}
-              />
-              <ZAxis range={[20, 20]} />
-              <Tooltip
-                cursor={{ strokeDasharray: "3 3", stroke: t.muted }}
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0]?.payload;
-                  return (
-                    <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 10, padding: "8px 12px", boxShadow: t.shadow, fontSize: 11, fontFamily: "'DM Sans',monospace" }}>
-                      <p style={{ color: t.muted, marginBottom: 3 }}>HR: <b style={{ color: t.text }}>{d?.hr?.toFixed(0)} bpm</b></p>
-                      <p style={{ color: t.muted }}>Temp: <b style={{ color: t.text }}>{d?.temp?.toFixed(1)} °C</b></p>
-                    </div>
-                  );
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Sans',monospace" }} iconType="circle" iconSize={8} />
-              {tempHrData.map((s) => (
-                <Scatter key={s.id} name={s.name} data={s.points} fill={s.color} opacity={0.7} />
-              ))}
-            </ScatterChart>
-          </ResponsiveContainer>
+        {/* Correlation summary */}
+        <Card title="Metric Correlations" t={t}>
+          {[
+            {
+              label: "HR ↔ Motion",
+              value: hrMagCorr,
+              desc: "Cardiovascular response to activity",
+            },
+            {
+              label: "HR ↔ Temperature",
+              value: hrTmpCorr,
+              desc: "Thermoregulation efficiency",
+            },
+            {
+              label: "HR ↔ Respiration",
+              value: hrRspCorr,
+              desc: "Cardiorespiratory coupling",
+            },
+          ].map((c) => {
+            const abs = Math.abs(c.value);
+            const barColor =
+              abs > 0.7 ? t.success : abs > 0.4 ? t.warning : t.danger;
+            return (
+              <div key={c.label} style={{ marginBottom: 12 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 4,
+                  }}
+                >
+                  <span
+                    style={{ fontSize: 12, fontWeight: 600, color: t.text }}
+                  >
+                    {c.label}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: barColor,
+                      fontFamily: "'DM Mono',monospace",
+                    }}
+                  >
+                    {c.value.toFixed(2)}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: 6,
+                    background: t.surface,
+                    borderRadius: 3,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${Math.abs(c.value) * 100}%`,
+                      height: "100%",
+                      background: barColor,
+                      borderRadius: 3,
+                      transition: "width 0.6s ease",
+                    }}
+                  />
+                </div>
+                <p style={{ fontSize: 10, color: t.muted, marginTop: 2 }}>
+                  {c.desc}
+                </p>
+              </div>
+            );
+          })}
         </Card>
-      </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
-        <Card title="Load Accumulation" t={t}>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart
-              data={loadAccumulation}
-              margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
+        {/* Recovery recommendation */}
+        <Card title="Recovery Recommendation" t={t}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[
+              {
+                icon: Zap,
+                label: "Training Load",
+                value:
+                  fatigue != null
+                    ? fatigue > 70
+                      ? "Reduce by 40%"
+                      : fatigue > 45
+                        ? "Reduce by 20%"
+                        : "Maintain"
+                    : "--",
+                color: statusColor,
+              },
+              {
+                icon: CheckCircle,
+                label: "Recovery Status",
+                value: status || "--",
+                color: statusColor,
+              },
+              {
+                icon: AlertTriangle,
+                label: "Risk Level",
+                value:
+                  fatigue != null
+                    ? fatigue > 75
+                      ? "Critical"
+                      : fatigue > 50
+                        ? "Moderate"
+                        : "Low"
+                    : "--",
+                color:
+                  fatigue != null
+                    ? fatigue > 75
+                      ? t.danger
+                      : fatigue > 50
+                        ? t.warning
+                        : t.success
+                    : t.muted,
+              },
+            ].map((r) => {
+              const Icon = r.icon;
+              return (
+                <div
+                  key={r.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "10px 14px",
+                    background: t.surface,
+                    borderRadius: 10,
+                    border: `1px solid ${t.border}`,
+                  }}
+                >
+                  <Icon size={16} color={r.color} />
+                  <div style={{ flex: 1 }}>
+                    <p
+                      style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}
+                    >
+                      {r.label}
+                    </p>
+                    <p
+                      style={{ fontSize: 13, fontWeight: 700, color: r.color }}
+                    >
+                      {r.value}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+            <div
+              style={{
+                marginTop: 4,
+                padding: "12px 14px",
+                background: `${statusColor}10`,
+                borderRadius: 10,
+                border: `1px solid ${statusColor}30`,
+              }}
             >
-              <defs>
-                {ids.map((id) => {
-                  const color = ATHLETE_META[id]?.color || "#6366f1";
-                  return (
-                    <linearGradient key={id} id={`laGrad${id}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={color} stopOpacity={0.4} />
-                      <stop offset="95%" stopColor={color} stopOpacity={0.05} />
-                    </linearGradient>
-                  );
-                })}
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 9, fill: t.faint, fontFamily: "'DM Sans',monospace" }} tickLine={false} axisLine={false} />
-              <Tooltip content={<ChartTip t={t} />} />
-              <Legend wrapperStyle={{ fontSize: 9, fontFamily: "'DM Sans',monospace" }} iconType="circle" iconSize={7} />
-              {ids.map((id) => (
-                <Area key={id} type="monotone" dataKey={id} name={ATHLETE_META[id]?.name || id} stackId="load" stroke={ATHLETE_META[id]?.color || "#6366f1"} strokeWidth={1.5} fill={`url(#laGrad${id})`} isAnimationActive={false} />
-              ))}
-            </AreaChart>
-          </ResponsiveContainer>
+              <p
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: statusColor,
+                  marginBottom: 4,
+                }}
+              >
+                Recommendation
+              </p>
+              <p style={{ fontSize: 11, color: t.text, lineHeight: 1.5 }}>
+                {fatigue == null
+                  ? "No data available yet."
+                  : fatigue > 70
+                    ? "Full rest day or very light stretching only. Prioritise sleep and hydration."
+                    : fatigue > 45
+                      ? "Light active recovery: easy walk, yoga, or swimming."
+                      : "Athlete is cleared for normal or high-intensity training."}
+              </p>
+            </div>
+          </div>
         </Card>
       </div>
-
-      {/* Weekly Load Trend */}
-      <Card title="Weekly Load Trend (Rolling Average)" t={t}>
-        <ResponsiveContainer width="100%" height={160}>
-          <LineChart
-            data={weeklyTrend}
-            margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={t.chartGrid}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="label"
-              tick={{
-                fontSize: 8,
-                fill: t.faint,
-                fontFamily: "'DM Sans',monospace",
-              }}
-              tickLine={false}
-              axisLine={false}
-              interval={Math.max(1, Math.floor(weeklyTrend.length / 12))}
-            />
-            <YAxis
-              domain={[0, 200]}
-              tick={{
-                fontSize: 9,
-                fill: t.faint,
-                fontFamily: "'DM Sans',monospace",
-              }}
-              tickLine={false}
-              axisLine={false}
-            />
-            <Tooltip content={<ChartTip t={t} />} />
-            <Legend
-              wrapperStyle={{ fontSize: 9, fontFamily: "'DM Sans',monospace" }}
-              iconType="circle"
-              iconSize={7}
-            />
-            <Line
-              type="monotone"
-              dataKey="load"
-              name="Raw load"
-              stroke={t.muted}
-              strokeWidth={1}
-              dot={false}
-              strokeDasharray="3 2"
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="rolling"
-              name="7-pt rolling avg"
-              stroke={t.accent}
-              strokeWidth={2.5}
-              dot={{ fill: t.accent, r: 3, strokeWidth: 0 }}
-              activeDot={{ r: 5, strokeWidth: 0 }}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="resp"
-              name="Breathing rate"
-              stroke="#f59e0b"
-              strokeWidth={1.5}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </Card>
-
     </main>
   );
 }
