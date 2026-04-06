@@ -93,6 +93,9 @@ const chatSchema = Joi.object({
     )
     .max(20)
     .optional(),
+  userRole: Joi.string().valid("admin", "athlete").optional(),
+  athleteId: Joi.string().allow(null, "").optional(),
+  connectedIds: Joi.array().items(Joi.string()).optional()
 });
 
 /* ── POST /api/chat ──────────────────────────────────────────── */
@@ -108,10 +111,10 @@ router.post("/chat", validateBody(chatSchema), async (req, res, next) => {
       });
     }
 
-    const { message, history = [] } = req.body;
+    const { message, history = [], userRole, athleteId, connectedIds = [] } = req.body;
 
-    // Build live data context for the system prompt
-    const dataCtx = await buildAIDataContext();
+    // Build live data context for the system prompt filtering by RBAC
+    const dataCtx = await buildAIDataContext({ userRole, athleteId, connectedIds });
 
     const messages = [
       {
