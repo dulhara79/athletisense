@@ -1,83 +1,38 @@
-/**
- * MainLayout.jsx
- * ─────────────────────────────────────────────────────────────
- * Central layout container with shared sidebar navigation.
- * Controls theme (light/dark) and page routing.
- * ─────────────────────────────────────────────────────────────
- */
-
-import React, { useState } from "react";
+// src/pages/MainLayout.jsx
+// ─────────────────────────────────────────────────────────────
+// Application shell: sidebar, routing, floating chat widget.
+// Theme is managed by ThemeContext (no local state duplication).
+// ─────────────────────────────────────────────────────────────
+import { lazy, Suspense, useState } from "react";
 import {
   Activity,
   BarChart2,
   Heart,
   Users,
+  LogOut,
+  Trash2,
   Sun,
   Moon,
-  LogOut,
-  LogIn,
   Link2,
-  Trash2,
   Eye,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
-
 import { useAuth } from "../context/AuthContext";
-import ConnectionManager from "../components/ConnectionManager";
-import ManageConnections from "../components/ManageConnections";
+import { useTheme } from "../context/ThemeContext";
+import { ConnectionManager } from "../components/connections";
+import { ManageConnections } from "../components/connections";
+import { useAthleteData } from "../hooks/useAthleteData";
 
-import AthletiSenseDashboard from "./AthletiSenseDashboard";
-import PerformanceAnalytics from "./PerformanceAnalytics";
-import FatigueRecovery from "./FatigueRecovery";
-import MultiAthleteComparison from "./MultiAthleteComparison";
-import VisualAnalyticsDashboard from "./VisualAnalyticsDashboard";
-import AthletiSenseChat from "../components/AthletiSenseChat";
-
-const THEMES = {
-  light: {
-    bg: "#f5f4f1",
-    card: "#ffffff",
-    sidebar: "#ffffff",
-    border: "#e4e2dd",
-    text: "#1a1917",
-    muted: "#6b6a66",
-    faint: "#9e9c97",
-    surface: "#f0eeed",
-    surface2: "#e8e6e1",
-    accent: "#4f46e5",
-    accentBg: "rgba(79,70,229,0.08)",
-    danger: "#e11d48",
-    dangerBg: "rgba(225,29,72,0.08)",
-    warning: "#d97706",
-    warningBg: "rgba(217,119,6,0.08)",
-    success: "#059669",
-    successBg: "rgba(5,150,105,0.08)",
-    chartGrid: "#ece9e4",
-    shadow: "0 1px 3px rgba(0,0,0,0.07),0 4px 16px rgba(0,0,0,0.04)",
-    shadowHover: "0 8px 30px rgba(0,0,0,0.10)",
-  },
-  dark: {
-    bg: "#0e0d0c",
-    card: "#191816",
-    sidebar: "#131210",
-    border: "#282624",
-    text: "#f0eeea",
-    muted: "#8a8880",
-    faint: "#5c5a57",
-    surface: "#211f1d",
-    surface2: "#2a2826",
-    accent: "#6366f1",
-    accentBg: "rgba(99,102,241,0.12)",
-    danger: "#fb4570",
-    dangerBg: "rgba(251,69,112,0.10)",
-    warning: "#fbbf24",
-    warningBg: "rgba(251,191,36,0.10)",
-    success: "#34d399",
-    successBg: "rgba(52,211,153,0.10)",
-    chartGrid: "#282624",
-    shadow: "0 1px 3px rgba(0,0,0,0.3),0 4px 16px rgba(0,0,0,0.2)",
-    shadowHover: "0 8px 30px rgba(0,0,0,0.4)",
-  },
-};
+// Code-split heavy dashboard pages
+const AthletiSenseDashboard = lazy(() => import("./AthletiSenseDashboard"));
+const PerformanceAnalytics = lazy(() => import("./PerformanceAnalytics"));
+const FatigueRecovery = lazy(() => import("./FatigueRecovery"));
+const MultiAthleteComparison = lazy(() => import("./MultiAthleteComparison"));
+const VisualAnalyticsDashboard = lazy(
+  () => import("./VisualAnalyticsDashboard"),
+);
+const AthletiSenseChat = lazy(() => import("../components/AthletiSenseChat"));
 
 const NAV_ITEMS = [
   {
@@ -103,6 +58,7 @@ const NAV_ITEMS = [
     label: "Comparison",
     icon: Users,
     desc: "Multi-athlete view",
+    adminOnly: true,
   },
   {
     id: "analytics",
@@ -118,17 +74,31 @@ const NAV_ITEMS = [
   },
 ];
 
+function PageLoader() {
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 13,
+        color: "#6b6a66",
+      }}
+    >
+      Loading…
+    </div>
+  );
+}
+
 export default function MainLayout() {
-  const [theme, setTheme] = useState("light");
-  const [activePage, setActivePage] = useState("monitoring");
-
-  // Pull user and logout function from your Auth context
   const { user, logout, deleteAccount } = useAuth();
+  const { t, theme, toggleTheme } = useTheme();
+  const { connected } = useAthleteData();
+  const [page, setPage] = useState("monitoring");
+  const isAdmin = user?.role === "admin";
 
-  // Role-based filtering: athletes cannot access the comparison page
-  const isAdmin = user?.role === 'admin';
-
-  const t = THEMES[theme];
+  const visibleNav = NAV_ITEMS.filter((n) => !n.adminOnly || isAdmin);
 
   return (
     <div
@@ -144,44 +114,36 @@ export default function MainLayout() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
-        ::-webkit-scrollbar{width:5px;height:5px;}
-        ::-webkit-scrollbar-track{background:transparent;}
-        ::-webkit-scrollbar-thumb{background:${t.border};border-radius:99px;}
+        ::-webkit-scrollbar{width:4px;height:4px}
+        ::-webkit-scrollbar-thumb{background:${t.border};border-radius:99px}
         @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-        @keyframes pulse-dot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(0.85); } }
-        .fadein{animation:fadein 0.35s ease both;}
-        th button:hover{background:${t.accentBg}!important;}
-        
-        /* Subtle hover effect for the logout button */
-        .auth-btn:hover { filter: brightness(0.95); }
+        @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .page-enter{animation:fadein 0.3s ease both}
       `}</style>
 
       {/* ── Sidebar ─────────────────────────────────────── */}
       <aside
         style={{
-          width: 260,
-          minWidth: 260,
+          width: 256,
+          minWidth: 256,
           background: t.sidebar,
           borderRight: `1px solid ${t.border}`,
           display: "flex",
           flexDirection: "column",
           zIndex: 30,
-          boxShadow: `2px 0 12px rgba(0,0,0,0.04)`,
+          boxShadow: "2px 0 8px rgba(0,0,0,0.04)",
         }}
       >
         {/* Logo */}
         <div
-          style={{
-            padding: "1.5rem 1.25rem",
-            borderBottom: `1px solid ${t.border}`,
-          }}
+          style={{ padding: "1.25rem", borderBottom: `1px solid ${t.border}` }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div
               style={{
-                width: 52,
-                height: 38,
+                width: 46,
+                height: 36,
                 borderRadius: 10,
                 background: "linear-gradient(135deg,#4f46e5,#7c3aed)",
                 display: "flex",
@@ -190,115 +152,201 @@ export default function MainLayout() {
                 boxShadow: "0 4px 12px rgba(79,70,229,0.35)",
               }}
             >
-              <Activity size={18} color="#fff" strokeWidth={2.5} />
+              <Activity size={17} color="#fff" />
             </div>
             <div>
               <div
                 style={{
                   fontFamily: "'Bebas Neue','Syne',sans-serif",
-                  fontSize: 30,
+                  fontSize: 26,
                   fontWeight: 800,
-                  letterSpacing: "0.10em",
-                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
                   color: t.text,
-                  marginTop: -8,
-
+                  lineHeight: 1,
                 }}
               >
                 ATHLETISENSE
               </div>
               <div
                 style={{
-                  fontSize: 12,
+                  fontSize: 10,
                   color: t.faint,
-                  fontFamily: "'DM Sans',monospace",
                   letterSpacing: "0.06em",
-                  marginTop: -6,
+                  lineHeight: 1.2,
                 }}
               >
                 v2.0 · IoT Platform
-
               </div>
             </div>
           </div>
         </div>
 
-        {/* User Info (Dynamically pulled from Firebase context) */}
-        <div style={{ padding: "1rem", borderBottom: `1px solid ${t.border}` }}>
-          <p style={{ fontSize: 11, color: t.muted }}>Welcome,</p>
-          <p
+        {/* User card */}
+        <div
+          style={{
+            margin: "10px 12px 0",
+            padding: "10px 12px",
+            background: t.surface,
+            borderRadius: 12,
+            border: `1px solid ${t.border}`,
+          }}
+        >
+          <div
             style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: t.text,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 8,
             }}
           >
-            {user ? user.name || user.email : "Guest"}
-          </p>
-          {user?.title && (
-            <p
+            <div
               style={{
-                fontSize: 11,
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: t.accentBg,
+                border: `1px solid ${t.border}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 12,
+                fontWeight: 800,
                 color: t.accent,
-                fontWeight: 600,
-                marginTop: 2,
+                flexShrink: 0,
               }}
             >
-              {user.title}
-            </p>
-          )}
-          {/* Connection Manager bell icon */}
-          <div style={{ marginTop: 8 }}>
-            <ConnectionManager t={t} />
+              {user?.name?.charAt(0) || "?"}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: t.text,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {user?.name || "User"}
+              </p>
+              <p style={{ fontSize: 10, color: t.muted }}>
+                {user?.title || "Member"}
+              </p>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              {connected ? (
+                <Wifi size={12} color={t.success} />
+              ) : (
+                <WifiOff size={12} color={t.muted} />
+              )}
+              <ConnectionManager t={t} />
+            </div>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 800,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                padding: "3px 8px",
+                borderRadius: 20,
+                background: isAdmin ? t.accentBg : t.successBg,
+                color: isAdmin ? t.accent : t.success,
+                border: `1px solid ${isAdmin ? t.accent + "30" : t.success + "30"}`,
+              }}
+            >
+              {isAdmin ? "🛡️ STAFF" : "🏃 ATHLETE"}
+            </span>
+            {connected && (
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  padding: "3px 8px",
+                  borderRadius: 20,
+                  background: t.successBg,
+                  color: t.success,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: "50%",
+                    background: t.success,
+                    animation: "pulse-dot 1.6s ease-in-out infinite",
+                  }}
+                />
+                LIVE
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav style={{ padding: "0.75rem", flex: 1, overflowY: "auto" }}>
-          {NAV_ITEMS.filter(item => {
-            if (!isAdmin && item.id === 'comparison') return false;
-            return true;
-          }).map((item) => {
-            const Icon = item.icon;
-            const isActive = activePage === item.id;
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto" }}>
+          <p
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: t.faint,
+              padding: "8px 8px 4px",
+            }}
+          >
+            Navigation
+          </p>
+          {visibleNav.map(({ id, label, icon: Icon, desc }) => {
+            const active = page === id;
             return (
               <button
-                key={item.id}
-                onClick={() => setActivePage(item.id)}
+                key={id}
+                onClick={() => setPage(id)}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
+                  gap: 9,
                   width: "100%",
-                  padding: "9px 10px",
+                  padding: "8px 10px",
                   borderRadius: 10,
                   marginBottom: 2,
-                  background: isActive ? t.accentBg : "transparent",
-                  border: `1px solid ${isActive ? "rgba(79,70,229,0.15)" : "transparent"}`,
+                  background: active ? t.accentBg : "transparent",
+                  border: `1px solid ${active ? t.accent + "25" : "transparent"}`,
                   cursor: "pointer",
                 }}
               >
                 <Icon
                   size={15}
-                  color={isActive ? t.accent : t.muted}
-                  strokeWidth={isActive ? 2.5 : 2}
+                  color={active ? t.accent : t.muted}
+                  strokeWidth={active ? 2.5 : 2}
                 />
                 <div style={{ textAlign: "left" }}>
                   <p
                     style={{
                       fontSize: 12,
-                      fontWeight: isActive ? 700 : 500,
-                      color: isActive ? t.text : t.muted,
+                      fontWeight: active ? 700 : 500,
+                      color: active ? t.text : t.muted,
                     }}
                   >
-                    {item.label}
+                    {label}
                   </p>
-                  <p style={{ fontSize: 9, color: t.faint }}>{item.desc}</p>
+                  <p style={{ fontSize: 9, color: t.faint }}>{desc}</p>
                 </div>
-                {isActive && (
+                {active && (
                   <div
                     style={{
                       marginLeft: "auto",
@@ -313,18 +361,34 @@ export default function MainLayout() {
             );
           })}
 
-          {/* Theme Toggle */}
-          <div style={{ marginTop: 24 }}>
+          {/* Theme toggle */}
+          <div
+            style={{
+              marginTop: 16,
+              paddingTop: 12,
+              borderTop: `1px solid ${t.border}`,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: t.faint,
+                padding: "0 8px 4px",
+              }}
+            >
+              Preferences
+            </p>
             <button
-              onClick={() =>
-                setTheme((p) => (p === "light" ? "dark" : "light"))
-              }
+              onClick={toggleTheme}
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
+                gap: 9,
                 width: "100%",
-                padding: "9px 10px",
+                padding: "8px 10px",
                 borderRadius: 10,
                 background: "transparent",
                 border: "1px solid transparent",
@@ -336,105 +400,106 @@ export default function MainLayout() {
               ) : (
                 <Moon size={15} color={t.accent} />
               )}
-              <p style={{ fontSize: 12, color: t.muted, fontWeight: 500 }}>
+              <p style={{ fontSize: 12, fontWeight: 500, color: t.muted }}>
                 {theme === "dark" ? "Light Mode" : "Dark Mode"}
               </p>
             </button>
           </div>
         </nav>
 
-        {/* ── Auth Buttons (Login / Logout) ───────────────── */}
-        <div style={{ padding: "0.75rem", borderTop: `1px solid ${t.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
-          {user ? (
-            <>
-              <button
-                className="auth-btn"
-                onClick={logout}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  width: "100%",
-                  padding: "9px",
-                  borderRadius: 10,
-                  background: t.dangerBg,
-                  border: "1px solid transparent",
-                  cursor: "pointer",
-                  transition: "filter 0.2s",
-                }}
-              >
-                <LogOut size={14} color={t.danger} strokeWidth={2.5} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: t.danger }}>
-                  Sign Out
-                </span>
-              </button>
-              
-              <button
-                className="auth-btn"
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-                    deleteAccount();
-                  }
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  width: "100%",
-                  padding: "9px",
-                  borderRadius: 10,
-                  background: t.dangerBg,
-                  border: "1px solid transparent",
-                  cursor: "pointer",
-                  transition: "filter 0.2s",
-                }}
-              >
-                <Trash2 size={14} color={t.danger} strokeWidth={2.5} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: t.danger }}>
-                  Delete Account
-                </span>
-              </button>
-            </>
-          ) : (
-            <button
-              className="auth-btn"
-              // Adjust this logic to redirect to your login route if needed
-              onClick={() => (window.location.href = "/login")}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                width: "100%",
-                padding: "9px",
-                borderRadius: 10,
-                background: t.accentBg,
-                border: "1px solid transparent",
-                cursor: "pointer",
-                transition: "filter 0.2s",
-              }}
-            >
-              <LogIn size={14} color={t.accent} strokeWidth={2.5} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: t.accent }}>
-                Sign In
-              </span>
-            </button>
-          )}
+        {/* Auth actions */}
+        <div
+          style={{
+            padding: "8px",
+            borderTop: `1px solid ${t.border}`,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
+        >
+          <button
+            onClick={logout}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              width: "100%",
+              padding: "9px 12px",
+              borderRadius: 10,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = t.dangerBg)
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "transparent")
+            }
+          >
+            <LogOut size={14} color={t.danger} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: t.danger }}>
+              Sign Out
+            </span>
+          </button>
+          <button
+            onClick={() =>
+              window.confirm("Delete your account? This cannot be undone.") &&
+              deleteAccount()
+            }
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              width: "100%",
+              padding: "9px 12px",
+              borderRadius: 10,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = t.dangerBg)
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "transparent")
+            }
+          >
+            <Trash2 size={14} color={t.danger} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: t.danger }}>
+              Delete Account
+            </span>
+          </button>
         </div>
       </aside>
 
-      {/* ── Main Content Area ─────────────────────────────── */}
-      {activePage === "monitoring" && <AthletiSenseDashboard t={t} />}
-      {activePage === "performance" && <PerformanceAnalytics t={t} />}
-      {activePage === "recovery" && <FatigueRecovery t={t} />}
-      {(activePage === "comparison" && isAdmin) && <MultiAthleteComparison t={t} />}
-      {activePage === "analytics" && <VisualAnalyticsDashboard t={t} />}
-      {activePage === "connections" && <ManageConnections t={t} />}
+      {/* ── Content ──────────────────────────────────────── */}
+      <Suspense fallback={<PageLoader />}>
+        <div
+          className="page-enter"
+          key={page}
+          style={{
+            flex: 1,
+            overflow: "auto",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {page === "monitoring" && <AthletiSenseDashboard t={t} />}
+          {page === "performance" && <PerformanceAnalytics t={t} />}
+          {page === "recovery" && <FatigueRecovery t={t} />}
+          {page === "comparison" && isAdmin && <MultiAthleteComparison t={t} />}
+          {page === "analytics" && <VisualAnalyticsDashboard t={t} />}
+          {page === "connections" && <ManageConnections t={t} />}
+        </div>
+      </Suspense>
 
-      {/* AI Chatbot — floating overlay */}
-      <AthletiSenseChat t={t} />
+      {/* Floating AI Chat */}
+      <Suspense fallback={null}>
+        <AthletiSenseChat t={t} />
+      </Suspense>
     </div>
   );
 }
