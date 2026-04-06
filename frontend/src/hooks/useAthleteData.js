@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ref as dbRef, onValue } from "firebase/database";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import {
   API_BASE,
   WS_URL,
@@ -83,9 +83,10 @@ export function useAthleteData() {
       // WS + REST fallback
       const fetchRest = async () => {
         try {
+          const token = auth.currentUser ? await auth.currentUser.getIdToken() : "";
           const [ar, sr] = await Promise.all([
-            fetch(`${API_BASE}/athletes`).then((r) => r.json()),
-            fetch(`${API_BASE}/summary`).then((r) => r.json()),
+            fetch(`${API_BASE}/athletes`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
+            fetch(`${API_BASE}/summary`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
           ]);
           setAthletes(ar.athletes || []);
           setSummary(sr.summary || []);
