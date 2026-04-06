@@ -97,7 +97,7 @@ Messages: `snapshot`, `live_update`, `error`, `pong`.
 | Rate limiting | 120/min API, 60/min analytics, 30/min chat |
 | Input sanitisation | Strips `<>`, `${}`, null bytes from all string inputs |
 | Firebase Auth | `requireAuth` middleware verifies ID tokens on analytics routes |
-| `requireAdmin` | Checks DB role for admin-only operations |
+| RBAC & AI Privacy | Strict data isolation preventing users from querying other athletes' biometric data via the Chatbot (`requireAdmin` / ownership verification) |
 | Request tracing | `X-Request-Id` on every response |
 | Graceful shutdown | SIGTERM/SIGINT with 10s forced-exit fallback |
 | Non-root Docker | Runs as `appuser` |
@@ -119,12 +119,18 @@ npm test          # unit tests (no credentials needed)
 
 ---
 
-## Docker
+## Docker & Deployment
 
 ```bash
 docker compose up --build
 curl http://localhost:3001/health
 ```
+
+### Hugging Face Deployment Automation
+This backend is continuously deployed to **Hugging Face Spaces**. We use a GitHub Actions CI/CD pipeline (`.github/workflows/huggingface-deploy.yml`) that:
+1. Syncs the backend directory to Hugging Face on push.
+2. Triggers an automated Docker build via the Space's configuration (`Dockerfile`).
+3. Ensures all environments variables and secrets (like OpenAI and Firebase keys) are securely mapped.
 
 ---
 
