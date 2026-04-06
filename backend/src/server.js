@@ -49,9 +49,7 @@ const server = http.createServer(app);
 app.set("trust proxy", 1);
 
 // ── Security headers ──────────────────────────────────────────
-app.use(
-  helmet({ crossOriginEmbedderPolicy: false, contentSecurityPolicy: false }),
-);
+app.use(helmet());
 
 // ── CORS ──────────────────────────────────────────────────────
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
@@ -62,8 +60,11 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin || !allowedOrigins.length || allowedOrigins.includes(origin))
+      // If ALLOWED_ORIGINS is not set, we shouldn't allow everything. Allow local dev or strict match.
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.length > 0 && allowedOrigins.includes(origin)) {
         return cb(null, true);
+      }
       cb(new Error(`CORS: origin '${origin}' not allowed.`));
     },
     credentials: true,
