@@ -213,22 +213,26 @@ function Dropdown({ label, options, value, onChange, t }) {
 }
 
 export default function PerformanceAnalytics({ t }) {
-  const { user } = useAuth();
+  const { user, connectedAthletes = [] } = useAuth();
   const { athletes, liveData, connected, loading, getAthleteData } =
     useAthleteData();
   const isAdmin = user?.role === "admin";
-  const allIds = athletes.map((a) => a.id);
+  const connectedAthleteIds = isAdmin ? connectedAthletes.map(a => a.athleteId) : [];
+  
+  const visibleAthletes = isAdmin 
+    ? athletes.filter(a => connectedAthleteIds.includes(a.id))
+    : athletes.filter((a) => a.id === user?.athleteId);
+
+  const allIds = visibleAthletes.map((a) => a.id);
 
   const [selectedId, setSelectedId] = useState(null);
   const [metric, setMetric] = useState("hr");
 
   useEffect(() => {
-    if (!selectedId && athletes.length) {
-      setSelectedId(
-        isAdmin ? athletes[0]?.id : user?.athleteId || athletes[0]?.id,
-      );
+    if (!selectedId && visibleAthletes.length) {
+      setSelectedId(visibleAthletes[0]?.id);
     }
-  }, [athletes.length]);
+  }, [visibleAthletes.length]);
 
   const records = getAthleteData(selectedId);
 
@@ -315,9 +319,7 @@ export default function PerformanceAnalytics({ t }) {
   }, [hrVals]);
 
   // Athlete options for dropdown
-  const athleteOptions = (
-    isAdmin ? athletes : athletes.filter((a) => a.id === user?.athleteId)
-  ).map((a) => ({ value: a.id, label: a.name || a.id }));
+  const athleteOptions = visibleAthletes.map((a) => ({ value: a.id, label: a.name || a.id }));
 
   const metricOptions = [
     { value: "hr", label: "Heart Rate" },
@@ -440,6 +442,9 @@ export default function PerformanceAnalytics({ t }) {
             t={t}
           />
         )}
+        {
+          console.log("Rendering with records:", records) /* Debug log to verify data presence */
+        }
         <Dropdown
           label="Metric"
           options={metricOptions}
