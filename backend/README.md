@@ -1,3 +1,13 @@
+---
+title: Athletisense Backend
+emoji: 🏃
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_file: Dockerfile
+pinned: false
+---
+
 # AthletiSense Backend v2.0
 
 Production-grade Node.js backend for the **AthletiSense IoT Athletic Performance Monitoring Platform**.
