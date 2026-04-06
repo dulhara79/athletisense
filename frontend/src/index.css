@@ -158,7 +158,8 @@
   }
 
   .nav-item.active {
-    @apply bg-surface-primary text-accent-primary font-semibold shadow-sm ring-1 ring-inset ring-indigo-100;
+    background-color: var(--color-surface-primary);
+    @apply text-accent-primary font-semibold shadow-sm ring-1 ring-inset ring-indigo-100;
   }
 
   .dark .nav-item.active {

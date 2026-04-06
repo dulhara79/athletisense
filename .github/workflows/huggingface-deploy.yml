@@ -1,0 +1,41 @@
+name: Deploy backend to Hugging Face
+
+on:
+  push:
+    branches:
+      - main
+    # Only trigger if files in the backend folder change
+    paths:
+      - 'backend/**'
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  sync-to-hf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Deploy to Hugging Face Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # 1. Setup git user for commit
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          
+          # 2. Clone the Hugging Face space repository
+          git clone https://dulharakaushalya:${HF_TOKEN}@huggingface.co/spaces/dulharakaushalya/athletisense-backend hf-space
+          
+          # 3. Synchronize files (Move only the 'backend' folder contents to HF root)
+          # We exclude .git tracking files to avoid messing up the HF git history
+          rsync -av --delete --exclude='.git' --exclude='.gitattributes' backend/ hf-space/
+          
+          # 4. Commit and Push
+          cd hf-space
+          git add .
+          git commit -m "Auto-sync from GitHub (commit ${{ github.sha }})" || echo "No changes to commit"
+          git push origin main
