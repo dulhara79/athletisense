@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
-import { useAuth } from "../context/AuthContext";
+// src/pages/MultiAthleteComparison.jsx
+import React, { useState, useMemo } from "react";
+import { useAthleteData } from "../hooks/useAthleteData";
 import {
   BarChart,
   Bar,
@@ -17,86 +18,19 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { ArrowUpDown } from "lucide-react";
 import {
-  RefreshCw,
-  Filter,
-  WifiOff,
-  ChevronDown,
-  ChevronRight,
-  ArrowUpDown,
-} from "lucide-react";
-
-const API_BASE = "http://localhost:3001";
-const WS_URL = "ws://localhost:3001";
-
-const ATHLETE_META = {
-  ATH_001: {
-    name: "Marcus Thorne",
-    sport: "Elite Runner",
-    color: "#4f46e5",
-    short: "A1",
-    avatar: "MT",
-  },
-  ATH_002: {
-    name: "Sarah Chen",
-    sport: "Cyclist",
-    color: "#f59e0b",
-    short: "A2",
-    avatar: "SC",
-  },
-  ATH_003: {
-    name: "Diego Ramirez",
-    sport: "Swimmer",
-    color: "#10b981",
-    short: "A3",
-    avatar: "DR",
-  },
-  ATH_004: {
-    name: "Aisha Patel",
-    sport: "Sprinter",
-    color: "#ef4444",
-    short: "A4",
-    avatar: "AP",
-  },
-};
-
-function motionMag(r) {
-  if (!r?.motion) return 0;
-  const { accel_x: ax = 0, accel_y: ay = 0, accel_z: az = 0 } = r.motion;
-  return parseFloat(
-    (Math.sqrt(ax * ax + ay * ay + az * az) / 16384).toFixed(3),
-  );
-}
-function parseTs(ts) {
-  if (!ts) return null;
-  const [d, tp] = ts.split(" ");
-  if (!d) return null;
-  const [dd, mm, yyyy] = d.split("/");
-  return new Date(`${yyyy}-${mm}-${dd}T${tp || "00:00:00"}`);
-}
-function avg(arr) {
-  return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-}
-function stdDev(arr) {
-  if (arr.length < 2) return 0;
-  const m = avg(arr);
-  return Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length);
-}
-function pearson(xs, ys) {
-  if (xs.length < 2) return 0;
-  const mx = avg(xs),
-    my = avg(ys);
-  const num = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0);
-  const den = Math.sqrt(
-    xs.reduce((s, x) => s + (x - mx) ** 2, 0) *
-      ys.reduce((s, y) => s + (y - my) ** 2, 0),
-  );
-  return den === 0 ? 0 : parseFloat((num / den).toFixed(2));
-}
-function normalize(val, min, max) {
-  if (max === min) return 50;
-  return parseFloat((((val - min) / (max - min)) * 100).toFixed(1));
-}
+  getBpm,
+  getTemp,
+  getResp,
+  getMag,
+  getSteps,
+  avg,
+  pearson,
+  fatigueScore,
+  athleteColor,
+  initials,
+} from "../utils/dataHelpers";
 
 function ChartTip({ active, payload, label, t }) {
   if (!active || !payload?.length) return null;
@@ -109,22 +43,13 @@ function ChartTip({ active, payload, label, t }) {
         padding: "8px 12px",
         boxShadow: t.shadow,
         fontSize: 11,
-        fontFamily: "'DM Sans',monospace",
-        zIndex: 50,
       }}
     >
       <p style={{ color: t.muted, marginBottom: 5, fontWeight: 700 }}>
         {label}
       </p>
       {payload.map((p, i) => (
-        <p
-          key={i}
-          style={{
-            color: p.color || p.stroke,
-            fontWeight: 700,
-            marginBottom: 2,
-          }}
-        >
+        <p key={i} style={{ color: p.color || p.fill, fontWeight: 700 }}>
           {p.name}:{" "}
           <span style={{ color: t.text }}>
             {typeof p.value === "number" ? p.value.toFixed(1) : p.value}
@@ -135,17 +60,16 @@ function ChartTip({ active, payload, label, t }) {
   );
 }
 
-function Card({ title, children, t, right, fullWidth }) {
+function Card({ title, children, t, right, span }) {
   return (
     <div
-      className="card-fadein"
       style={{
         background: t.card,
         border: `1px solid ${t.border}`,
         borderRadius: 14,
         padding: "1.125rem 1.25rem",
         boxShadow: t.shadow,
-        ...(fullWidth ? { gridColumn: "1/-1" } : {}),
+        ...(span ? { gridColumn: `span ${span}` } : {}),
       }}
     >
       <div
@@ -163,7 +87,7 @@ function Card({ title, children, t, right, fullWidth }) {
             textTransform: "uppercase",
             letterSpacing: "0.10em",
             color: t.muted,
-            fontFamily: "'DM Sans',monospace",
+            fontFamily: "'DM Mono',monospace",
           }}
         >
           {title}
@@ -175,579 +99,119 @@ function Card({ title, children, t, right, fullWidth }) {
   );
 }
 
-function Dropdown({ label, options, value, onChange, t }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef();
-  useEffect(() => {
-    const h = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  const display = options.find((o) => o.value === value)?.label || label;
-  return (
-    <div
-      ref={ref}
-      style={{ position: "relative", flex: "1 1 200px", minWidth: 180 }}
-    >
-      <button
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-          width: "100%",
-          padding: "8px 12px",
-          borderRadius: 10,
-          background: t.surface,
-          border: `1px solid ${t.border}`,
-          cursor: "pointer",
-          fontSize: 12,
-          fontWeight: 600,
-          color: t.text,
-          fontFamily: "'Plus Jakarta Sans',sans-serif",
-        }}
-      >
-        <span
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {display}
-        </span>
-        <ChevronDown
-          size={13}
-          color={t.muted}
-          style={{
-            flexShrink: 0,
-            transform: open ? "rotate(180deg)" : "none",
-            transition: "transform 0.2s",
-          }}
-        />
-      </button>
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            zIndex: 200,
-            background: t.card,
-            border: `1px solid ${t.border}`,
-            borderRadius: 12,
-            boxShadow: t.shadowHover,
-            overflow: "hidden",
-          }}
-        >
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => {
-                onChange(opt.value);
-                setOpen(false);
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                width: "100%",
-                padding: "9px 14px",
-                background: value === opt.value ? t.accentBg : "transparent",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: value === opt.value ? 700 : 500,
-                color: value === opt.value ? t.accent : t.text,
-                fontFamily: "'Plus Jakarta Sans',sans-serif",
-                transition: "background 0.15s",
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MultiSelect({ label, options, value, onChange, t }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef();
-  useEffect(() => {
-    const h = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  const display =
-    value.length === 0
-      ? label
-      : value.length === options.length
-        ? "All Athletes"
-        : `${value.length} athletes`;
-  return (
-    <div
-      ref={ref}
-      style={{ position: "relative", flex: "1 1 220px", minWidth: 190 }}
-    >
-      <button
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-          width: "100%",
-          padding: "8px 12px",
-          borderRadius: 10,
-          background: t.surface,
-          border: `1px solid ${t.border}`,
-          cursor: "pointer",
-          fontSize: 12,
-          fontWeight: 600,
-          color: t.text,
-          fontFamily: "'Plus Jakarta Sans',sans-serif",
-        }}
-      >
-        <span>{display}</span>
-        <ChevronDown
-          size={13}
-          color={t.muted}
-          style={{
-            transform: open ? "rotate(180deg)" : "none",
-            transition: "transform 0.2s",
-          }}
-        />
-      </button>
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            zIndex: 200,
-            background: t.card,
-            border: `1px solid ${t.border}`,
-            borderRadius: 12,
-            boxShadow: t.shadowHover,
-            overflow: "hidden",
-          }}
-        >
-          {options.map((opt) => {
-            const sel = value.includes(opt.value);
-            return (
-              <button
-                key={opt.value}
-                onClick={() =>
-                  onChange(
-                    sel
-                      ? value.filter((v) => v !== opt.value)
-                      : [...value, opt.value],
-                  )
-                }
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  width: "100%",
-                  padding: "9px 14px",
-                  background: sel ? t.accentBg : "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: sel ? 700 : 500,
-                  color: sel ? t.accent : t.text,
-                  fontFamily: "'Plus Jakarta Sans',sans-serif",
-                  transition: "background 0.15s",
-                }}
-              >
-                <div
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: 4,
-                    border: `2px solid ${sel ? t.accent : t.border}`,
-                    background: sel ? t.accent : "transparent",
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {sel && (
-                    <span
-                      style={{ color: "#fff", fontSize: 9, fontWeight: 900 }}
-                    >
-                      ✓
-                    </span>
-                  )}
-                </div>
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: opt.color || t.muted,
-                    flexShrink: 0,
-                  }}
-                />
-                <span>{opt.label}</span>
-                <span
-                  style={{
-                    marginLeft: "auto",
-                    fontSize: 9,
-                    color: t.faint,
-                    fontFamily: "'DM Sans',monospace",
-                  }}
-                >
-                  {opt.sub}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function corrColor(r) {
-  if (r >= 0) {
-    const t = r;
-    return `rgb(${Math.round(255)},${Math.round(255 * (1 - t))},${Math.round(255 * (1 - t))})`;
-  } else {
-    const t = -r;
-    return `rgb(${Math.round(255 * (1 - t))},${Math.round(255 * (1 - t))},255)`;
-  }
+function normalize(val, min, max) {
+  if (max === min) return 50;
+  return parseFloat((((val - min) / (max - min)) * 100).toFixed(1));
 }
 
 export default function MultiAthleteComparison({ t }) {
-  const [athletes, setAthletes] = useState([]);
-  const [allRecords, setAllRecords] = useState({});
-  const [liveLatest, setLiveLatest] = useState({});
-  const [wsConnected, setWsConnected] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const wsRef = useRef(null);
+  const { athletes, liveData, loading, getAthleteData } = useAthleteData();
+  const allIds = athletes.map((a) => a.id);
+  const [sortKey, setSortKey] = useState("avgHR");
 
-  const [filterAthletes, setFilterAthletes] = useState([]);
-  const [timeFilter, setTimeFilter] = useState("all");
-  const [compMode, setCompMode] = useState("head");
-
-  const [sortKey, setSortKey] = useState("maxHR");
-  const [sortDir, setSortDir] = useState("desc");
-  const [expandedRows, setExpandedRows] = useState(new Set());
-
-  // Role-based filtering
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
-  const myAthleteId = user?.athleteId;
-
-  useEffect(() => {
-    setLoading(true);
-    fetch(`${API_BASE}/api/athletes`)
-      .then((r) => r.json())
-      .then(async ({ athletes: list }) => {
-        // Role-based filter: athletes only see their own data
-        const filtered = (!isAdmin && myAthleteId)
-          ? (list || []).filter(a => a.id === myAthleteId)
-          : (list || []);
-        setAthletes(filtered);
-        setFilterAthletes(filtered.map((a) => a.id));
-        const latMap = {};
-        list?.forEach((a) => {
-          if (a.latest) latMap[a.id] = a.latest;
-        });
-        setLiveLatest(latMap);
-
-        const hists = await Promise.all(
-          (list || []).map((a) =>
-            fetch(`${API_BASE}/api/athletes/${a.id}/history?limit=200`)
-              .then((r) => r.json())
-              .then((d) => ({
-                id: a.id,
-                readings: (d.readings || []).reverse(),
-              }))
-              .catch(() => ({ id: a.id, readings: [] })),
-          ),
-        );
-        const rec = {};
-        hists.forEach((h) => {
-          rec[h.id] = h.readings;
-        });
-        setAllRecords(rec);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    function connect() {
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
-      ws.onopen = () => setWsConnected(true);
-      ws.onclose = () => {
-        setWsConnected(false);
-        setTimeout(connect, 3000);
-      };
-      ws.onerror = () => ws.close();
-      ws.onmessage = (evt) => {
-        try {
-          const msg = JSON.parse(evt.data);
-          if (msg.type === "live_update" && msg.athlete_id && msg.data) {
-            const { athlete_id: id, data } = msg;
-            setLiveLatest((p) => ({ ...p, [id]: data }));
-            setAllRecords((p) => {
-              const ex = p[id] || [];
-              return { ...p, [id]: [...ex, data].slice(-200) };
-            });
-          }
-        } catch (e) {}
-      };
-    }
-    connect();
-    return () => wsRef.current?.close();
-  }, []);
-
-  const cutoff = useMemo(() => {
-    if (timeFilter === "all") return null;
-    const d = new Date();
-    d.setDate(d.getDate() - parseInt(timeFilter));
-    return d;
-  }, [timeFilter]);
-
-  const athleteStats = useMemo(() => {
-    const ids = filterAthletes.length
-      ? filterAthletes
-      : athletes.map((a) => a.id);
-    return ids
-      .map((id) => {
-        let recs = allRecords[id] || [];
-        if (cutoff)
-          recs = recs.filter((r) => {
-            const d = parseTs(r.timestamp);
-            return d && d >= cutoff;
-          });
-        if (!recs.length) return null;
-
-        const hrs = recs
-          .map((r) => r?.heart_rate?.bpm_avg || 0)
-          .filter(Boolean);
-        const resps = recs
-          .map((r) => r?.respiration?.rate_avg || 0)
-          .filter(Boolean);
-        const temps = recs
-          .map((r) => r?.temperature?.celsius || 0)
-          .filter(Boolean);
-        const mgs = recs.map((r) => motionMag(r));
-        const steps = recs.map((r) => r?.motion?.step_count || 0);
-
-        const maxHR = hrs.length ? Math.round(Math.max(...hrs)) : 0;
-        const avgHR = hrs.length ? Math.round(avg(hrs)) : 0;
-        const avgResp = resps.length ? parseFloat(avg(resps).toFixed(1)) : 0;
-        const avgTemp = temps.length ? parseFloat(avg(temps).toFixed(1)) : 0;
-        const avgMg = mgs.length ? parseFloat(avg(mgs).toFixed(2)) : 0;
-        const maxSteps = steps.length ? Math.max(...steps) : 0;
-        const load = Math.round(avgHR * 0.5 + avgMg * 50 + avgResp * 2);
-
-        const cv = avgHR > 0 ? (stdDev(hrs) / avgHR) * 100 : 50;
-        const consistency = Math.round(Math.max(0, Math.min(100, 100 - cv)));
-        const avgPace =
-          avgHR > 0 ? parseFloat((60 / (avgHR / 80)).toFixed(2)) : 0;
-
-        const weeklyC = [];
-        for (let i = 0; i < Math.min(recs.length, 80); i += 5) {
-          const sl = recs
-            .slice(i, i + 5)
-            .map((r) => r?.heart_rate?.bpm_avg || 0)
-            .filter(Boolean);
-          const slCv =
-            sl.length > 1 && avg(sl) > 0 ? (stdDev(sl) / avg(sl)) * 100 : 20;
-          weeklyC.push(Math.round(Math.max(0, Math.min(100, 100 - slCv))));
-        }
-
-        const rawHR = hrs;
-        const rawResp = recs
-          .slice(0, hrs.length)
-          .map((r) => r?.respiration?.rate_avg || 0);
-        const rawMg = mgs.slice(0, hrs.length);
-        const rawLoad = hrs.map(
-          (h, i) => h * 0.5 + (mgs[i] || 0) * 50 + (rawResp[i] || 0) * 2,
+  // Build per-athlete stats from real records
+  const stats = useMemo(
+    () =>
+      athletes.map((a) => {
+        const recs = getAthleteData(a.id);
+        const latest = recs.at(-1) ?? null;
+        const hrVals = recs.map(getBpm).filter(Number.isFinite);
+        const tmpVals = recs.map(getTemp).filter(Number.isFinite);
+        const rspVals = recs.map(getResp).filter(Number.isFinite);
+        const magVals = recs.map((r) => getMag(r) ?? 0).filter(Number.isFinite);
+        const { score: fatigue, recovery, status } = fatigueScore(latest);
+        const load = hrVals.reduce(
+          (s, hr) => s + (hr / 220) * Math.min(1.5, magVals[0] ?? 1),
+          0,
         );
 
         return {
-          id,
-          maxHR,
-          avgHR,
-          avgResp,
-          avgTemp,
-          avgMg,
-          maxSteps,
-          load,
-          consistency,
-          avgPace,
-          weeklyConsistency: weeklyC,
-          raw: { hr: rawHR, resp: rawResp, mg: rawMg, load: rawLoad },
-          recordCount: recs.length,
-          name: ATHLETE_META[id]?.name || id,
-          sport: ATHLETE_META[id]?.sport || "Athlete",
-          color: ATHLETE_META[id]?.color || "#6366f1",
-          short: ATHLETE_META[id]?.short || id,
+          id: a.id,
+          name: a.name || a.id,
+          sport: a.sport || "Athlete",
+          color: athleteColor(a.id, allIds),
+          avatar: initials(a.name),
+          avgHR: hrVals.length ? Math.round(avg(hrVals)) : null,
+          maxHR: hrVals.length ? Math.round(Math.max(...hrVals)) : null,
+          avgTemp: tmpVals.length ? parseFloat(avg(tmpVals).toFixed(1)) : null,
+          avgResp: rspVals.length ? Math.round(avg(rspVals)) : null,
+          avgMag: magVals.length ? parseFloat(avg(magVals).toFixed(2)) : null,
+          latestSteps: getSteps(latest),
+          fatigue,
+          recovery,
+          status,
+          load: parseFloat(load.toFixed(1)),
+          dataPoints: recs.length,
         };
-      })
-      .filter(Boolean);
-  }, [allRecords, filterAthletes, athletes, cutoff]);
+      }),
+    [athletes, liveData],
+  );
 
-  const radarDataPerAthlete = useMemo(() => {
-    if (!athleteStats.length) return [];
-    const keys = [
-      "maxHR",
-      "avgResp",
-      "avgMg",
-      "load",
-      "consistency",
-      "avgPace",
-    ];
-    const ranges = {};
-    keys.forEach((k) => {
-      const vals = athleteStats.map((a) => a[k] || 0);
-      ranges[k] = { min: Math.min(...vals), max: Math.max(...vals) };
+  // Sort table
+  const sorted = [...stats].sort((a, b) => {
+    const av = a[sortKey] ?? -Infinity,
+      bv = b[sortKey] ?? -Infinity;
+    return bv - av;
+  });
+
+  // Bar chart: avg HR comparison
+  const barData = sorted.map((s) => ({
+    name: s.name.split(" ")[0],
+    avgHR: s.avgHR,
+    maxHR: s.maxHR,
+    color: s.color,
+  }));
+
+  // Radar chart: normalised metrics
+  const radarMetrics = ["avgHR", "avgTemp", "avgResp", "avgMag", "fatigue"];
+  const radarLabels = ["Heart Rate", "Temp", "Resp", "Motion", "Fatigue"];
+  const mins = Object.fromEntries(
+    radarMetrics.map((k) => [
+      k,
+      Math.min(...stats.map((s) => s[k] ?? Infinity)),
+    ]),
+  );
+  const maxs = Object.fromEntries(
+    radarMetrics.map((k) => [
+      k,
+      Math.max(...stats.map((s) => s[k] ?? -Infinity)),
+    ]),
+  );
+  const radarData = radarLabels.map((label, i) => {
+    const key = radarMetrics[i];
+    const entry = { metric: label };
+    stats.forEach((s) => {
+      entry[s.id] = normalize(s[key] ?? 0, mins[key], maxs[key]);
     });
+    return entry;
+  });
 
-    return athleteStats.map((a) => ({
-      ...a,
-      radarPoints: [
-        {
-          metric: "Max HR",
-          value: normalize(a.maxHR, ranges.maxHR.min, ranges.maxHR.max),
-        },
-        {
-          metric: "Avg Speed",
-          value: normalize(a.avgResp, ranges.avgResp.min, ranges.avgResp.max),
-        },
-        {
-          metric: "Motion",
-          value: normalize(a.avgMg, ranges.avgMg.min, ranges.avgMg.max),
-        },
-        {
-          metric: "Load",
-          value: normalize(a.load, ranges.load.min, ranges.load.max),
-        },
-        {
-          metric: "HR Stability",
-          value: normalize(
-            a.consistency,
-            ranges.consistency.min,
-            ranges.consistency.max,
-          ),
-        },
-        {
-          metric: "Total Distance",
-          value: normalize(
-            a.maxSteps,
-            0,
-            Math.max(1, ...athleteStats.map((s) => s.maxSteps)),
-          ),
-        },
-      ],
-    }));
-  }, [athleteStats]);
-
-  const rankingData = useMemo(() => {
-    const metrics = ["Max HR", "Avg Resp", "Avg Motion", "Load", "HR Stability"];
-    return metrics.map((metric) => {
-      const row = { metric };
-      athleteStats.forEach((a) => {
-        const val =
-          metric === "Max HR"
-            ? a.maxHR
-            : metric === "Avg Resp"
-              ? a.avgResp
-              : metric === "Avg Motion"
-                ? parseFloat((a.avgMg * 100).toFixed(1))
-                : metric === "Load"
-                  ? a.load
-                  : a.consistency;
-        row[a.id] = val;
-      });
-      return row;
-    });
-  }, [athleteStats]);
-
-  const corrMatrix = useMemo(() => {
-    if (!athleteStats.length) return { labels: [], matrix: [] };
-    const merged = {
-      HR: athleteStats.flatMap((a) => a.raw.hr),
-      Resp: athleteStats.flatMap((a) => a.raw.resp),
-      Motion: athleteStats.flatMap((a) => a.raw.mg),
-      Load: athleteStats.flatMap((a) => a.raw.load),
-    };
-    const labels = Object.keys(merged);
-    const n = Math.min(...Object.values(merged).map((v) => v.length));
-    const trimmed = {};
-    labels.forEach((k) => {
-      trimmed[k] = merged[k].slice(0, n);
-    });
-    const matrix = labels.map((r) =>
-      labels.map((c) => pearson(trimmed[r], trimmed[c])),
+  if (loading)
+    return (
+      <main
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <p style={{ color: t.muted }}>Loading…</p>
+      </main>
     );
-    return { labels, matrix };
-  }, [athleteStats]);
-
-  const consistencyTrend = useMemo(() => {
-    if (!athleteStats.length) return [];
-    const maxLen = Math.max(
-      ...athleteStats.map((a) => a.weeklyConsistency.length),
+  if (athletes.length === 0)
+    return (
+      <main
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <p style={{ color: t.muted }}>No athletes in database yet.</p>
+      </main>
     );
-    return Array.from({ length: maxLen }, (_, i) => {
-      const row = { week: i + 1 };
-      athleteStats.forEach((a) => {
-        row[a.id] = a.weeklyConsistency[i] ?? null;
-      });
-      return row;
-    });
-  }, [athleteStats]);
-
-  const tableRows = useMemo(() => {
-    const rows = athleteStats.map((a) => ({
-      id: a.id,
-      athlete: a.short,
-      name: a.name,
-      sport: a.sport,
-      color: a.color,
-      maxHR: a.maxHR,
-      avgPace: a.avgPace,
-      totalDist: a.maxSteps,
-      load: a.load,
-      avgResp: a.avgResp,
-      motionRate: parseFloat((a.avgMg * 100).toFixed(1)),
-      consistency: a.consistency,
-      records: a.recordCount,
-    }));
-    return [...rows].sort((a, b) => {
-      const av = a[sortKey] || 0,
-        bv = b[sortKey] || 0;
-      return sortDir === "asc" ? av - bv : bv - av;
-    });
-  }, [athleteStats, sortKey, sortDir]);
-
-  function toggleSort(key) {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
-  }
-
-  const ids = filterAthletes.length
-    ? filterAthletes
-    : athletes.map((a) => a.id);
 
   return (
     <main
@@ -760,720 +224,337 @@ export default function MultiAthleteComparison({ t }) {
         gap: 14,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontFamily: "'Syne',sans-serif",
-              fontSize: 20,
-              fontWeight: 800,
-              color: t.text,
-              letterSpacing: "0.02em",
-            }}
-          >
-            Multi-Athlete Comparison
-          </h1>
-          <p style={{ fontSize: 11, color: t.muted, marginTop: 2 }}>
-            {ids.length} athlete(s) ·{" "}
-            {athleteStats.reduce((s, a) => s + a.recordCount, 0)} records
-          </p>
-        </div>
-        <span
+      <div>
+        <h2
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            padding: "5px 12px",
-            borderRadius: 99,
-            fontSize: 10,
-            fontWeight: 700,
-            fontFamily: "'DM Sans',monospace",
-            background: wsConnected ? t.successBg : t.dangerBg,
-            color: wsConnected ? t.success : t.danger,
-            border: `1px solid ${wsConnected ? t.success + "30" : t.danger + "30"}`,
+            fontSize: 24,
+            fontWeight: 400,
+            color: t.text,
+            fontFamily: "'Bebas Neue','Syne',sans-serif",
+            letterSpacing: "0.06em",
           }}
         >
-          {wsConnected ? (
-            <>
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: t.success,
-                  animation: "pulse 1.6s infinite",
-                }}
-              />{" "}
-              LIVE
-            </>
-          ) : (
-            <>
-              <WifiOff size={10} /> OFFLINE
-            </>
-          )}
-        </span>
+          MULTI-ATHLETE COMPARISON
+        </h2>
+        <p style={{ fontSize: 11, color: t.muted }}>
+          {athletes.length} athletes · live data
+        </p>
       </div>
 
-      <div
-        className="card-fadein"
-        style={{
-          background: t.card,
-          border: `1px solid ${t.border}`,
-          borderRadius: 14,
-          padding: "1rem 1.25rem",
-          boxShadow: t.shadow,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          <Filter size={13} color={t.muted} />
-          <p
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.10em",
-              color: t.muted,
-              fontFamily: "'DM Sans',monospace",
-            }}
-          >
-            Filters Panel
-          </p>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            flexWrap: "wrap",
-            alignItems: "center",
-          }}
-        >
-          <MultiSelect
-            label="Athlete Multi-Select"
-            options={athletes.map((a) => ({
-              value: a.id,
-              label: `${ATHLETE_META[a.id]?.name || a.id}`,
-              color: ATHLETE_META[a.id]?.color,
-              sub: `${ATHLETE_META[a.id]?.short || a.id}`,
-            }))}
-            value={filterAthletes}
-            onChange={setFilterAthletes}
-            t={t}
-          />
-          <Dropdown
-            label="Time Filter"
-            options={[
-              { value: "all", label: "All Time" },
-              { value: "7", label: "Last 7 days" },
-              { value: "30", label: "Last Month" },
-              { value: "90", label: "Last 3 Months" },
-              { value: "365", label: "Last Year" },
-            ]}
-            value={timeFilter}
-            onChange={setTimeFilter}
-            t={t}
-          />
+      {/* Athlete cards */}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        {stats.map((s) => (
           <div
+            key={s.id}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "6px 12px",
-              borderRadius: 10,
-              background: t.surface,
-              border: `1px solid ${t.border}`,
+              flex: "1 1 160px",
+              background: t.card,
+              border: `1px solid ${s.color}30`,
+              borderRadius: 14,
+              padding: "1rem",
+              boxShadow: t.shadow,
+              position: "relative",
+              overflow: "hidden",
             }}
           >
-            <input
-              type="checkbox"
-              id="cmpMode"
-              checked={compMode === "aggregate"}
-              onChange={(e) =>
-                setCompMode(e.target.checked ? "aggregate" : "head")
-              }
-              style={{ cursor: "pointer" }}
-            />
-            <label
-              htmlFor="cmpMode"
+            <div
               style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: t.text,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                fontFamily: "'Plus Jakarta Sans',sans-serif",
-                lineHeight: 1.3,
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                background: `linear-gradient(90deg,${s.color},${s.color}40)`,
+              }}
+            />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 10,
               }}
             >
-              Comparison Mode Toggle
-              <br />
-              <span style={{ fontSize: 10, color: t.muted, fontWeight: 500 }}>
-                {compMode === "head" ? "Head-to-Head" : "Aggregate"}
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  background: `${s.color}20`,
+                  border: `1px solid ${s.color}40`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: s.color,
+                }}
+              >
+                {s.avatar}
+              </div>
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: t.text }}>
+                  {s.name}
+                </p>
+                <p style={{ fontSize: 10, color: t.muted }}>{s.sport}</p>
+              </div>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 6,
+              }}
+            >
+              {[
+                {
+                  label: "Avg HR",
+                  value: s.avgHR != null ? `${s.avgHR} bpm` : "--",
+                },
+                {
+                  label: "Temp",
+                  value: s.avgTemp != null ? `${s.avgTemp}°C` : "--",
+                },
+                {
+                  label: "Fatigue",
+                  value: s.fatigue != null ? `${s.fatigue}%` : "--",
+                },
+                { label: "Pts", value: String(s.dataPoints) },
+              ].map((m) => (
+                <div
+                  key={m.label}
+                  style={{
+                    background: t.surface,
+                    borderRadius: 8,
+                    padding: "6px 8px",
+                  }}
+                >
+                  <p style={{ fontSize: 9, color: t.muted, fontWeight: 600 }}>
+                    {m.label}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: t.text,
+                      fontFamily: "'DM Mono',monospace",
+                    }}
+                  >
+                    {m.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div
+              style={{
+                marginTop: 8,
+                padding: "4px 8px",
+                borderRadius: 6,
+                background:
+                  s.status === "Optimal"
+                    ? t.successBg
+                    : s.status === "Moderate"
+                      ? t.warningBg
+                      : t.dangerBg,
+                textAlign: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color:
+                    s.status === "Optimal"
+                      ? t.success
+                      : s.status === "Moderate"
+                        ? t.warning
+                        : t.danger,
+                }}
+              >
+                {s.status}
               </span>
-            </label>
+            </div>
           </div>
-          <button
-            onClick={() => {
-              setFilterAthletes(athletes.map((a) => a.id));
-              setTimeFilter("all");
-              setCompMode("head");
-            }}
-            style={{
-              padding: "8px 18px",
-              borderRadius: 10,
-              cursor: "pointer",
-              background: t.accent,
-              border: "none",
-              color: "#fff",
-              fontSize: 12,
-              fontWeight: 700,
-              fontFamily: "'Plus Jakarta Sans',sans-serif",
-              boxShadow: `0 4px 12px ${t.accent}40`,
-            }}
-          >
-            Apply Filters
-          </button>
-          <button
-            onClick={() => {
-              setFilterAthletes(athletes.map((a) => a.id));
-              setTimeFilter("all");
-              setCompMode("head");
-            }}
-            style={{
-              padding: "8px 12px",
-              borderRadius: 10,
-              cursor: "pointer",
-              background: "transparent",
-              border: `1px solid ${t.border}`,
-              color: t.muted,
-              fontSize: 12,
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-            }}
-          >
-            <RefreshCw size={11} /> Reset
-          </button>
-        </div>
+        ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <Card
-          title="Athlete Performance Radar Chart"
-          t={t}
-          right={
-            <div style={{ display: "flex", gap: 8 }}>
-              {ids.map((id) => {
-                const meta = ATHLETE_META[id];
-                return (
-                  <span
-                    key={id}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {/* HR Comparison bar */}
+        <Card title="Heart Rate Comparison" t={t}>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart
+              data={barData}
+              margin={{ top: 5, right: 10, bottom: 0, left: 0 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke={t.chartGrid}
+                vertical={false}
+              />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 10, fill: t.faint }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                domain={[40, 220]}
+                tick={{ fontSize: 9, fill: t.faint }}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+              />
+              <Tooltip content={<ChartTip t={t} />} />
+              <Legend wrapperStyle={{ fontSize: 9 }} />
+              {
+                stats.map((s) => (
+                  <Bar
+                    key={s.id}
+                    dataKey="avgHR"
+                    name="Avg HR"
+                    fill={s.color}
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={40}
+                  />
+                ))[0]
+              }
+              {barData.map((d, i) => null)}
+            </BarChart>
+          </ResponsiveContainer>
+          {/* Simple bar rendering per athlete */}
+          <div
+            style={{
+              marginTop: 12,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            {sorted.map((s) => {
+              const pct = s.avgHR ? Math.min((s.avgHR / 220) * 100, 100) : 0;
+              return (
+                <div key={s.id}>
+                  <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      fontSize: 9,
-                      color: t.muted,
-                      fontFamily: "'DM Sans',monospace",
-                      fontWeight: 700,
+                      justifyContent: "space-between",
+                      marginBottom: 2,
                     }}
                   >
                     <span
+                      style={{ fontSize: 11, color: t.text, fontWeight: 600 }}
+                    >
+                      {s.name}
+                    </span>
+                    <span
                       style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: meta?.color || t.accent,
+                        fontSize: 11,
+                        color: s.color,
+                        fontWeight: 700,
+                        fontFamily: "'DM Mono',monospace",
                       }}
-                    />
-                    {meta?.short || id}
-                  </span>
-                );
-              })}
-            </div>
-          }
-        >
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 8,
-              justifyContent: "center",
-            }}
-          >
-            {compMode === "head" && radarDataPerAthlete.map((a) => (
-              <div
-                key={a.id}
-                style={{ flex: "1 1 120px", maxWidth: 160, minWidth: 110 }}
-              >
-                <p
-                  style={{
-                    fontSize: 9,
-                    fontWeight: 700,
-                    textAlign: "center",
-                    color: a.color,
-                    fontFamily: "'DM Sans',monospace",
-                    marginBottom: 2,
-                  }}
-                >
-                  {a.short}
-                </p>
-                <ResponsiveContainer width="100%" height={130}>
-                  <RadarChart
-                    data={a.radarPoints}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius="65%"
-                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                    >
+                      {s.avgHR ?? "--"} bpm
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      height: 8,
+                      background: t.surface,
+                      borderRadius: 4,
+                    }}
                   >
-                    <PolarGrid stroke={t.chartGrid} gridType="polygon" />
-                    <PolarAngleAxis
-                      dataKey="metric"
-                      tick={{
-                        fontSize: 7,
-                        fill: t.muted,
-                        fontFamily: "'DM Sans',monospace",
+                    <div
+                      style={{
+                        width: `${pct}%`,
+                        height: "100%",
+                        background: s.color,
+                        borderRadius: 4,
+                        transition: "width 0.5s ease",
                       }}
                     />
-                    <Radar
-                      dataKey="value"
-                      name={a.short}
-                      stroke={a.color}
-                      fill={a.color}
-                      fillOpacity={0.2}
-                      strokeWidth={2}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-            ))}
-            {radarDataPerAthlete.length >= 2 && (
-              <div style={{ flex: compMode === "aggregate" ? "1 1 100%" : "1 1 120px", maxWidth: compMode === "aggregate" ? 320 : 160, minWidth: 110 }}>
-                <p
-                  style={{
-                    fontSize: 9,
-                    fontWeight: 700,
-                    textAlign: "center",
-                    color: t.muted,
-                    fontFamily: "'DM Sans',monospace",
-                    marginBottom: 2,
-                  }}
-                >
-                  {compMode === "aggregate" ? "Aggregate Overlay" : "Combined"}
-                </p>
-                <ResponsiveContainer width="100%" height={compMode === "aggregate" ? 200 : 130}>
-                  <RadarChart
-                    cx="50%"
-                    cy="50%"
-                    outerRadius="65%"
-                    data={radarDataPerAthlete[0].radarPoints}
-                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                  >
-                    <PolarGrid stroke={t.chartGrid} gridType="polygon" />
-                    <PolarAngleAxis
-                      dataKey="metric"
-                      tick={{
-                        fontSize: compMode === "aggregate" ? 9 : 7,
-                        fill: t.muted,
-                        fontFamily: "'DM Sans',monospace",
-                      }}
-                    />
-                    {radarDataPerAthlete.map((a) => (
-                      <Radar
-                        key={a.id}
-                        dataKey="value"
-                        name={a.short}
-                        stroke={a.color}
-                        fill={a.color}
-                        fillOpacity={0.15}
-                        strokeWidth={1.5}
-                        data={a.radarPoints}
-                      />
-                    ))}
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </Card>
 
-        <Card
-          title="Ranking Bar Chart"
-          t={t}
-          right={
-            <div style={{ display: "flex", gap: 8 }}>
-              {ids.map((id) => (
-                <span
-                  key={id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    fontSize: 9,
-                    color: t.muted,
-                    fontFamily: "'DM Sans',monospace",
-                    fontWeight: 700,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: ATHLETE_META[id]?.color || t.accent,
-                    }}
-                  />
-                  {ATHLETE_META[id]?.short || id}
-                </span>
-              ))}
-            </div>
-          }
-        >
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart
-              data={rankingData}
-              margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke={t.chartGrid}
-                vertical={false}
-              />
-              <XAxis
-                dataKey="metric"
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Sans',monospace",
-                }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Sans',monospace",
-                }}
-                tickLine={false}
-                axisLine={false}
-                label={{
-                  value: "Total Load/Distance",
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: t.faint,
-                  fontSize: 8,
-                  dx: -4,
-                }}
-              />
-              <Tooltip content={<ChartTip t={t} />} />
-              <Legend
-                wrapperStyle={{
-                  fontSize: 9,
-                  fontFamily: "'DM Sans',monospace",
-                }}
-                iconType="circle"
-                iconSize={7}
-              />
-              {ids.map((id) => (
-                <Bar
-                  key={id}
-                  dataKey={id}
-                  name={ATHLETE_META[id]?.short || id}
-                  fill={ATHLETE_META[id]?.color || t.accent}
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={28}
-                  isAnimationActive={false}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <Card title="Correlation Matrix Heatmap" t={t}>
-          {corrMatrix.labels.length === 0 ? (
-            <div
+        {/* Radar */}
+        <Card title="Multi-Metric Radar" t={t}>
+          {stats.every((s) => s.dataPoints === 0) ? (
+            <p
               style={{
-                textAlign: "center",
-                padding: "2rem",
                 color: t.muted,
                 fontSize: 12,
+                textAlign: "center",
+                padding: 20,
               }}
             >
-              Insufficient data for correlation
-            </div>
+              No data yet
+            </p>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{
-                  borderCollapse: "collapse",
-                  width: "100%",
-                  fontSize: 11,
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th
-                      style={{
-                        padding: "6px 8px",
-                        fontSize: 9,
-                        color: t.faint,
-                        fontFamily: "'DM Sans',monospace",
-                        fontWeight: 700,
-                      }}
-                    />
-                    {corrMatrix.labels.map((l) => (
-                      <th
-                        key={l}
-                        style={{
-                          padding: "6px 8px",
-                          fontSize: 9,
-                          color: t.muted,
-                          fontFamily: "'DM Sans',monospace",
-                          fontWeight: 700,
-                          textAlign: "center",
-                        }}
-                      >
-                        {l}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {corrMatrix.labels.map((rowL, ri) => (
-                    <tr key={rowL}>
-                      <td
-                        style={{
-                          padding: "4px 8px",
-                          fontSize: 9,
-                          color: t.muted,
-                          fontFamily: "'DM Sans',monospace",
-                          fontWeight: 700,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {rowL}
-                      </td>
-                      {corrMatrix.matrix[ri].map((val, ci) => (
-                        <td
-                          key={ci}
-                          title={`${rowL} vs ${corrMatrix.labels[ci]}: ${val}`}
-                          style={{ padding: "0", textAlign: "center" }}
-                        >
-                          <div
-                            style={{
-                              width: 56,
-                              height: 32,
-                              background: corrColor(val),
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color:
-                                val === 1
-                                  ? "#fff"
-                                  : Math.abs(val) > 0.6
-                                    ? "#fff"
-                                    : t.text,
-                              fontFamily: "'DM Sans',monospace",
-                              margin: "1px",
-                              borderRadius: 4,
-                              transition: "transform 0.15s",
-                              cursor: "default",
-                            }}
-                          >
-                            {val.toFixed(2)}
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginTop: 10,
-                  justifyContent: "flex-end",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 9,
-                    color: t.faint,
-                    fontFamily: "'DM Sans',monospace",
-                  }}
-                >
-                  -1
-                </span>
-                <div
-                  style={{
-                    width: 80,
-                    height: 8,
-                    borderRadius: 4,
-                    background:
-                      "linear-gradient(to right,#4444ff,#ffffff,#ff4444)",
-                  }}
+            <ResponsiveContainer width="100%" height={240}>
+              <RadarChart data={radarData}>
+                <PolarGrid stroke={t.chartGrid} />
+                <PolarAngleAxis
+                  dataKey="metric"
+                  tick={{ fontSize: 10, fill: t.muted }}
                 />
-                <span
-                  style={{
-                    fontSize: 9,
-                    color: t.faint,
-                    fontFamily: "'DM Sans',monospace",
-                  }}
-                >
-                  +1
-                </span>
-              </div>
-            </div>
-          )}
-        </Card>
-
-        <Card
-          title="HR Stability Trend (Weekly)"
-          t={t}
-          right={
-            <div style={{ display: "flex", gap: 8 }}>
-              {ids.map((id) => (
-                <span
-                  key={id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    fontSize: 9,
-                    color: t.muted,
-                    fontFamily: "'DM Sans',monospace",
-                    fontWeight: 700,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: ATHLETE_META[id]?.color || t.accent,
-                    }}
+                <PolarRadiusAxis
+                  domain={[0, 100]}
+                  tick={{ fontSize: 8, fill: t.faint }}
+                />
+                <Tooltip content={<ChartTip t={t} />} />
+                {stats.map((s) => (
+                  <Radar
+                    key={s.id}
+                    name={s.name}
+                    dataKey={s.id}
+                    stroke={s.color}
+                    fill={s.color}
+                    fillOpacity={0.12}
                   />
-                  {ATHLETE_META[id]?.short || id}
-                </span>
-              ))}
-            </div>
-          }
-        >
-          <ResponsiveContainer width="100%" height={210}>
-            <LineChart
-              data={consistencyTrend}
-              margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke={t.chartGrid}
-                vertical={false}
-              />
-              <XAxis
-                dataKey="week"
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Sans',monospace",
-                }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                domain={[0, 100]}
-                tick={{
-                  fontSize: 9,
-                  fill: t.faint,
-                  fontFamily: "'DM Sans',monospace",
-                }}
-                tickLine={false}
-                axisLine={false}
-                label={{
-                  value: "HR Stability",
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: t.faint,
-                  fontSize: 8,
-                  dx: -4,
-                }}
-              />
-              <Tooltip content={<ChartTip t={t} />} />
-              <Legend
-                wrapperStyle={{
-                  fontSize: 9,
-                  fontFamily: "'DM Sans',monospace",
-                }}
-                iconType="circle"
-                iconSize={7}
-              />
-              {ids.map((id) => (
-                <Line
-                  key={id}
-                  type="monotone"
-                  dataKey={id}
-                  name={ATHLETE_META[id]?.short || id}
-                  stroke={ATHLETE_META[id]?.color || t.accent}
-                  strokeWidth={2}
-                  dot={{
-                    fill: ATHLETE_META[id]?.color || t.accent,
-                    r: 3,
-                    strokeWidth: 0,
-                  }}
-                  activeDot={{ r: 5, strokeWidth: 0 }}
-                  connectNulls
-                  isAnimationActive={false}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+                ))}
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+              </RadarChart>
+            </ResponsiveContainer>
+          )}
         </Card>
       </div>
 
-      <Card title="Detailed Comparison Table" t={t} fullWidth>
+      {/* Comparison table */}
+      <Card title="Full Comparison Table" t={t} span={2}>
         <div style={{ overflowX: "auto" }}>
           <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: 11,
-              minWidth: 900,
-            }}
+            style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}
           >
             <thead>
-              <tr style={{ borderBottom: `2px solid ${t.border}` }}>
+              <tr>
                 {[
-                  { key: "name", label: "Athlete" },
-                  { key: "athlete", label: "ID" },
-                  { key: "maxHR", label: "Max HR" },
-                  { key: "avgPace", label: "Avg Pace" },
-                  { key: "totalDist", label: "Total Steps" },
-                  { key: "load", label: "Load" },
-                  { key: "avgResp", label: "Avg Resp" },
-                  { key: "motionRate", label: "Motion Rate" },
-                  { key: "consistency", label: "HR Stability" },
+                  "Athlete",
+                  "Sport",
+                  "Avg HR",
+                  "Max HR",
+                  "Avg Temp",
+                  "Avg Resp",
+                  "Fatigue",
+                  "Status",
+                  "Readings",
                 ].map((col) => (
                   <th
-                    key={col.key}
+                    key={col}
+                    onClick={() => {
+                      const k = {
+                        "Avg HR": "avgHR",
+                        "Max HR": "maxHR",
+                        "Avg Temp": "avgTemp",
+                        "Avg Resp": "avgResp",
+                        Fatigue: "fatigue",
+                        Readings: "dataPoints",
+                      }[col];
+                      if (k) setSortKey(k);
+                    }}
                     style={{
                       padding: "8px 12px",
                       textAlign: "left",
@@ -1482,386 +563,169 @@ export default function MultiAthleteComparison({ t }) {
                       textTransform: "uppercase",
                       letterSpacing: "0.08em",
                       color: t.muted,
-                      fontFamily: "'DM Sans',monospace",
+                      borderBottom: `1px solid ${t.border}`,
+                      cursor: "pointer",
                       whiteSpace: "nowrap",
-                      background:
-                        sortKey === col.key ? t.accentBg : "transparent",
+                      fontFamily: "'DM Mono',monospace",
                     }}
                   >
-                    <button
-                      onClick={() => toggleSort(col.key)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: sortKey === col.key ? t.accent : t.muted,
-                        fontSize: 9,
-                        fontWeight: 700,
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        fontFamily: "'DM Sans',monospace",
-                        padding: "2px 4px",
-                        borderRadius: 4,
-                      }}
-                    >
-                      {col.label}{" "}
-                      <ArrowUpDown
-                        size={9}
-                        color={sortKey === col.key ? t.accent : t.faint}
-                      />
-                    </button>
+                    {col}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {tableRows.length === 0 ? (
-                <tr>
+              {sorted.map((s, i) => (
+                <tr
+                  key={s.id}
+                  style={{
+                    background: i % 2 === 0 ? "transparent" : t.surface,
+                  }}
+                >
                   <td
-                    colSpan={9}
                     style={{
-                      textAlign: "center",
-                      padding: "2rem",
-                      color: t.muted,
-                      fontSize: 12,
+                      padding: "10px 12px",
+                      borderBottom: `1px solid ${t.border}`,
                     }}
                   >
-                    No data available
-                  </td>
-                </tr>
-              ) : (
-                tableRows.map((row, i) => {
-                  const expanded = expandedRows.has(row.id);
-                  const statRow = athleteStats.find((a) => a.id === row.id);
-                  return (
-                    <React.Fragment key={row.id}>
-                      <tr
-                        onClick={() =>
-                          setExpandedRows((prev) => {
-                            const next = new Set(prev);
-                            expanded ? next.delete(row.id) : next.add(row.id);
-                            return next;
-                          })
-                        }
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      <div
                         style={{
-                          borderBottom: `1px solid ${t.border}`,
-                          cursor: "pointer",
-                          background: expanded
-                            ? t.accentBg
-                            : i % 2 === 0
-                              ? t.surface + "50"
-                              : "transparent",
-                          transition: "background 0.15s",
+                          width: 26,
+                          height: 26,
+                          borderRadius: 7,
+                          background: `${s.color}20`,
+                          border: `1px solid ${s.color}40`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 9,
+                          fontWeight: 800,
+                          color: s.color,
                         }}
                       >
-                        <td style={{ padding: "10px 12px" }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                            }}
-                          >
-                            <ChevronRight
-                              size={12}
-                              color={t.muted}
-                              style={{
-                                transform: expanded ? "rotate(90deg)" : "none",
-                                transition: "transform 0.2s",
-                              }}
-                            />
-                            <div
-                              style={{
-                                width: 26,
-                                height: 26,
-                                borderRadius: 7,
-                                background: `${row.color}20`,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 10,
-                                fontWeight: 800,
-                                color: row.color,
-                                fontFamily: "'DM Sans',monospace",
-                              }}
-                            >
-                              {row.athlete}
-                            </div>
-                            <div>
-                              <p
-                                style={{
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  color: t.text,
-                                }}
-                              >
-                                {row.name}
-                              </p>
-                              <p style={{ fontSize: 9, color: t.faint }}>
-                                {row.sport}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td
+                        {s.avatar}
+                      </div>
+                      <div>
+                        <p
                           style={{
-                            padding: "10px 12px",
-                            fontFamily: "'DM Sans',monospace",
                             fontWeight: 700,
-                            color: row.color,
-                          }}
-                        >
-                          {row.athlete}
-                        </td>
-                        <td
-                          style={{
-                            padding: "10px 12px",
-                            fontFamily: "'DM Sans',monospace",
-                            color: t.danger,
-                            fontWeight: 700,
-                          }}
-                        >
-                          {row.maxHR} bpm
-                        </td>
-                        <td
-                          style={{
-                            padding: "10px 12px",
-                            fontFamily: "'DM Sans',monospace",
-                            color: t.muted,
-                          }}
-                        >
-                          {row.avgPace.toFixed(2)}
-                        </td>
-                        <td
-                          style={{
-                            padding: "10px 12px",
-                            fontFamily: "'DM Sans',monospace",
                             color: t.text,
+                            fontSize: 12,
                           }}
                         >
-                          {row.totalDist.toLocaleString()}
-                        </td>
-                        <td
-                          style={{
-                            padding: "10px 12px",
-                            fontFamily: "'DM Sans',monospace",
-                            color: t.accent,
-                            fontWeight: 700,
-                          }}
-                        >
-                          {row.load}
-                        </td>
-                        <td
-                          style={{
-                            padding: "10px 12px",
-                            fontFamily: "'DM Sans',monospace",
-                            color: t.text,
-                          }}
-                        >
-                          {row.avgResp} rpm
-                        </td>
-                        <td
-                          style={{
-                            padding: "10px 12px",
-                            fontFamily: "'DM Sans',monospace",
-                            color: t.muted,
-                          }}
-                        >
-                          {row.motionRate} g×100
-                        </td>
-                        <td style={{ padding: "10px 12px" }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                            }}
-                          >
-                            <div
-                              style={{
-                                flex: 1,
-                                height: 5,
-                                borderRadius: 99,
-                                background: t.surface2,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  height: "100%",
-                                  borderRadius: 99,
-                                  width: `${row.consistency}%`,
-                                  background:
-                                    row.consistency > 70
-                                      ? t.success
-                                      : row.consistency > 40
-                                        ? t.warning
-                                        : t.danger,
-                                  transition: "width 0.4s",
-                                }}
-                              />
-                            </div>
-                            <span
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 800,
-                                fontFamily: "'DM Sans',monospace",
-                                color:
-                                  row.consistency > 70
-                                    ? t.success
-                                    : row.consistency > 40
-                                      ? t.warning
-                                      : t.danger,
-                                minWidth: 28,
-                              }}
-                            >
-                              {row.consistency}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                      {expanded && statRow && (
-                        <tr key={`${row.id}-exp`}>
-                          <td
-                            colSpan={9}
-                            style={{
-                              padding: "0 12px 14px 52px",
-                              background: t.accentBg,
-                              borderBottom: `1px solid ${t.border}`,
-                            }}
-                          >
-                            <div
-                              style={{
-                                paddingTop: 10,
-                                display: "flex",
-                                gap: 16,
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              <div style={{ flex: "2 1 280px" }}>
-                                <p
-                                  style={{
-                                    fontSize: 9,
-                                    fontWeight: 700,
-                                    color: t.muted,
-                                    fontFamily: "'DM Sans',monospace",
-                                    marginBottom: 6,
-                                  }}
-                                >
-                                  HR trend - last{" "}
-                                  {Math.min(statRow.raw.hr.length, 30)} readings
-                                </p>
-                                <ResponsiveContainer width="100%" height={70}>
-                                  <LineChart
-                                    data={statRow.raw.hr
-                                      .slice(-30)
-                                      .map((h, i) => ({
-                                        i,
-                                        hr: h,
-                                        resp: statRow.raw.resp[i],
-                                      }))}
-                                    margin={{
-                                      top: 2,
-                                      right: 8,
-                                      bottom: 0,
-                                      left: -20,
-                                    }}
-                                  >
-                                    <CartesianGrid
-                                      strokeDasharray="2 2"
-                                      stroke={t.chartGrid}
-                                      vertical={false}
-                                    />
-                                    <XAxis dataKey="i" hide />
-                                    <YAxis
-                                      yAxisId="hr"
-                                      domain={[40, 220]}
-                                      tick={{
-                                        fontSize: 7,
-                                        fill: t.faint,
-                                        fontFamily: "'DM Sans',monospace",
-                                      }}
-                                      tickLine={false}
-                                      axisLine={false}
-                                      width={26}
-                                    />
-                                    <Tooltip content={<ChartTip t={t} />} />
-                                    <Line
-                                      yAxisId="hr"
-                                      type="monotone"
-                                      dataKey="hr"
-                                      name="HR"
-                                      stroke={row.color}
-                                      strokeWidth={2}
-                                      dot={false}
-                                      isAnimationActive={false}
-                                    />
-                                  </LineChart>
-                                </ResponsiveContainer>
-                              </div>
-                              <div
-                                style={{
-                                  flex: "1 1 200px",
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: 6,
-                                  justifyContent: "center",
-                                }}
-                              >
-                                {[
-                                  ["Records", row.records, ""],
-                                  ["Avg HR", statRow.avgHR, " bpm"],
-                                  ["Avg Temp", statRow.avgTemp, "°C"],
-                                  ["Avg Motion", statRow.avgMg, "g"],
-                                ].map(([label, val, unit]) => (
-                                  <div
-                                    key={label}
-                                    style={{
-                                      display: "flex",
-                                      justifyContent: "space-between",
-                                      padding: "4px 10px",
-                                      borderRadius: 7,
-                                      background: t.surface,
-                                      border: `1px solid ${t.border}`,
-                                    }}
-                                  >
-                                    <span
-                                      style={{
-                                        fontSize: 10,
-                                        color: t.muted,
-                                        fontFamily: "'DM Sans',monospace",
-                                      }}
-                                    >
-                                      {label}
-                                    </span>
-                                    <span
-                                      style={{
-                                        fontSize: 10,
-                                        fontWeight: 700,
-                                        color: row.color,
-                                        fontFamily: "'DM Sans',monospace",
-                                      }}
-                                    >
-                                      {typeof val === "number"
-                                        ? Number.isInteger(val)
-                                          ? val
-                                          : val.toFixed(2)
-                                        : val}
-                                      {unit}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })
-              )}
+                          {s.name}
+                        </p>
+                        <p style={{ fontSize: 10, color: t.muted }}>{s.id}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td
+                    style={{
+                      padding: "10px 12px",
+                      borderBottom: `1px solid ${t.border}`,
+                      color: t.muted,
+                      fontSize: 11,
+                    }}
+                  >
+                    {s.sport}
+                  </td>
+                  <td
+                    style={{
+                      padding: "10px 12px",
+                      borderBottom: `1px solid ${t.border}`,
+                      fontWeight: 700,
+                      color: "#ef4444",
+                      fontFamily: "'DM Mono',monospace",
+                    }}
+                  >
+                    {s.avgHR ?? "--"}
+                  </td>
+                  <td
+                    style={{
+                      padding: "10px 12px",
+                      borderBottom: `1px solid ${t.border}`,
+                      fontWeight: 600,
+                      color: t.text,
+                      fontFamily: "'DM Mono',monospace",
+                    }}
+                  >
+                    {s.maxHR ?? "--"}
+                  </td>
+                  <td
+                    style={{
+                      padding: "10px 12px",
+                      borderBottom: `1px solid ${t.border}`,
+                      color: "#f59e0b",
+                      fontFamily: "'DM Mono',monospace",
+                    }}
+                  >
+                    {s.avgTemp ?? "--"}
+                  </td>
+                  <td
+                    style={{
+                      padding: "10px 12px",
+                      borderBottom: `1px solid ${t.border}`,
+                      color: "#3b82f6",
+                      fontFamily: "'DM Mono',monospace",
+                    }}
+                  >
+                    {s.avgResp ?? "--"}
+                  </td>
+                  <td
+                    style={{
+                      padding: "10px 12px",
+                      borderBottom: `1px solid ${t.border}`,
+                      fontWeight: 700,
+                      color: t.text,
+                      fontFamily: "'DM Mono',monospace",
+                    }}
+                  >
+                    {s.fatigue ?? "--"}%
+                  </td>
+                  <td
+                    style={{
+                      padding: "10px 12px",
+                      borderBottom: `1px solid ${t.border}`,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "3px 8px",
+                        borderRadius: 6,
+                        background:
+                          s.status === "Optimal"
+                            ? t.successBg
+                            : s.status === "Moderate"
+                              ? t.warningBg
+                              : t.dangerBg,
+                        color:
+                          s.status === "Optimal"
+                            ? t.success
+                            : s.status === "Moderate"
+                              ? t.warning
+                              : t.danger,
+                      }}
+                    >
+                      {s.status}
+                    </span>
+                  </td>
+                  <td
+                    style={{
+                      padding: "10px 12px",
+                      borderBottom: `1px solid ${t.border}`,
+                      color: t.muted,
+                      fontFamily: "'DM Mono',monospace",
+                    }}
+                  >
+                    {s.dataPoints}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
