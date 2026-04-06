@@ -224,14 +224,17 @@ function AthleteDropdown({ athletes, value, onChange, allIds, t }) {
 }
 
 export default function FatigueRecovery({ t }) {
-  const { user } = useAuth();
+  const { user, connectedAthletes = [] } = useAuth();
   const { athletes, connected, loading, getAthleteData, getLatest } =
     useAthleteData();
   const isAdmin = user?.role === "admin";
-  const allIds = athletes.map((a) => a.id);
+  const connectedAthleteIds = isAdmin ? connectedAthletes.map(a => a.athleteId) : [];
+
   const visible = isAdmin
-    ? athletes
+    ? athletes.filter(a => connectedAthleteIds.includes(a.id))
     : athletes.filter((a) => a.id === user?.athleteId);
+    
+  const allIds = visible.map((a) => a.id);
 
   const [selectedId, setSelectedId] = useState(null);
   useEffect(() => {
