@@ -783,17 +783,19 @@ function NotificationBell({ history, t }) {
 
 /* ── Main Dashboard ───────────────────────────────────────────── */
 export default function AthletiSenseDashboard({ t }) {
-  const { user, connectedCoaches = [] } = useAuth();
+  const { user, connectedCoaches = [], connectedAthletes = [] } = useAuth();
   const { athletes, liveData, connected, loading, getAthleteData, getLatest } =
     useAthleteData();
   const isAdmin = user?.role === "admin";
   const myAthleteId = user?.athleteId;
-  const allIds = athletes.map((a) => a.id);
+  const connectedAthleteIds = isAdmin ? connectedAthletes.map(a => a.athleteId) : [];
 
   // Role-filter: athletes only see themselves
   const visible = isAdmin
-    ? athletes
+    ? athletes.filter(a => connectedAthleteIds.includes(a.id))
     : athletes.filter((a) => a.id === myAthleteId);
+    
+  const allIds = visible.map((a) => a.id);
   const [selectedId, setSelectedId] = useState(null);
   const [dropOpen, setDropOpen] = useState(false);
   const [notifHist, setNotifHist] = useState([]);
