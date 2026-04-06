@@ -602,7 +602,7 @@ export default function FatigueRecovery({ t }) {
         )}
       </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* HR + Temp overlay */}
         <Card title="HR & Temperature Trend" t={t}>
           <ResponsiveContainer width="100%" height={180}>

@@ -17,6 +17,8 @@ import {
   Eye,
   Wifi,
   WifiOff,
+  Menu,
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -96,6 +98,7 @@ export default function MainLayout() {
   const { t, theme, toggleTheme } = useTheme();
   const { connected } = useAthleteData();
   const [page, setPage] = useState("monitoring");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isAdmin = user?.role === "admin";
 
   const visibleNav = NAV_ITEMS.filter((n) => !n.adminOnly || isAdmin);
@@ -120,10 +123,72 @@ export default function MainLayout() {
         @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
         @keyframes spin{to{transform:rotate(360deg)}}
         .page-enter{animation:fadein 0.3s ease both}
+
+        .sidebar-overlay {
+          position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+          opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+        .sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .mobile-header { display: none; }
+        .content-area { flex: 1; overflow: auto; display: flex; flex-direction: column; }
+        @media (max-width: 768px) {
+          .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; transform: translateX(-100%); width: 260px !important; }
+          .sidebar.open { transform: translateX(0); }
+          .mobile-header {
+            display: flex; align-items: center; justify-content: space-between;
+            height: 60px; padding: 0 16px; background: ${t.sidebar}; border-bottom: 1px solid ${t.border};
+            position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+          }
+          .content-area { padding-top: 60px; }
+        }
       `}</style>
+
+      {/* Mobile Top Header (only visible on small screens) */}
+      <div className="mobile-header">
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: "linear-gradient(135deg,#4f46e5,#7c3aed)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Activity size={16} color="#fff" />
+          </div>
+          <div
+            style={{
+              fontFamily: "'Bebas Neue','Syne',sans-serif",
+              fontSize: 20,
+              fontWeight: 800,
+              letterSpacing: "0.05em",
+              color: t.text,
+              lineHeight: 1,
+            }}
+          >
+            ATHLETISENSE
+          </div>
+        </div>
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          style={{ background: "transparent", border: "none", color: t.text }}
+        >
+          <Menu size={24} />
+        </button>
+      </div>
+
+      <div 
+        className={`sidebar-overlay ${mobileMenuOpen ? 'open' : ''}`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
 
       {/* ── Sidebar ─────────────────────────────────────── */}
       <aside
+        className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}
         style={{
           width: 256,
           minWidth: 256,
@@ -131,13 +196,13 @@ export default function MainLayout() {
           borderRight: `1px solid ${t.border}`,
           display: "flex",
           flexDirection: "column",
-          zIndex: 30,
+          zIndex: 50,
           boxShadow: "2px 0 8px rgba(0,0,0,0.04)",
         }}
       >
         {/* Logo */}
         <div
-          style={{ padding: "1.25rem", borderBottom: `1px solid ${t.border}` }}
+          style={{ padding: "1.25rem", borderBottom: `1px solid ${t.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div
@@ -179,6 +244,15 @@ export default function MainLayout() {
               </div>
             </div>
           </div>
+          {/* Close button for mobile within sidebar */}
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="md-hidden-btn"
+            style={{ background: "transparent", border: "none", color: t.muted, cursor: "pointer" }}
+          >
+            <style>{`@media (min-width: 769px) { .md-hidden-btn { display: none !important; } }`}</style>
+            <X size={20} />
+          </button>
         </div>
 
         {/* User card */}
@@ -315,7 +389,10 @@ export default function MainLayout() {
             return (
               <button
                 key={id}
-                onClick={() => setPage(id)}
+                onClick={() => {
+                  setPage(id);
+                  setMobileMenuOpen(false);
+                }}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -478,14 +555,8 @@ export default function MainLayout() {
       {/* ── Content ──────────────────────────────────────── */}
       <Suspense fallback={<PageLoader />}>
         <div
-          className="page-enter"
+          className="page-enter content-area"
           key={page}
-          style={{
-            flex: 1,
-            overflow: "auto",
-            display: "flex",
-            flexDirection: "column",
-          }}
         >
           {page === "monitoring" && <AthletiSenseDashboard t={t} />}
           {page === "performance" && <PerformanceAnalytics t={t} />}

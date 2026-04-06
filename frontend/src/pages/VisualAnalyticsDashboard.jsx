@@ -578,7 +578,7 @@ export default function VisualAnalyticsDashboard({ t }) {
         )}
       </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* HR vs Motion scatter */}
         <Card title="HR vs Motion — Brushing & Linking" icon={Eye} t={t}>
           <ResponsiveContainer width="100%" height={200}>
