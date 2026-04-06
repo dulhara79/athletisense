@@ -254,28 +254,21 @@ export default function AthletiSenseChat({ t }) {
       boxShadow: `0 4px 20px ${t.accent}50`,
       color: "#fff",
     },
-    win: {
-      position: "fixed",
-      bottom: 80,
-      right: 24,
-      width: 380,
-      height: 560,
-      background: t.card,
-      border: `1px solid ${t.border}`,
-      borderRadius: 20,
-      boxShadow: t.shadowHover,
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-      zIndex: 1000,
-    },
   };
 
   return (
-    <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 1001 }}>
+    <div className="fixed bottom-6 right-4 md:right-6 z-[1001]">
       <style>{`@keyframes chatDot{0%,80%,100%{opacity:0.5;transform:scale(1)}40%{opacity:1;transform:scale(1.3)}}`}</style>
       {isOpen && (
-        <div style={s.win}>
+        <div
+          className="fixed bottom-[80px] right-4 md:right-6 w-[calc(100vw-2rem)] md:w-[380px] h-[560px] max-h-[calc(100vh-120px)] flex flex-col overflow-hidden z-[1000]"
+          style={{
+            background: t.card,
+            border: `1px solid ${t.border}`,
+            borderRadius: 20,
+            boxShadow: t.shadowHover,
+          }}
+        >
           {/* Header */}
           <div
             style={{
