@@ -43,6 +43,12 @@ const SYSTEM_PROMPT = `\
 You are **AthletiSense AI**, an intelligent sports-performance analyst embedded in the
 AthletiSense IoT Athletic Performance Monitoring Platform.
 
+## STRICT DATA RESTRICTION (CRITICAL)
+- You MUST answer questions using ONLY the data provided in the "User Context" and "Current Live Athlete Data" sections below.
+- DO NOT hallucinate, guess, or invent metrics.
+- DO NOT use outside knowledge to fill in missing data.
+- Note that athletes and coaches listed in your "User Context" are definitively connected to the user, even if they currently lack entries in the "Live Athlete Data" telemetry section. Provide their names if asked.
+
 ## Your Role
 - Help coaches, physiotherapists, and athletes understand biometric and kinematic data
   collected from IoT chest-strap sensors.
@@ -95,7 +101,13 @@ const chatSchema = Joi.object({
     .optional(),
   userRole: Joi.string().valid("admin", "athlete").optional(),
   athleteId: Joi.string().allow(null, "").optional(),
-  connectedIds: Joi.array().items(Joi.string()).optional()
+  connectedIds: Joi.array().items(Joi.string()).optional(),
+  userContext: Joi.object({
+    name: Joi.string().allow(null, "").optional(),
+    role: Joi.string().allow(null, "").optional(),
+    connectedAthletes: Joi.array().items(Joi.string()).optional(),
+    connectedCoaches: Joi.array().items(Joi.string()).optional()
+  }).optional()
 });
 
 /* ── POST /api/chat ──────────────────────────────────────────── */
@@ -111,15 +123,22 @@ router.post("/chat", validateBody(chatSchema), async (req, res, next) => {
       });
     }
 
-    const { message, history = [], userRole, athleteId, connectedIds = [] } = req.body;
+    const { message, history = [], userRole, athleteId, connectedIds = [], userContext = {} } = req.body;
 
     // Build live data context for the system prompt filtering by RBAC
     const dataCtx = await buildAIDataContext({ userRole, athleteId, connectedIds });
 
+    const ctxString = `
+## User Context
+You are currently talking to: ${userContext.name || "Unknown User"} (Role: ${userContext.role || "Unknown"})
+Connected Athletes: ${userContext.connectedAthletes?.length ? userContext.connectedAthletes.join(", ") : "None"}
+Connected Coaches: ${userContext.connectedCoaches?.length ? userContext.connectedCoaches.join(", ") : "None"}
+`;
+
     const messages = [
       {
         role: "system",
-        content: `${SYSTEM_PROMPT}\n\n## Current Live Athlete Data\n${dataCtx}`,
+        content: `${SYSTEM_PROMPT}\n${ctxString}\n## Current Live Athlete Data\n${dataCtx}`,
       },
     ];
 
