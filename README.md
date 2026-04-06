@@ -1,6 +1,10 @@
 # 🏃 AthletiSense: IoT Athletic Performance Ecosystem
 
-AthletiSense is a comprehensive, real-time sports performance monitoring ecosystem. It consists of a **Wearable Chest Strap** that collects high-fidelity biometric and kinematic data, and a **Performance Dashboard** for coaches and athletes to visualize live telemetry and historical trends.
+[![Frontend Deployment](https://img.shields.io/badge/Frontend-Vercel-black?logo=vercel)](#)
+[![Backend Deployment](https://img.shields.io/badge/Backend-Hugging_Face-yellow?logo=huggingface)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+AthletiSense is a comprehensive, real-time sports performance monitoring ecosystem. It consists of a **Wearable Chest Strap** that collects high-fidelity biometric and kinematic data, and a **Performance Dashboard** for coaches and athletes to visualize live telemetry and historical trends, with AI-powered analytics.
 
 ![AthletiSense Dashboard](./docs/preview.png)
 
@@ -11,14 +15,14 @@ AthletiSense is a comprehensive, real-time sports performance monitoring ecosyst
 ```mermaid
 graph LR
     A[Wearable Chest Strap] -- Wi-Fi --> B[Firebase Realtime DB]
-    B -- REST / WebSocket --> C[Backend Node.js]
-    C -- Live Stream --> D[Frontend React Dashboard]
+    B -- REST / WebSocket --> C[Backend Node.js (Hugging Face)]
+    C -- Live Stream --> D[Frontend React Dashboard (Vercel)]
 ```
 
 1.  **Wearable Device**: ESP32-C3 powered chest strap collects ECG, IMU, Temp, and Strain data.
 2.  **Cloud Layer**: Firebase acts as a real-time data bridge and persistent storage.
-3.  **Backend**: Node.js/Express server providing standardized APIs and WebSocket streaming.
-4.  **Frontend**: React-based dashboard with responsive charts, role-based access, and alerts.
+3.  **Backend**: Node.js/Express server hosted on **Hugging Face Spaces**, providing standardized APIs, secure AI chat integrations, and WebSocket streaming. Pipeline is fully automated with a GitHub action.
+4.  **Frontend**: React-based dashboard hosted on **Vercel**, featuring responsive UI, Role-Based Access Control (RBAC), and dark mode.
 
 ---
 
@@ -45,13 +49,14 @@ graph LR
 
 ## 📱 Performance Dashboard (Software)
 
-### 👥 Role-Based Access
+### 👥 Role-Based Access & Privacy
 - **Head Coach / Physiotherapist**: Full access to all athlete data and comparative analytics.
 - **Athletes**: Private access to personal performance logs and live vitals.
+- **AI Chatbot Privacy**: Strict data access limits ensure users can only query data they are permitted to view.
 
 ### 📊 Tech Stack
-- **Frontend**: React 18, Vite, Tailwind CSS, Recharts, Lucide React.
-- **Backend**: Node.js, Express, WebSocket (`ws`), `firebase-admin`.
+- **Frontend**: React 18, Vite, Tailwind CSS, Recharts, Lucide React. Deployed on **Vercel**.
+- **Backend**: Node.js, Express, WebSocket (`ws`), `firebase-admin`, OpenAI API. Deployed on **Hugging Face Spaces**.
 
 ---
 
@@ -106,31 +111,13 @@ Connect to `ws://localhost:3001`
 
 ---
 
-## 🔥 Firebase Integration (Future)
+## 🔥 Firebase Integration (Active)
 
-When ready to switch from CSV to Firebase Realtime Database, replace the data layer in `backend/server.js`:
+Firebase Realtime Database is completely integrated for both secure authentication and live data ingestion.
 
-```javascript
-// Install Firebase Admin SDK
-// npm install firebase-admin
-
-const admin = require('firebase-admin');
-admin.initializeApp({ credential: admin.credential.applicationDefault() });
-const db = admin.database();
-
-// Replace CSV loading with:
-const snapshot = await db.ref('athletes').once('value');
-const data = snapshot.val();
-
-// For real-time streaming, use Firebase listeners:
-db.ref('athletes/ATH_001/readings').on('child_added', (snap) => {
-  const newReading = snap.val();
-  // broadcast to WebSocket clients
-  wss.clients.forEach(client => {
-    client.send(JSON.stringify({ type: 'live_update', data: [newReading] }));
-  });
-});
-```
+- **Authentication**: JWT verification ensures all API interactions are safe.
+- **Realtime Database**: Streams data from IoT directly into the system, persisting live metrics permanently and updating connected clients instantly.
+- **Database Rules**: Ensuring only authenticated devices and users can read/write relevant subsets of telemetry.
 
 ---
 
