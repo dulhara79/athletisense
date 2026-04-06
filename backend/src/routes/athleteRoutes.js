@@ -16,12 +16,13 @@ const express = require("express");
 const router = express.Router();
 const logger = require("../config/logger");
 const { requireFirebase } = require("../middleware/index");
+const { requireAuth } = require("../middleware/auth");
 const { getMeta } = require("../config/athletes");
 const svc = require("../services/athleteService");
 
 /* ── GET /api/athletes ──────────────────────────────────────── */
 
-router.get("/athletes", requireFirebase, async (req, res, next) => {
+router.get("/athletes", requireFirebase, requireAuth, async (req, res, next) => {
   try {
     const athletes = await svc.buildAthleteList();
     res.json({ athletes, count: athletes.length });
@@ -36,7 +37,7 @@ router.get("/athletes", requireFirebase, async (req, res, next) => {
 
 /* ── GET /api/athletes/:id ───────────────────────────────────── */
 
-router.get("/athletes/:id", requireFirebase, async (req, res, next) => {
+router.get("/athletes/:id", requireFirebase, requireAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -74,7 +75,7 @@ router.get("/athletes/:id", requireFirebase, async (req, res, next) => {
 
 /* ── GET /api/athletes/:id/latest ───────────────────────────── */
 
-router.get("/athletes/:id/latest", requireFirebase, async (req, res, next) => {
+router.get("/athletes/:id/latest", requireFirebase, requireAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
     const latest = await svc.fetchLatest(id);
@@ -101,7 +102,7 @@ router.get("/athletes/:id/latest", requireFirebase, async (req, res, next) => {
 
 /* ── GET /api/athletes/:id/history ──────────────────────────── */
 
-router.get("/athletes/:id/history", requireFirebase, async (req, res, next) => {
+router.get("/athletes/:id/history", requireFirebase, requireAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -148,7 +149,7 @@ router.get("/athletes/:id/history", requireFirebase, async (req, res, next) => {
 
 /* ── GET /api/summary ───────────────────────────────────────── */
 
-router.get("/summary", requireFirebase, async (req, res, next) => {
+router.get("/summary", requireFirebase, requireAuth, async (req, res, next) => {
   try {
     const summary = await svc.buildSummary();
     res.json({
