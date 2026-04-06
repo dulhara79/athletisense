@@ -1,5 +1,6 @@
 // src/pages/MultiAthleteComparison.jsx
 import React, { useState, useMemo } from "react";
+import { useAuth } from "../context/AuthContext";
 import { useAthleteData } from "../hooks/useAthleteData";
 import {
   BarChart,
@@ -105,14 +106,22 @@ function normalize(val, min, max) {
 }
 
 export default function MultiAthleteComparison({ t }) {
+  const { user, connectedAthletes = [] } = useAuth();
   const { athletes, liveData, loading, getAthleteData } = useAthleteData();
-  const allIds = athletes.map((a) => a.id);
+  const isAdmin = user?.role === "admin";
+  const connectedAthleteIds = isAdmin ? connectedAthletes.map(a => a.athleteId) : [];
+  
+  const visibleAthletes = isAdmin 
+    ? athletes.filter(a => connectedAthleteIds.includes(a.id))
+    : athletes.filter((a) => a.id === user?.athleteId);
+
+  const allIds = visibleAthletes.map((a) => a.id);
   const [sortKey, setSortKey] = useState("avgHR");
 
   // Build per-athlete stats from real records
   const stats = useMemo(
     () =>
-      athletes.map((a) => {
+      visibleAthletes.map((a) => {
         const recs = getAthleteData(a.id);
         const latest = recs.at(-1) ?? null;
         const hrVals = recs.map(getBpm).filter(Number.isFinite);
@@ -144,7 +153,7 @@ export default function MultiAthleteComparison({ t }) {
           dataPoints: recs.length,
         };
       }),
-    [athletes, liveData],
+    [visibleAthletes, liveData],
   );
 
   // Sort table
@@ -199,7 +208,7 @@ export default function MultiAthleteComparison({ t }) {
         <p style={{ color: t.muted }}>Loading…</p>
       </main>
     );
-  if (athletes.length === 0)
+  if (visibleAthletes.length === 0)
     return (
       <main
         style={{
@@ -237,7 +246,7 @@ export default function MultiAthleteComparison({ t }) {
           MULTI-ATHLETE COMPARISON
         </h2>
         <p style={{ fontSize: 11, color: t.muted }}>
-          {athletes.length} athletes · live data
+          {visibleAthletes.length} athletes · live data
         </p>
       </div>
 
