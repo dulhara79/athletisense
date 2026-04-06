@@ -2,6 +2,7 @@
 // Floating AI chat — connects to /api/v1/chat
 import React, { useState, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { auth } from "../firebase";
 import {
   MessageCircle,
   X,
@@ -184,10 +185,15 @@ export default function AthletiSenseChat({ t }) {
   // Load suggestions on first open
   React.useEffect(() => {
     if (isOpen && suggestions.length === 0) {
-      fetch(`${API_BASE}/chat/suggestions`)
-        .then((r) => r.json())
-        .then((d) => setSuggestions(d.suggestions || []))
-        .catch(() => {});
+      const fetchSuggestions = async () => {
+        try {
+          const token = auth.currentUser ? await auth.currentUser.getIdToken() : "";
+          const r = await fetch(`${API_BASE}/chat/suggestions`, { headers: { Authorization: `Bearer ${token}` } });
+          const d = await r.json();
+          setSuggestions(d.suggestions || []);
+        } catch (e) {}
+      };
+      fetchSuggestions();
     }
   }, [isOpen]);
 
@@ -200,9 +206,13 @@ export default function AthletiSenseChat({ t }) {
       setMessages((prev) => [...prev, { role: "user", content: msg }]);
       setLoading(true);
       try {
+        const token = auth.currentUser ? await auth.currentUser.getIdToken() : "";
         const res = await fetch(`${API_BASE}/chat`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
           body: JSON.stringify({ 
             message: msg, 
             history: messages.slice(-8),
