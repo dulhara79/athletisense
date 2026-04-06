@@ -4,6 +4,8 @@
 // ─────────────────────────────────────────────────────────────
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { db } from "../firebase";
+import { ref, get } from "firebase/database";
 import { Check, X, UserPlus, Send, Users, UserMinus } from "lucide-react";
 
 // ── ConnectionManager — header dropdown ──────────────────────
@@ -291,14 +293,54 @@ export function ConnectionManager({ t }) {
 
 // ── ManageConnections — full page ─────────────────────────────
 export function ManageConnections({ t }) {
-  const { user, connectedCoaches, connectedAthletes, removeConnection } =
+  const { user, connectedCoaches, connectedAthletes, removeConnection, sendRequest, pendingRequests } =
     useAuth();
+  
+  const [systemUsers, setSystemUsers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loadingUsers, setLoadingUsers] = useState(true);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const snap = await get(ref(db, "users"));
+        if (snap.exists()) {
+          const allUsers = [];
+          snap.forEach(child => {
+            allUsers.push({ uid: child.key, ...child.val() });
+          });
+          setSystemUsers(allUsers);
+        }
+      } catch (err) {
+        console.error("Failed to fetch system users", err);
+      } finally {
+        setLoadingUsers(false);
+      }
+    }
+    fetchUsers();
+  }, []);
   const isAdmin = user?.role === "admin";
   const connections = isAdmin ? connectedAthletes : connectedCoaches;
   const label = isAdmin ? "Connected Athletes" : "Your Coaches";
   const emptyMsg = isAdmin
-    ? "No athletes connected yet. Send a request from the header icon."
-    : "No coaches connected. You are training independently!";
+    ? "No athletes connected yet. Send a request from the header icon or discover below."
+    : "No coaches connected. Discover and train directly below!";
+
+  // Compute discoverable users
+  const discoverableUsers = systemUsers.filter(u => {
+    if (u.uid === user?.uid) return false;
+    if (isAdmin && u.role === "admin") return false;
+    if (!isAdmin && u.role !== "admin") return false;
+    if (connections.some(c => c.uid === u.uid)) return false;
+    
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!u.name?.toLowerCase().includes(q) && !u.username?.toLowerCase().includes(q)) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   return (
     <main
@@ -442,6 +484,128 @@ export function ManageConnections({ t }) {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          background: t.card,
+          border: `1px solid ${t.border}`,
+          borderRadius: 14,
+          padding: "1rem 1.25rem",
+          boxShadow: t.shadow,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <UserPlus size={14} color={t.accent} />
+            <p
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                color: t.muted,
+              }}
+            >
+              Discover {isAdmin ? "Athletes" : "Coaches"}
+            </p>
+          </div>
+          <input
+            type="text"
+            placeholder="Search username or name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              padding: "6px 12px",
+              borderRadius: 8,
+              border: `1px solid ${t.border}`,
+              background: t.surface,
+              color: t.text,
+              fontSize: 12,
+              outline: "none",
+              width: "200px"
+            }}
+          />
+        </div>
+
+        {loadingUsers ? (
+          <div style={{ padding: "20px", textAlign: "center", color: t.muted, fontSize: 13 }}>Loading users...</div>
+        ) : discoverableUsers.length === 0 ? (
+          <div style={{ padding: "20px", textAlign: "center", color: t.muted, fontSize: 13 }}>
+            {searchQuery ? "No matching users found." : "No new users to discover."}
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "400px", overflowY: "auto" }}>
+            {discoverableUsers.map((u) => {
+              const isPending = pendingRequests.some(pr => pr.to === u.uid);
+              return (
+                <div
+                  key={u.uid}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "12px 16px",
+                    borderRadius: 12,
+                    background: t.surface,
+                    border: `1px solid ${t.border}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      background: t.accentBg,
+                      border: `1px solid ${t.accent}30`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: t.accent,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {u.name?.split(" ").map(w => w[0]).join("") || "?"}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: t.text }}>
+                      {u.name}
+                    </p>
+                    <p style={{ fontSize: 11, color: t.muted }}>
+                      @{u.username}
+                      {isAdmin && u.sport && <span> · {u.sport}</span>}
+                      {!isAdmin && u.title && <span> · {u.title}</span>}
+                    </p>
+                  </div>
+                  {isPending ? (
+                    <span style={{ fontSize: 11, color: t.muted, fontWeight: 600, padding: "6px 12px", background: t.surface, borderRadius: 8, border: `1px solid ${t.border}` }}>Requested</span>
+                  ) : (
+                    <button
+                      onClick={() => sendRequest(u.username)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        background: t.accent,
+                        color: "#fff",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6
+                      }}
+                    >
+                      <UserPlus size={12} /> Connect
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
