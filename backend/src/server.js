@@ -62,8 +62,15 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin || !allowedOrigins.length || allowedOrigins.includes(origin))
+      // Allow local development (Vite frontend, etc) and requests with no origin
+      if (!origin || origin.startsWith("http://localhost:") || origin === "http://127.0.0.1:5173") {
         return cb(null, true);
+      }
+      
+      if (!allowedOrigins.length || allowedOrigins.includes(origin)) {
+        return cb(null, true);
+      }
+
       cb(new Error(`CORS: origin '${origin}' not allowed.`));
     },
     credentials: true,
