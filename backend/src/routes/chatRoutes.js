@@ -14,6 +14,7 @@ const Joi = require("joi");
 const router = express.Router();
 const logger = require("../config/logger");
 const { validateBody } = require("../middleware/index");
+const { requireAuth } = require("../middleware/auth");
 const { buildAIDataContext } = require("../services/athleteService");
 
 /* ── OpenAI client ──────────────────────────────────────────── */
@@ -112,7 +113,7 @@ const chatSchema = Joi.object({
 
 /* ── POST /api/chat ──────────────────────────────────────────── */
 
-router.post("/chat", validateBody(chatSchema), async (req, res, next) => {
+router.post("/chat", requireAuth, validateBody(chatSchema), async (req, res, next) => {
   try {
     if (!openai) {
       return res.status(503).json({
@@ -186,7 +187,7 @@ Connected Coaches: ${userContext.connectedCoaches?.length ? userContext.connecte
 
 /* ── GET /api/chat/suggestions ──────────────────────────────── */
 
-router.get("/chat/suggestions", (_req, res) => {
+router.get("/chat/suggestions", requireAuth, (_req, res) => {
   res.json({
     suggestions: [
       "What's the current status of all athletes?",

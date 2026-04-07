@@ -49,9 +49,7 @@ const server = http.createServer(app);
 app.set("trust proxy", 1);
 
 // ── Security headers ──────────────────────────────────────────
-app.use(
-  helmet({ crossOriginEmbedderPolicy: false, contentSecurityPolicy: false }),
-);
+app.use(helmet());
 
 // ── CORS ──────────────────────────────────────────────────────
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")

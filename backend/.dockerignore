@@ -5,3 +5,8 @@ npm-debug.log
 .gitignore
 README.md
 *.md
+
+# Sensitive data and credentials
+performance-monitering-glove-firebase-adminsdk.json
+athlete_training_data.json
+import_json_to_firebase.js
