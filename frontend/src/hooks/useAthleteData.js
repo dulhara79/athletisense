@@ -18,6 +18,7 @@ import {
   getMag,
   getSteps,
   getRssi,
+  parseTs,
 } from "../utils/dataHelpers";
 
 function normaliseRecord(rec) {
@@ -176,7 +177,11 @@ export function useAthleteData() {
             if (lat && !recs.some((r) => r.timestamp === lat.timestamp))
               recs.push(lat);
           }
-          recs.sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1));
+          recs.sort((a, b) => {
+            const ta = parseTs(a.timestamp)?.getTime() || 0;
+            const tb = parseTs(b.timestamp)?.getTime() || 0;
+            return ta - tb;
+          });
           map[aid] = recs;
         });
       } else {
@@ -188,7 +193,11 @@ export function useAthleteData() {
           map[id].push(n);
         });
         Object.keys(map).forEach((id) =>
-          map[id].sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1)),
+          map[id].sort((a, b) => {
+            const ta = parseTs(a.timestamp)?.getTime() || 0;
+            const tb = parseTs(b.timestamp)?.getTime() || 0;
+            return ta - tb;
+          })
         );
       }
 
