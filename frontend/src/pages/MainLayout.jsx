@@ -25,6 +25,8 @@ import { useTheme } from "../context/ThemeContext";
 import { ConnectionManager } from "../components/connections";
 import { ManageConnections } from "../components/connections";
 import { useAthleteData } from "../hooks/useAthleteData";
+import { ToastManager } from "../components/ToastManager";
+import { NotificationBell } from "../components/NotificationBell";
 
 // Code-split heavy dashboard pages
 const AthletiSenseDashboard = lazy(() => import("./AthletiSenseDashboard"));
@@ -244,7 +246,6 @@ export default function MainLayout() {
               </div>
             </div>
           </div>
-          {/* Close button for mobile within sidebar */}
           <button
             onClick={() => setMobileMenuOpen(false)}
             className="md-hidden-btn"
@@ -253,6 +254,14 @@ export default function MainLayout() {
             <style>{`@media (min-width: 769px) { .md-hidden-btn { display: none !important; } }`}</style>
             <X size={20} />
           </button>
+        </div>
+
+        {/* Global Notifications persistent in sidebar */}
+        <div style={{ padding: "8px 12px", borderBottom: `1px solid ${t.border}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 9, fontWeight: 800, color: t.faint, letterSpacing: '0.1em' }}>ALERTS</span>
+            <NotificationBell t={t} />
+          </div>
         </div>
 
         {/* User card */}
@@ -567,6 +576,9 @@ export default function MainLayout() {
         </div>
       </Suspense>
 
+      {/* Floating UI Elements */}
+      <ToastManager />
+      
       {/* Floating AI Chat */}
       <Suspense fallback={null}>
         <AthletiSenseChat t={t} />
