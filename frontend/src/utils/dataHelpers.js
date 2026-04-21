@@ -148,3 +148,95 @@ export function fatigueScore(latest) {
           : "Critical";
   return { score, recovery, status };
 }
+
+/**
+ * Shared Alert Logic
+ * Evaluates a latest biometric record and returns an array of active alerts.
+ */
+export function getAlerts(latest) {
+  if (!latest) return [];
+  const bpm = getBpm(latest) ?? 0;
+  const temp = getTemp(latest) ?? 0;
+  const mag = getMag(latest) ?? 0;
+  const isMoving = mag > 1.2;
+  const out = [];
+
+  if (isMoving) {
+    if (bpm > 185)
+      out.push({
+        id: "hr-c",
+        level: "critical",
+        title: "Critical: Active HR Too High",
+        msg: `${fmtBpm(bpm)} bpm — limit 185 bpm`,
+      });
+    else if (bpm > 165)
+      out.push({
+        id: "hr-w",
+        level: "warning",
+        title: "Warning: High Active HR",
+        msg: `${fmtBpm(bpm)} bpm — monitor intensity`,
+      });
+
+    if (temp > 38.5)
+      out.push({
+        id: "tp-c",
+        level: "critical",
+        title: "Critical: High Active Temp",
+        msg: `${fmtTemp(temp)}°C — heat risk`,
+      });
+    else if (temp > 38.0)
+      out.push({
+        id: "tp-w",
+        level: "warning",
+        title: "Warning: Elevated Temp",
+        msg: `${fmtTemp(temp)}°C — monitor cooling`,
+      });
+  } else {
+    if (bpm > 120)
+      out.push({
+        id: "hr-c",
+        level: "critical",
+        title: "Critical: Resting Tachycardia",
+        msg: `${fmtBpm(bpm)} bpm while inactive`,
+      });
+    else if (bpm > 100)
+      out.push({
+        id: "hr-w",
+        level: "warning",
+        title: "Warning: Elevated Resting HR",
+        msg: `${fmtBpm(bpm)} bpm`,
+      });
+    else if (bpm > 0 && bpm < 40)
+      out.push({
+        id: "hr-br",
+        level: "warning",
+        title: "Warning: Bradycardia",
+        msg: `Low HR: ${fmtBpm(bpm)} bpm`,
+      });
+
+    if (temp > 38.0)
+      out.push({
+        id: "tp-c",
+        level: "critical",
+        title: "Critical: High Resting Temp",
+        msg: `${fmtTemp(temp)}°C — fever risk`,
+      });
+    else if (temp > 37.5)
+      out.push({
+        id: "tp-w",
+        level: "warning",
+        title: "Warning: Elevated Temp",
+        msg: `${fmtTemp(temp)}°C`,
+      });
+  }
+
+  if (mag > 11)
+    out.push({
+      id: "mg-w",
+      level: "warning",
+      title: "Warning: High Impact",
+      msg: `${mag.toFixed(1)} g`,
+    });
+
+  return out;
+}
