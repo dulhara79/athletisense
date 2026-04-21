@@ -61,3 +61,7 @@ nyc_output/
 
 # Windows specific
 desktop.ini
+backend/performance-monitering-glove-default-rtdb-export.json
+backend_documentation.md
+frontend_documentation.md
+project_architecture_overview.md
