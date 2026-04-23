@@ -105,7 +105,7 @@ export function MetricCard({
       >
         <span
           style={{
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
             fontSize: 28,
             fontWeight: 900,
             color: c.text,
@@ -233,7 +233,7 @@ export function MotionGauge({ value = 0, max = 15, t }) {
           fill={color}
           fontSize="36"
           fontWeight="900"
-          fontFamily="'DM Mono',monospace"
+          fontFamily="'Plus Jakarta Sans', sans-serif"
           textAnchor="middle"
         >
           {score}
@@ -244,7 +244,7 @@ export function MotionGauge({ value = 0, max = 15, t }) {
           fill={t.muted}
           fontSize="9"
           fontWeight="800"
-          fontFamily="'DM Mono',monospace"
+          fontFamily="'Plus Jakarta Sans', sans-serif"
           textAnchor="middle"
           letterSpacing="1"
         >
@@ -451,7 +451,7 @@ export function AlertsPanel({ athleteId, latest, t }) {
                   fontSize: 10,
                   fontWeight: 600,
                   color: t.muted,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                 }}
               >
                 {alert.time}
