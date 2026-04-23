@@ -4,127 +4,127 @@
 [![Backend Deployment](https://img.shields.io/badge/Backend-Hugging_Face-yellow?logo=huggingface)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-AthletiSense is a comprehensive, real-time sports performance monitoring ecosystem. It consists of a **Wearable Chest Strap** that collects high-fidelity biometric and kinematic data, and a **Performance Dashboard** for coaches and athletes to visualize live telemetry and historical trends, with AI-powered analytics.
+**AthletiSense** is a professional-grade, end-to-end IoT ecosystem designed for high-performance athletic monitoring. It bridges the gap between raw physiological telemetry and actionable coaching insights by combining custom wearable hardware, real-time cloud synchronization, and advanced machine learning inference.
 
-![AthletiSense Dashboard](./docs/preview.png)
+---
+
+## 🌟 The Vision
+
+AthletiSense empowers coaches and athletes with a "Digital Twin" of physiological performance. By monitoring multi-dimensional data—from ECG-grade heart rate and 6-axis motion to respiratory strain and skin temperature—the system identifies fatigue patterns, detects physiological anomalies, and forecasts performance trends before they impact the athlete.
 
 ---
 
 ## 🏗️ System Architecture
 
+AthletiSense utilizes a decentralized 4-layer architecture to ensure low-latency data streaming and high-fidelity analysis.
+
 ```mermaid
-graph LR
-    A[Wearable Chest Strap] -- Wi-Fi --> B[Firebase Realtime DB]
-    B -- REST / WebSocket --> C[Backend Node.js (Hugging Face)]
-    C -- Live Stream --> D[Frontend React Dashboard (Vercel)]
+graph TD
+    subgraph "IoT Edge Layer"
+        A[ESP32-C3 Wearable] -->|Wi-Fi / TLS| B[Firebase Realtime DB]
+    end
+
+    subgraph "Inference & Logic Layer"
+        B <-->|Real-time Sync| C["Backend Node.js (Hugging Face)"]
+        B <-->|Stream Processing| D[Python ML Worker]
+        D -->|Push Insights| B
+    end
+
+    subgraph "Presentation Layer"
+        C -->|WebSockets| E[React Performance Dashboard]
+        E <-->|Auth & Telemetry| B
+    end
 ```
 
-1.  **Wearable Device**: ESP32-C3 powered chest strap collects ECG, IMU, Temp, and Strain data.
-2.  **Cloud Layer**: Firebase acts as a real-time data bridge and persistent storage.
-3.  **Backend**: Node.js/Express server hosted on **Hugging Face Spaces**, providing standardized APIs, secure AI chat integrations, and WebSocket streaming. Pipeline is fully automated with a GitHub action.
-4.  **Frontend**: React-based dashboard hosted on **Vercel**, featuring responsive UI, Role-Based Access Control (RBAC), and dark mode.
+### 1. IoT Edge Layer (Wearable)
+A custom-built chest strap powered by the **ESP32-C3**. It performs on-device signal processing for ECG filtering and R-peak detection, sampling biometrics at 100Hz before securely offloading payloads to the cloud.
+
+### 2. Cloud Data Hub (Firebase)
+Acts as the central nervous system of the project. It provides a real-time, bi-directional data bridge between the edge devices, the inference worker, and the frontend dashboard.
+
+### 3. Inference & Analytics Layer
+- **Node.js Backend**: Orchestrates API requests, manages secure authentication, and hosts the AI Coaching Chatbot.
+- **Python ML Worker**: A dedicated service running **Isolation Forests** (Anomaly Detection), **GMM** (Behavior Clustering), and **Gradient Boosting** (Forecasting) on live telemetry streams.
+
+### 4. Presentation Layer (Frontend)
+A high-performance React dashboard featuring real-time visualization using Recharts, role-based access control, and an interactive AI insights panel.
 
 ---
 
 ## 👕 Wearable Chest Strap (Hardware)
 
-### ✨ Key Features
-- **❤️ Heart Rate (ECG):** AD8232 sensor for precise electrical heart activity and BPM calculation.
-- **🏃 Motion Tracking:** BMI160 6-axis IMU for acceleration, gyroscope, and step counting.
-- **🌡️ Skin Temperature:** DS18B20 digital sensor for accurate body temperature monitoring.
-- **🦾 Muscle/Joint Strain:** BF350 Strain Gauge to monitor breathing rate or physical exertion.
-- **📺 On-board OLED:** Live status updates (Vitals, Motion, System) directly on the device.
+### ✨ Sensor Suite
+- **❤️ Heart Rate (ECG):** AD8232 sensor for precise electrical heart activity and BPM calculation with adaptive thresholding.
+- **🏃 Motion Tracking:** BMI160 6-axis IMU for high-fidelity acceleration, gyroscope, and hardware-accelerated step counting.
+- **🌡️ Skin Temperature:** DS18B20 digital thermometer providing 0.1°C precision for thermal regulation monitoring.
+- **🦾 Respiratory Strain:** BF350 Strain Gauge integrated into the strap to monitor breathing rate through chest expansion.
+- **📺 Status Display:** On-board 0.96" SSD1306 OLED for instant feedback on vitals and system status.
 
-### 🛠️ Hardware Specifications
+### 🛠️ Hardware Mapping
 | Component | Function | Interface / Pins |
 | :--- | :--- | :--- |
-| **ESP32-C3 Mini-1** | Main Microcontroller | - |
-| **AD8232** | ECG Activity | Analog (`GPIO 34`, `LO+ = 32`, `LO- = 33`) |
-| **BF350** | Breathing/Strain | Analog (`GPIO 3`) |
-| **BMI160** | IMU + Steps | I2C (`SDA=8`, `SCL=9`, Addr: `0x69`) |
+| **ESP32-C3 Mini-1** | MCU | Wi-Fi / RISC-V |
+| **AD8232** | ECG | Analog (`GPIO 4`), Digital (`GPIO 5, 6`) |
+| **BF350** | Strain / Resp | Analog (`GPIO 3`) |
+| **BMI160** | IMU + Steps | I2C (`GPIO 8, 9`) |
 | **DS18B20** | Temperature | OneWire (`GPIO 2`) |
-| **SSD1306** | 0.96" OLED | I2C (`SDA=8`, `SCL=9`, Addr: `0x3C`) |
+| **SSD1306** | Status OLED | I2C (`GPIO 8, 9`) |
 
 ---
 
-## 📱 Performance Dashboard (Software)
-
-### 👥 Role-Based Access & Privacy
-- **Head Coach / Physiotherapist**: Full access to all athlete data and comparative analytics.
-- **Athletes**: Private access to personal performance logs and live vitals.
-- **AI Chatbot Privacy**: Strict data access limits ensure users can only query data they are permitted to view.
+## 📱 Software Ecosystem
 
 ### 📊 Tech Stack
-- **Frontend**: React 18, Vite, Tailwind CSS, Recharts, Lucide React. Deployed on **Vercel**.
-- **Backend**: Node.js, Express, WebSocket (`ws`), `firebase-admin`, OpenAI API. Deployed on **Hugging Face Spaces**.
+- **Frontend**: React 18, Vite, Tailwind CSS, Recharts, Lucide React.
+- **Backend**: Node.js, Express, WebSocket (`ws`), Firebase Admin SDK.
+- **AI/ML**: Python, Scikit-Learn, Joblib, Pandas (ML Worker), OpenAI API (AI Coach).
+
+### 👥 Role-Based Access
+- **Coaches**: Can monitor all athletes, view comparative analytics, and access the "Team Leaderboard".
+- **Athletes**: Restricted to personal performance logs, live vitals, and private AI coaching feedback.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
-### 1️⃣ Firmware Setup (Hardware)
-1.  Open `/src/esp32_sensors_firebase.ino` in Arduino IDE.
-2.  Install Required Libraries: `BMI160-Arduino`, `OneWire`, `DallasTemperature`, `Firebase ESP32 Client`.
-3.  Update `Config` namespace with your Wi-Fi and Firebase credentials.
-4.  Flash to **ESP32-C3**.
+### 1️⃣ Firmware Setup
+1.  Navigate to `esp32_sensors_firebase_new/`.
+2.  Open `esp32_sensors_firebase_new.ino` in Arduino IDE.
+3.  Install libraries: `BMI160-Arduino`, `OneWire`, `DallasTemperature`, `Firebase ESP32 Client`.
+4.  Configure `Config` namespace with your Wi-Fi and Firebase credentials.
+5.  Flash to **ESP32-C3**.
 
-### 2️⃣ Dashboard Setup (Software)
-#### Install Dependencies
-
+### 2️⃣ Dashboard & Backend Setup
 ```bash
-# Backend
+# 1. Install Dependencies
 cd backend && npm install
-
-# Frontend
 cd ../frontend && npm install
-```
 
-#### Start the Services
-```bash
-# Terminal 1: Backend
+# 2. Start Services
+# Terminal A (Backend)
 cd backend && npm start
 
-# Terminal 2: Frontend
+# Terminal B (ML Worker)
+cd backend/src/models && python ml_worker.py
+
+# Terminal C (Frontend)
 cd frontend && npm run dev
 ```
 
+---
 
-## 📡 REST API Endpoints
+## 📡 Core API Reference
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/athletes` | List all athletes + latest record |
-| GET | `/api/athletes/:id` | Full history for one athlete |
-| GET | `/api/athletes/:id/latest` | Latest reading |
-| GET | `/api/summary` | Aggregated stats for all athletes |
+| GET | `/api/v1/athletes` | List all athletes + current status |
+| GET | `/api/v1/athletes/:id` | Deep-dive history for specific athlete |
+| GET | `/api/v1/analytics/anomalies` | Global anomaly log detected by ML |
+| POST | `/api/v1/chat` | AI Coach conversational interface |
 
 ---
 
-## 🔌 WebSocket Events
+## ⚖️ License
+Distributed under the MIT License. See `LICENSE` for more information.
 
-Connect to `ws://localhost:3001`
-
-| Event | Direction | Description |
-|-------|-----------|-------------|
-| `snapshot` | Server → Client | Initial full data on connect |
-| `live_update` | Server → Client | New reading every 4 seconds |
-
----
-
-## 🔥 Firebase Integration (Active)
-
-Firebase Realtime Database is completely integrated for both secure authentication and live data ingestion.
-
-- **Authentication**: JWT verification ensures all API interactions are safe.
-- **Realtime Database**: Streams data from IoT directly into the system, persisting live metrics permanently and updating connected clients instantly.
-- **Database Rules**: Ensuring only authenticated devices and users can read/write relevant subsets of telemetry.
-
----
-
-## 📱 Responsive Design
-
-The dashboard is fully responsive:
-- **Desktop**: Full sidebar + multi-column grid
-- **Tablet**: Collapsible sidebar, 2-column grid
-- **Mobile**: Hamburger menu, single column
 
