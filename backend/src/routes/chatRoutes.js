@@ -16,6 +16,7 @@ const logger = require("../config/logger");
 const { validateBody } = require("../middleware/index");
 const { requireAuth } = require("../middleware/auth");
 const { buildAIDataContext } = require("../services/athleteService");
+const { saveChatMessage, getChatHistory, clearChatHistory } = require("../services/chatService");
 
 /* ── OpenAI client ──────────────────────────────────────────── */
 
@@ -163,6 +164,10 @@ Connected Coaches: ${userContext.connectedCoaches?.length ? userContext.connecte
     const response =
       completion.choices[0]?.message?.content ?? "No response generated.";
 
+    // Persist messages in background
+    saveChatMessage(req.user.uid, { role: "user", content: message });
+    saveChatMessage(req.user.uid, { role: "assistant", content: response });
+
     logger.info("[Chat] Response generated", {
       model,
       prompt_tokens: completion.usage?.prompt_tokens,
@@ -202,6 +207,28 @@ router.get("/chat/suggestions", requireAuth, (_req, res) => {
       "Flag any athletes with critical biometric values",
     ],
   });
+});
+
+/* ── GET /api/chat/history ──────────────────────────────────── */
+
+router.get("/chat/history", requireAuth, async (req, res, next) => {
+  try {
+    const history = await getChatHistory(req.user.uid);
+    res.json({ history });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ── DELETE /api/chat/history ───────────────────────────────── */
+
+router.delete("/chat/history", requireAuth, async (req, res, next) => {
+  try {
+    await clearChatHistory(req.user.uid);
+    res.json({ success: true, message: "Chat history cleared." });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

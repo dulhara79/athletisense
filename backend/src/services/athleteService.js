@@ -242,13 +242,18 @@ async function buildAIDataContext(options = {}) {
       const resp = lat.respiration?.rate_avg ?? "N/A";
       const rssi = lat.system?.wifi_rssi ?? "N/A";
       const ts = lat.timestamp ?? "unknown";
-      const cnt = node.readings ? Object.keys(node.readings).length : 0;
-      const leads = lat.heart_rate?.leads_connected ? "YES" : "NO";
+      const ml = node.ml_insight || {};
+      const isAnomaly = ml.dynamic_alerts?.is_anomaly ? "YES" : "NO";
+      const severity = ml.dynamic_alerts?.severity_score ?? "0.0";
+      const state = ml.behavior_cluster?.current_state ?? "Unknown";
+      
+      const readings = node.readings ? Object.values(node.readings) : [];
+      const historyCount = readings.length;
 
       lines.push(
         `Athlete: ${name} (${aid}) | HR: ${hr} bpm | Temp: ${temp}°C | ` +
-          `Steps: ${step} | Resp: ${resp} br/min | RSSI: ${rssi} dBm | ` +
-          `Leads: ${leads} | Last seen: ${ts} | History: ${cnt} readings`,
+          `Steps: ${step} | Resp: ${resp} br/min | Last: ${ts} | ` +
+          `ML Anomaly: ${isAnomaly} | Severity: ${severity} | State: ${state} | History: ${historyCount} readings`,
       );
     }
 

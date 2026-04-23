@@ -148,3 +148,46 @@ export function fatigueScore(latest) {
           : "Critical";
   return { score, recovery, status };
 }
+
+/**
+ * Shared Alert Logic
+ * Evaluates a latest biometric record and returns an array of active alerts.
+ */
+export function getAlerts(latest, mlInsight) {
+  const out = [];
+
+  // 1. ML-Driven Anomaly Detection
+  if (mlInsight?.dynamic_alerts?.is_anomaly) {
+    const { severity_score, action } = mlInsight.dynamic_alerts;
+    const level = (Number(severity_score) || 0) > 1.0 ? "critical" : "warning";
+    out.push({
+      id: "ml-anomaly",
+      level,
+      title: level === "critical" ? "ML: Critical Anomaly" : "ML: Physiological Warning",
+      msg: action || "Detected by real-time ML."
+    });
+  }
+
+  if (!latest) return out;
+  const bpm = getBpm(latest) ?? 0;
+  const temp = getTemp(latest) ?? 0;
+  const mag = getMag(latest) ?? 0;
+  const isMoving = mag > 1.2;
+
+  if (isMoving && !out.length) {
+    if (bpm > 185) out.push({ id: "hr-c", level: "critical", title: "Critical: Active HR", msg: `${fmtBpm(bpm)} bpm` });
+    if (temp > 38.5) out.push({ id: "tp-c", level: "critical", title: "Critical: High Active Temp", msg: `${fmtTemp(temp)}°C` });
+  } else if (!out.length) {
+    if (bpm > 120) out.push({ id: "hr-c", level: "critical", title: "Critical: Resting HR", msg: `${fmtBpm(bpm)} bpm` });
+  }
+
+  if (mag > 11) {
+    out.push({ id: "mg-w", level: "warning", title: "Warning: High Impact", msg: `${mag.toFixed(1)} g` });
+  }
+
+  if (!out.length) {
+    out.push({ id: "ok", level: "info", title: "All Systems Normal", msg: "Biometrics within stable ranges" });
+  }
+
+  return out;
+}

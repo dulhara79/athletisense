@@ -182,20 +182,35 @@ export default function AthletiSenseChat({ t }) {
     scrollToBottom();
   }, [messages, loading]);
 
-  // Load suggestions on first open
+  // Load suggestions and history on first open
   React.useEffect(() => {
-    if (isOpen && suggestions.length === 0) {
-      const fetchSuggestions = async () => {
+    if (isOpen) {
+      const fetchInitialData = async () => {
         try {
           const token = auth.currentUser ? await auth.currentUser.getIdToken() : "";
-          const r = await fetch(`${API_BASE}/chat/suggestions`, { headers: { Authorization: `Bearer ${token}` } });
-          const d = await r.json();
-          setSuggestions(d.suggestions || []);
-        } catch (e) {}
+          
+          // 1. Fetch Suggestions if empty
+          if (suggestions.length === 0) {
+            const sRes = await fetch(`${API_BASE}/chat/suggestions`, { headers: { Authorization: `Bearer ${token}` } });
+            const sData = await sRes.json();
+            setSuggestions(sData.suggestions || []);
+          }
+
+          // 2. Fetch History if we only have the welcome message
+          if (messages.length === 1) {
+            const hRes = await fetch(`${API_BASE}/chat/history`, { headers: { Authorization: `Bearer ${token}` } });
+            const hData = await hRes.json();
+            if (hData.history && hData.history.length > 0) {
+              setMessages(hData.history);
+            }
+          }
+        } catch (e) {
+          console.error("[Chat] Error fetching initial data:", e);
+        }
       };
-      fetchSuggestions();
+      fetchInitialData();
     }
-  }, [isOpen]);
+  }, [isOpen, suggestions.length, messages.length]);
 
   const send = useCallback(
     async (text) => {

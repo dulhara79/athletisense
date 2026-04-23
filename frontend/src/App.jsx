@@ -6,6 +6,8 @@
 import { useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { AthleteDataProvider } from "./context/AthleteContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import MainLayout from "./pages/MainLayout";
 import { LoginPage, SignupPage } from "./pages/AuthPages";
 
@@ -66,7 +68,11 @@ export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <AppContent />
+        <AthleteDataProvider>
+          <NotificationProvider>
+            <AppContent />
+          </NotificationProvider>
+        </AthleteDataProvider>
       </ThemeProvider>
     </AuthProvider>
   );

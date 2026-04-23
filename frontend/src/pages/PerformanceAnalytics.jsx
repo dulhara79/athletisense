@@ -597,7 +597,7 @@ export default function PerformanceAnalytics({ t }) {
                 strokeWidth={2}
                 fill="url(#perfGrad)"
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
               />
               {metric === "hr" && (
                 <Line
@@ -608,7 +608,7 @@ export default function PerformanceAnalytics({ t }) {
                   strokeWidth={1.5}
                   strokeDasharray="4 3"
                   dot={false}
-                  isAnimationActive={false}
+                  isAnimationActive={true}
                 />
               )}
             </AreaChart>
@@ -806,7 +806,7 @@ export default function PerformanceAnalytics({ t }) {
                   stroke="#ef4444"
                   strokeWidth={1.5}
                   dot={false}
-                  isAnimationActive={false}
+                  isAnimationActive={true}
                 />
                 <Line
                   type="monotone"
@@ -815,7 +815,7 @@ export default function PerformanceAnalytics({ t }) {
                   stroke="#3b82f6"
                   strokeWidth={1.5}
                   dot={false}
-                  isAnimationActive={false}
+                  isAnimationActive={true}
                 />
                 <Line
                   type="monotone"
@@ -824,7 +824,7 @@ export default function PerformanceAnalytics({ t }) {
                   stroke="#f59e0b"
                   strokeWidth={1.5}
                   dot={false}
-                  isAnimationActive={false}
+                  isAnimationActive={true}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -882,7 +882,7 @@ export default function PerformanceAnalytics({ t }) {
                   strokeWidth={2}
                   fill="url(#stepGrad)"
                   dot={false}
-                  isAnimationActive={false}
+                  isAnimationActive={true}
                 />
               </AreaChart>
             </ResponsiveContainer>

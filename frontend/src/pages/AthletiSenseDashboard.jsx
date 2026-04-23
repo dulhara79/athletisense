@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useAthleteData } from "../hooks/useAthleteData";
+import { AIInsightsPanel } from '../components/AIInsightsPanel';
 import {
   AreaChart,
   Area,
@@ -46,7 +47,10 @@ import {
   fmtResp,
   initials,
   athleteColor,
+  getAlerts,
 } from "../utils/dataHelpers";
+import { useNotifications } from "../context/NotificationContext";
+import { NotificationBell } from "../components/NotificationBell";
 
 /* ── Shared chart tooltip ─────────────────────────────────────── */
 function ChartTip({ active, payload, label, t }) {
@@ -189,7 +193,7 @@ function StatCard({
                   strokeWidth={1.5}
                   fill={`url(#sg-${sparkKey})`}
                   dot={false}
-                  isAnimationActive={false}
+                  isAnimationActive={true}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -426,102 +430,13 @@ function MotionGaugeViz({ value = 0, t }) {
   );
 }
 
-/* ── Alerts ───────────────────────────────────────────────────── */
-function getAlerts(latest) {
-  if (!latest) return [];
-  const bpm = getBpm(latest) ?? 0;
-  const temp = getTemp(latest) ?? 0;
-  const mag = getMag(latest) ?? 0;
-  const isMoving = mag > 1.2;
-  const out = [];
-  if (isMoving) {
-    if (bpm > 185)
-      out.push({
-        id: "hr-c",
-        level: "critical",
-        title: "Critical: Active HR Too High",
-        msg: `${fmtBpm(bpm)} bpm — limit 185 bpm`,
-      });
-    else if (bpm > 165)
-      out.push({
-        id: "hr-w",
-        level: "warning",
-        title: "Warning: High Active HR",
-        msg: `${fmtBpm(bpm)} bpm — monitor intensity`,
-      });
-    if (temp > 38.5)
-      out.push({
-        id: "tp-c",
-        level: "critical",
-        title: "Critical: High Active Temp",
-        msg: `${fmtTemp(temp)}°C — heat risk`,
-      });
-    else if (temp > 38.0)
-      out.push({
-        id: "tp-w",
-        level: "warning",
-        title: "Warning: Elevated Temp",
-        msg: `${fmtTemp(temp)}°C — monitor cooling`,
-      });
-  } else {
-    if (bpm > 120)
-      out.push({
-        id: "hr-c",
-        level: "critical",
-        title: "Critical: Resting Tachycardia",
-        msg: `${fmtBpm(bpm)} bpm while inactive`,
-      });
-    else if (bpm > 100)
-      out.push({
-        id: "hr-w",
-        level: "warning",
-        title: "Warning: Elevated Resting HR",
-        msg: `${fmtBpm(bpm)} bpm`,
-      });
-    else if (bpm > 0 && bpm < 40)
-      out.push({
-        id: "hr-br",
-        level: "warning",
-        title: "Warning: Bradycardia",
-        msg: `Low HR: ${fmtBpm(bpm)} bpm`,
-      });
-    if (temp > 38.0)
-      out.push({
-        id: "tp-c",
-        level: "critical",
-        title: "Critical: High Resting Temp",
-        msg: `${fmtTemp(temp)}°C — fever risk`,
-      });
-    else if (temp > 37.5)
-      out.push({
-        id: "tp-w",
-        level: "warning",
-        title: "Warning: Elevated Temp",
-        msg: `${fmtTemp(temp)}°C`,
-      });
-  }
-  if (mag > 11)
-    out.push({
-      id: "mg-w",
-      level: "warning",
-      title: "Warning: High Impact",
-      msg: `${mag.toFixed(1)} g`,
-    });
-  if (!out.length)
-    out.push({
-      id: "ok",
-      level: "info",
-      title: "All Systems Normal",
-      msg: "All biometrics within healthy ranges",
-    });
-  return out;
-}
+// getAlerts moved to dataHelpers.js
 
-function AlertsPanel({ latest, t }) {
+function AlertsPanel({ latest, mlInsight, t }) {
   const [dismissed, setDismissed] = useState(new Set());
   const alerts = useMemo(
-    () => getAlerts(latest).filter((a) => !dismissed.has(a.id)),
-    [latest, dismissed],
+    () => getAlerts(latest, mlInsight).filter((a) => !dismissed.has(a.id)),
+    [latest, mlInsight, dismissed],
   );
   const cfg = {
     critical: {
@@ -635,156 +550,12 @@ function AlertsPanel({ latest, t }) {
   );
 }
 
-/* ── Bell notification ────────────────────────────────────────── */
-function NotificationBell({ history, t }) {
-  const [open, setOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(new Set());
-  const ref = useRef();
-  useEffect(() => {
-    const h = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-  const count = history.filter((n) => !dismissed.has(n.histId)).length;
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          background: t.surface,
-          border: `1px solid ${t.border}`,
-          borderRadius: 10,
-          padding: 8,
-          cursor: "pointer",
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          color: t.muted,
-        }}
-      >
-        <Bell size={18} />
-        {count > 0 && (
-          <span
-            style={{
-              position: "absolute",
-              top: -4,
-              right: -4,
-              background: t.danger,
-              color: "#fff",
-              fontSize: 9,
-              fontWeight: 800,
-              minWidth: 16,
-              height: 16,
-              borderRadius: 8,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: `2px solid ${t.bg}`,
-            }}
-          >
-            {count}
-          </span>
-        )}
-      </button>
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 8px)",
-            right: 0,
-            width: 300,
-            background: t.card,
-            border: `1px solid ${t.border}`,
-            borderRadius: 14,
-            boxShadow: t.shadowHover,
-            zIndex: 1000,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              padding: "12px 16px",
-              borderBottom: `1px solid ${t.border}`,
-              display: "flex",
-              justifyContent: "space-between",
-            }}
-          >
-            <p style={{ fontSize: 11, fontWeight: 700, color: t.text }}>
-              Recent Alerts
-            </p>
-            <span style={{ fontSize: 10, color: t.faint }}>Latest 10</span>
-          </div>
-          <div style={{ maxHeight: 340, overflowY: "auto" }}>
-            {history.length === 0 ? (
-              <p
-                style={{
-                  padding: 24,
-                  textAlign: "center",
-                  fontSize: 12,
-                  color: t.faint,
-                }}
-              >
-                No alerts yet
-              </p>
-            ) : (
-              history.map((n) => (
-                <div
-                  key={n.histId}
-                  style={{
-                    padding: "10px 16px",
-                    borderBottom: `1px solid ${t.border}`,
-                    display: "flex",
-                    gap: 10,
-                    background: dismissed.has(n.histId)
-                      ? "transparent"
-                      : t.accentBg,
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: t.text }}>
-                      {n.title}
-                    </p>
-                    <p style={{ fontSize: 11, color: t.muted }}>{n.msg}</p>
-                    <p
-                      style={{
-                        fontSize: 9,
-                        color: t.faint,
-                        marginTop: 2,
-                        fontFamily: "'DM Mono',monospace",
-                      }}
-                    >
-                      {n.timestamp}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() =>
-                      setDismissed((d) => new Set([...d, n.histId]))
-                    }
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: t.faint,
-                    }}
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+// NotificationBell moved to components/NotificationBell.jsx
 
 /* ── Main Dashboard ───────────────────────────────────────────── */
 export default function AthletiSenseDashboard({ t }) {
   const { user, connectedCoaches = [], connectedAthletes = [] } = useAuth();
-  const { athletes, liveData, connected, loading, getAthleteData, getLatest } =
+  const { athletes, liveData, connected, loading, getAthleteData, getLatest, mlInsights } =
     useAthleteData();
   const isAdmin = user?.role === "admin";
   const myAthleteId = user?.athleteId;
@@ -798,7 +569,6 @@ export default function AthletiSenseDashboard({ t }) {
   const allIds = visible.map((a) => a.id);
   const [selectedId, setSelectedId] = useState(null);
   const [dropOpen, setDropOpen] = useState(false);
-  const [notifHist, setNotifHist] = useState([]);
 
   // Auto-select first visible athlete
   useEffect(() => {
@@ -808,28 +578,7 @@ export default function AthletiSenseDashboard({ t }) {
   const latest = getLatest(selectedId);
   const records = getAthleteData(selectedId);
 
-  // Notification history
-  useEffect(() => {
-    if (!latest) return;
-    const active = getAlerts(latest).filter((a) => a.level !== "info");
-    if (!active.length) return;
-    setNotifHist((prev) => {
-      const next = [...prev];
-      let changed = false;
-      active.forEach((a) => {
-        const histId = `${a.id}-${latest.timestamp}`;
-        if (!next.some((n) => n.histId === histId)) {
-          next.unshift({
-            ...a,
-            histId,
-            timestamp: new Date().toLocaleTimeString(),
-          });
-          changed = true;
-        }
-      });
-      return changed ? next.slice(0, 10) : prev;
-    });
-  }, [latest]);
+  // Notification history moved to global context
 
   const chartData = useMemo(
     () =>
@@ -936,8 +685,16 @@ export default function AthletiSenseDashboard({ t }) {
           ) : (
             <span style={{ fontSize: 10, color: t.muted }}>Offline</span>
           )}
-          <NotificationBell history={notifHist} t={t} />
+          <NotificationBell t={t} />
         </div>
+      </div>
+
+      <div style={{ marginBottom: '24px' }}>
+        <AIInsightsPanel
+          mlData={mlInsights?.[selectedId]} // Dynamically use the selected athlete's ID
+          athleteName={athleteName}         // Dynamically use the selected athlete's name
+          t={t}
+        />
       </div>
 
       {/* ── Athlete selector + timer + status ── */}
@@ -1235,9 +992,9 @@ export default function AthletiSenseDashboard({ t }) {
           value={fmtResp(resp)}
           unit="br/min"
           sub={
-            chartData.length
-              ? `Avg: ${(chartData.reduce((s, d) => s + (d.resp || 0), 0) / chartData.length).toFixed(0)} br/min`
-              : null
+            chartData.length > 0
+              ? `Avg: ${(chartData.reduce((s, d) => s + (Number(d.resp) || 0), 0) / chartData.length).toFixed(0)} br/min`
+              : "No data available"
           }
           color="#3b82f6"
           icon={Wind}
@@ -1388,7 +1145,7 @@ export default function AthletiSenseDashboard({ t }) {
                 strokeWidth={2}
                 fill="url(#mgGrad)"
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -1515,7 +1272,7 @@ export default function AthletiSenseDashboard({ t }) {
                 strokeWidth={2}
                 fill="url(#hrGrad)"
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
                 unit=" bpm"
               />
               <Line
@@ -1526,7 +1283,7 @@ export default function AthletiSenseDashboard({ t }) {
                 stroke="#10b981"
                 strokeWidth={1.5}
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
                 unit="g"
               />
             </ComposedChart>
@@ -1640,7 +1397,7 @@ export default function AthletiSenseDashboard({ t }) {
                 strokeWidth={2}
                 fill="url(#brGrad)"
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
                 unit=" br/min"
               />
             </AreaChart>
@@ -1648,17 +1405,31 @@ export default function AthletiSenseDashboard({ t }) {
         </div>
       </div>
 
-      {/* ── Alerts ── */}
-      <div
-        style={{
-          background: t.card,
-          border: `1px solid ${t.border}`,
-          borderRadius: 16,
-          padding: "1.25rem",
-          boxShadow: t.shadow,
-        }}
-      >
-        <AlertsPanel latest={latest} t={t} />
+      {/* ── AI Insights & Alerts ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {mlInsights?.[selectedId] && (
+          <AIInsightsPanel 
+            mlData={mlInsights[selectedId]} 
+            athleteName={athletes.find(a => a.id === selectedId)?.name || selectedId}
+            t={t} 
+          />
+        )}
+        
+        <div
+          style={{
+            background: t.card,
+            border: `1px solid ${t.border}`,
+            borderRadius: 16,
+            padding: "1.25rem",
+            boxShadow: t.shadow,
+          }}
+        >
+          <AlertsPanel 
+            latest={latest} 
+            mlInsight={mlInsights?.[selectedId]} 
+            t={t} 
+          />
+        </div>
       </div>
     </main>
   );
