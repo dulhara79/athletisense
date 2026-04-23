@@ -367,13 +367,14 @@ export function ManageConnections({ t }) {
       <div>
         <h1
           style={{
-            fontFamily: "'Syne',sans-serif",
-            fontSize: 20,
-            fontWeight: 800,
+            fontFamily: "'Bebas Neue','Syne',sans-serif",
+            fontSize: 24,
+            fontWeight: 400,
             color: t.text,
+            letterSpacing: "0.06em",
           }}
         >
-          {label}
+          {label.toUpperCase()}
         </h1>
         <p style={{ fontSize: 11, color: t.muted, marginTop: 2 }}>
           Manage your {isAdmin ? "athletes" : "coaches"} · Use the header icon
