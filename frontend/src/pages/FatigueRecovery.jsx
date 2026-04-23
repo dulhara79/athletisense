@@ -595,7 +595,7 @@ export default function FatigueRecovery({ t }) {
                 strokeWidth={2}
                 fill="url(#fatGrad)"
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -649,7 +649,7 @@ export default function FatigueRecovery({ t }) {
                 stroke="#ef4444"
                 strokeWidth={2}
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
               />
               <Line
                 yAxisId="temp"
@@ -659,7 +659,7 @@ export default function FatigueRecovery({ t }) {
                 stroke="#f59e0b"
                 strokeWidth={2}
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
               />
             </LineChart>
           </ResponsiveContainer>
