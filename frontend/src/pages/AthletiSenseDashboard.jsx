@@ -193,7 +193,7 @@ function StatCard({
                   strokeWidth={1.5}
                   fill={`url(#sg-${sparkKey})`}
                   dot={false}
-                  isAnimationActive={false}
+                  isAnimationActive={true}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -1145,7 +1145,7 @@ export default function AthletiSenseDashboard({ t }) {
                 strokeWidth={2}
                 fill="url(#mgGrad)"
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -1272,7 +1272,7 @@ export default function AthletiSenseDashboard({ t }) {
                 strokeWidth={2}
                 fill="url(#hrGrad)"
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
                 unit=" bpm"
               />
               <Line
@@ -1283,7 +1283,7 @@ export default function AthletiSenseDashboard({ t }) {
                 stroke="#10b981"
                 strokeWidth={1.5}
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
                 unit="g"
               />
             </ComposedChart>
@@ -1397,7 +1397,7 @@ export default function AthletiSenseDashboard({ t }) {
                 strokeWidth={2}
                 fill="url(#brGrad)"
                 dot={false}
-                isAnimationActive={false}
+                isAnimationActive={true}
                 unit=" br/min"
               />
             </AreaChart>
