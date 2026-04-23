@@ -33,6 +33,8 @@ import {
   Pause,
   Play,
   ChevronDown,
+  TrendingUp,
+  Zap,
 } from "lucide-react";
 import {
   timeLabel,
@@ -48,6 +50,7 @@ import {
   initials,
   athleteColor,
   getAlerts,
+  isStale,
 } from "../utils/dataHelpers";
 import { useNotifications } from "../context/NotificationContext";
 import { NotificationBell } from "../components/NotificationBell";
@@ -575,6 +578,13 @@ export default function AthletiSenseDashboard({ t }) {
     if (!selectedId && visible.length) setSelectedId(visible[0].id);
   }, [visible.length]);
 
+  // Force re-render every 30s to update "staleness" status even if no new data arrives
+  const [, setTicker] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTicker(t => t + 1), 30000);
+    return () => clearInterval(timer);
+  }, []);
+
   const latest = getLatest(selectedId);
   const records = getAthleteData(selectedId);
 
@@ -599,6 +609,7 @@ export default function AthletiSenseDashboard({ t }) {
   const mag = getMag(latest) ?? 0;
   const steps = getSteps(latest);
   const rssi = getRssi(latest);
+  const sensorOffline = !latest || isStale(latest.timestamp);
 
   // Athlete meta from live data
   const selectedAthlete = athletes.find((a) => a.id === selectedId);
@@ -658,32 +669,58 @@ export default function AthletiSenseDashboard({ t }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {connected ? (
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 800,
-                color: t.success,
-                background: t.successBg,
-                padding: "4px 10px",
-                borderRadius: 20,
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
+            !sensorOffline ? (
               <span
                 style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: t.success,
-                  animation: "pulse-dot 1.6s ease-in-out infinite",
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color: t.success,
+                  background: t.successBg,
+                  padding: "4px 10px",
+                  borderRadius: 20,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
                 }}
-              />
-              LIVE
-            </span>
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: t.success,
+                    animation: "pulse-dot 1.6s ease-in-out infinite",
+                  }}
+                />
+                LIVE
+              </span>
+            ) : (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color: t.danger,
+                  background: t.dangerBg,
+                  padding: "4px 10px",
+                  borderRadius: 20,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: t.danger,
+                  }}
+                />
+                SENSOR OFFLINE
+              </span>
+            )
           ) : (
-            <span style={{ fontSize: 10, color: t.muted }}>Offline</span>
+            <span style={{ fontSize: 10, color: t.muted }}>Cloud Offline</span>
           )}
           <NotificationBell t={t} />
         </div>
@@ -691,8 +728,9 @@ export default function AthletiSenseDashboard({ t }) {
 
       <div style={{ marginBottom: '24px' }}>
         <AIInsightsPanel
-          mlData={mlInsights?.[selectedId]} // Dynamically use the selected athlete's ID
-          athleteName={athleteName}         // Dynamically use the selected athlete's name
+          mlData={mlInsights?.[selectedId]} 
+          athleteName={athleteName}         
+          currentHR={bpm}
           t={t}
         />
       </div>
@@ -930,22 +968,24 @@ export default function AthletiSenseDashboard({ t }) {
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {connected ? (
+              {connected && !sensorOffline ? (
                 <Wifi size={13} color={t.success} />
               ) : (
                 <WifiOff size={13} color={t.danger} />
               )}
               <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>
-                Connection:
+                Sensor State:
               </span>
               <span
                 style={{
                   fontSize: 11,
-                  color: connected ? t.success : t.danger,
+                  color: connected && !sensorOffline ? t.success : t.danger,
                   fontWeight: 700,
                 }}
               >
-                {connected ? "Firebase Live" : "Offline"}
+                {connected 
+                  ? (sensorOffline ? "Disconnected / Stale" : "Active & Streaming") 
+                  : "Cloud Connection Lost"}
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1030,6 +1070,19 @@ export default function AthletiSenseDashboard({ t }) {
           icon={Activity}
           sparkData={chartData}
           sparkKey="steps"
+          t={t}
+        />
+        <StatCard
+          title="AI Forecast"
+          value={mlInsights?.[selectedId]?.predicted_hr ? Math.round(mlInsights[selectedId].predicted_hr) : "--"}
+          unit="bpm"
+          sub={
+            mlInsights?.[selectedId]?.predicted_hr 
+              ? (mlInsights[selectedId].predicted_hr > bpm ? "↑ Expected Increase" : "↓ Expected Decrease")
+              : "Analyzing trends..."
+          }
+          color="#6366f1"
+          icon={TrendingUp}
           t={t}
         />
       </div>

@@ -24,6 +24,8 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Global state to prevent re-processing same data
 last_processed_ts = {}
+# History buffer for forecasting lags (Store last 6 readings per athlete)
+athlete_history = {} 
 
 # --- 1. Load Trained Models ---
 logging.info("Loading pre-trained ML artifacts...")
@@ -32,7 +34,9 @@ try:
     # Use production unified models
     alerter_pipeline = joblib.load(os.path.join(CURRENT_DIR, "anomaly_detector_production.joblib"))
     behavior_pipeline = joblib.load(os.path.join(CURRENT_DIR, "behavior_analyzer_production.joblib"))
-    logging.info("Models loaded successfully.")
+    # Load the temporal forecaster for live predictions
+    forecaster_model = joblib.load(os.path.join(CURRENT_DIR, "temporal_forecaster_global.joblib"))
+    logging.info("All models (including Forecaster) loaded successfully.")
 except Exception as e:
     logging.error(f"Failed to load models: {e}")
     exit(1)
@@ -45,6 +49,45 @@ try:
 except Exception as e:
     logging.error(f"Firebase Init Error: {e}")
     exit(1)
+
+def engineer_forecast_features(athlete_id, current_features, current_ts_str):
+    """Calculates lags, rolling stats, and cyclical time for the forecaster."""
+    if athlete_id not in athlete_history:
+        athlete_history[athlete_id] = []
+    
+    # Add current reading to history
+    athlete_history[athlete_id].append(current_features)
+    
+    # Keep only enough for lookback (6 lags + current = 7)
+    if len(athlete_history[athlete_id]) > 10: 
+        athlete_history[athlete_id].pop(0)
+    
+    if len(athlete_history[athlete_id]) < 7:
+        return None # Not enough history for the model yet
+    
+    history_df = pd.DataFrame(athlete_history[athlete_id])
+    
+    # 1. Cyclical Time
+    try:
+        dt = pd.to_datetime(current_ts_str)
+        hour = dt.hour
+        hour_sin = np.sin(hour * (2. * np.pi / 24))
+        hour_cos = np.cos(hour * (2. * np.pi / 24))
+    except:
+        hour_sin, hour_cos = 0, 1
+
+    # 2. Rolling Stats (last 6)
+    recent_hr = history_df['heart_rate_bpm'].tail(6)
+    rolling_mean = recent_hr.mean()
+
+    # 3. Lags (1 to 6)
+    # The production model expects 15 features:
+    # [hour_sin, hour_cos, rolling_mean] + 6 lags HR + 6 lags Motion
+    lags_hr_ordered = history_df['heart_rate_bpm'].iloc[-7:-1].tolist()[::-1] 
+    lags_motion_ordered = history_df['motion_accel_g'].iloc[-7:-1].tolist()[::-1]
+
+    input_row = [hour_sin, hour_cos, rolling_mean] + lags_hr_ordered + lags_motion_ordered
+    return np.array(input_row).reshape(1, -1)
 
 def process_all_telemetry():
     """Polls all athlete nodes, runs inference, and writes insights."""
@@ -88,19 +131,31 @@ def process_all_telemetry():
 
             # --- A. Dynamic Alert Inference (IsolationForest) ---
             X_scaled = scaler_a.transform(live_df[alerter_pipeline['features']].values)
-            
-            # IsolationForest decision_function returns signed anomaly score
-            # Lower means more abnormal.
             score = float(alerter_pipeline['model'].decision_function(X_scaled)[0])
             is_anomaly = bool(alerter_pipeline['model'].predict(X_scaled)[0] == -1)
-            
-            # Severity mapping (0 to 1 scale roughly)
             severity = round(abs(min(0, score)) * 10, 2)
             
             # --- B. Behavior Clustering Inference (K-Means) ---
             X_cluster = scaler_b.transform(live_df[behavior_pipeline['features']].values)
             cluster_id = int(behavior_pipeline['model'].predict(X_cluster)[0])
             states = {0: "Resting Base", 1: "Active Load", 2: "Peak Intensity"}
+
+            # --- C. Temporal Trend Forecasting (Gradient Boosting) ---
+            predicted_hr = None
+            X_forecast = engineer_forecast_features(athlete_id, features, current_ts)
+            
+            # DEBUG LOG
+            buffer_size = len(athlete_history.get(athlete_id, []))
+            logging.info(f"[{athlete_id}] History buffer size: {buffer_size}")
+
+            if X_forecast is not None:
+                try:
+                    predicted_hr = float(forecaster_model.predict(X_forecast)[0])
+                    logging.info(f"[{athlete_id}] SUCCESS: Generated Prediction: {predicted_hr}")
+                except Exception as e:
+                    logging.error(f"[{athlete_id}] Forecasting FAILURE: {e}")
+            else:
+                logging.info(f"[{athlete_id}] Forecasting SKIPPED: Waiting for more history...")
 
             # --- 3. Construct Insight Payload ---
             insight_payload = {
@@ -113,15 +168,20 @@ def process_all_telemetry():
                 "behavior_cluster": {
                     "current_state": states.get(cluster_id, "Unknown"),
                     "cluster_id": cluster_id
-                }
+                },
+                "predicted_hr": round(predicted_hr, 2) if predicted_hr else None
             }
 
-            # Write directly to the authorized athlete path
+            # Write directly to the authorized athlete path (latest snapshot)
             db.reference(f'athlete_records/{athlete_id}/ml_insight').set(insight_payload)
             
+            # ALSO: Write to a historical node for chart rendering
+            # We use a push ID to ensure every prediction is saved uniquely
+            db.reference(f'athlete_records/{athlete_id}/ml_predictions').push(insight_payload)
+
             # Update cache
             last_processed_ts[athlete_id] = current_ts
-            logging.info(f"[{athlete_id}] Inference Complete. Anomaly: {is_anomaly} | State: {states.get(cluster_id)}")
+            logging.info(f"[{athlete_id}] Inference Complete. Anomaly: {is_anomaly} | State: {states.get(cluster_id)} | Pred HR: {predicted_hr}")
 
     except Exception as e:
         logging.error(f"Worker Loop Error: {str(e)}")

@@ -22,6 +22,7 @@ export const AthleteDataProvider = ({ children }) => {
     const [athletes, setAthletes] = useState([]);
     const [liveData, setLiveData] = useState({});
     const [mlInsights, setMlInsights] = useState({});
+    const [mlHistory, setMlHistory] = useState({}); // Stores historical predictions
     const [loading, setLoading] = useState(true);
     const [connected, setConnected] = useState(false);
     
@@ -41,15 +42,18 @@ export const AthleteDataProvider = ({ children }) => {
     };
     
     /**
-     * Fetches historical readings for an athlete from Firebase.
-     * This is used to populate charts with history on load.
+     * Fetches historical readings and ML insights for an athlete from Firebase.
      */
     const fetchHistoricalData = async (aid) => {
         try {
             console.log(`[AthleteData] Fetching history for ${aid}...`);
             const readingsRef = dbRef(db, `athlete_records/${aid}/readings`);
+            const mlHistoryRef = dbRef(db, `athlete_records/${aid}/ml_history`);
+            
             const historyQuery = query(readingsRef, limitToLast(200));
-            const snap = await get(historyQuery);
+            const mlQuery = query(mlHistoryRef, limitToLast(200));
+            
+            const [snap, mlSnap] = await Promise.all([get(historyQuery), get(mlQuery)]);
             
             if (snap.exists()) {
                 const data = snap.val();
@@ -57,11 +61,14 @@ export const AthleteDataProvider = ({ children }) => {
                     .map(normaliseRecord)
                     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                 
-                setLiveData(prev => ({
-                    ...prev,
-                    [aid]: historicalRecords
-                }));
-                console.log(`[AthleteData] Loaded ${historicalRecords.length} historical points for ${aid}`);
+                setLiveData(prev => ({ ...prev, [aid]: historicalRecords }));
+            }
+
+            if (mlSnap.exists()) {
+                const data = mlSnap.val();
+                const historicalML = Object.values(data)
+                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                setMlHistory(prev => ({ ...prev, [aid]: historicalML }));
             }
         } catch (err) {
             console.error(`[AthleteData] Error fetching history for ${aid}:`, err);
@@ -70,6 +77,13 @@ export const AthleteDataProvider = ({ children }) => {
 
     useEffect(() => {
         console.log("[AthleteData] Initializing global listeners...");
+        
+        // 0. Listen for browser's connection to Firebase
+        const connectedRef = dbRef(db, ".info/connected");
+        const unsubConn = onValue(connectedRef, (snap) => {
+            setConnected(snap.val() === true);
+        });
+
         const usersRef = dbRef(db, "users");
 
         // 1. Listen for the athlete list (via users node)
@@ -103,13 +117,12 @@ export const AthleteDataProvider = ({ children }) => {
                         
                         setLiveData(prev => {
                             const current = prev[aid] || [];
-                            // Avoid duplicate points if Firebase triggers twice for same TS
                             if (current.some(r => r.timestamp === lat.timestamp)) return prev;
                             return { ...prev, [aid]: [...current, lat].slice(-200) };
                         });
                     });
 
-                    // B. ML Insight Listener (The core of the AI Coaching system)
+                    // B. ML Insight Listener (Latest Snapshot)
                     const mlInsightRef = dbRef(db, `athlete_records/${aid}/ml_insight`);
                     const unsubML = onValue(mlInsightRef, (mSnap) => {
                         if (mSnap.exists()) {
@@ -117,10 +130,23 @@ export const AthleteDataProvider = ({ children }) => {
                         }
                     });
 
+                    // C. ML Predictions Listener (Trend Tracking)
+                    const mlPredsRef = dbRef(db, `athlete_records/${aid}/ml_predictions`);
+                    const unsubMLPreds = onValue(mlPredsRef, (mhSnap) => {
+                        if (mhSnap.exists()) {
+                            const data = mhSnap.val();
+                            const sortedML = Object.values(data)
+                                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                            console.log(`[AthleteContext] Received ${sortedML.length} predictions for ${aid}`);
+                            setMlHistory(prev => ({ ...prev, [aid]: sortedML.slice(-200) }));
+                        }
+                    });
+
                     // Store unsubs for cleanup
                     listenersRef.current[aid] = () => {
                         unsubLat();
                         unsubML();
+                        unsubMLPreds();
                     };
                 }
             });
@@ -131,6 +157,7 @@ export const AthleteDataProvider = ({ children }) => {
 
         return () => {
             console.log("[AthleteData] Cleaning up global listeners...");
+            unsubConn();
             unsubUsers();
             Object.values(listenersRef.current).forEach(unsub => unsub());
             listenersRef.current = {};
@@ -138,6 +165,7 @@ export const AthleteDataProvider = ({ children }) => {
     }, []);
 
     const getAthleteData = (id) => liveData[id] || [];
+    const getMLHistory = (id) => mlHistory[id] || [];
     const getLatest = (id) => {
         const data = liveData[id];
         return data && data.length > 0 ? data[data.length - 1] : null;
@@ -147,9 +175,11 @@ export const AthleteDataProvider = ({ children }) => {
         athletes,
         liveData,
         mlInsights,
+        mlHistory,
         loading,
         connected,
         getAthleteData,
+        getMLHistory,
         getLatest
     };
 

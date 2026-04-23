@@ -150,13 +150,33 @@ export function fatigueScore(latest) {
 }
 
 /**
+ * Checks if a timestamp is older than a certain threshold (default 2 mins).
+ */
+export function isStale(ts, thresholdMs = 120000) {
+  if (!ts) return true;
+  const d = parseTs(ts);
+  if (!d) return true;
+  return Date.now() - d.getTime() > thresholdMs;
+}
+
+/**
  * Shared Alert Logic
  * Evaluates a latest biometric record and returns an array of active alerts.
  */
 export function getAlerts(latest, mlInsight) {
   const out = [];
 
-  // 1. ML-Driven Anomaly Detection
+  // 1. Connection Staleness Check
+  if (latest && isStale(latest.timestamp)) {
+    out.push({
+      id: "sensor-offline",
+      level: "critical",
+      title: "Sensor Disconnected",
+      msg: "No data received for > 2 minutes. Check device power/WiFi.",
+    });
+  }
+
+  // 2. ML-Driven Anomaly Detection
   if (mlInsight?.dynamic_alerts?.is_anomaly) {
     const { severity_score, action } = mlInsight.dynamic_alerts;
     const level = (Number(severity_score) || 0) > 1.0 ? "critical" : "warning";
@@ -174,10 +194,10 @@ export function getAlerts(latest, mlInsight) {
   const mag = getMag(latest) ?? 0;
   const isMoving = mag > 1.2;
 
-  if (isMoving && !out.length) {
+  if (isMoving && !out.filter(a => a.level === 'critical').length) {
     if (bpm > 185) out.push({ id: "hr-c", level: "critical", title: "Critical: Active HR", msg: `${fmtBpm(bpm)} bpm` });
     if (temp > 38.5) out.push({ id: "tp-c", level: "critical", title: "Critical: High Active Temp", msg: `${fmtTemp(temp)}°C` });
-  } else if (!out.length) {
+  } else if (!out.filter(a => a.level === 'critical').length) {
     if (bpm > 120) out.push({ id: "hr-c", level: "critical", title: "Critical: Resting HR", msg: `${fmtBpm(bpm)} bpm` });
   }
 
@@ -191,3 +211,19 @@ export function getAlerts(latest, mlInsight) {
 
   return out;
 }
+
+/**
+ * Returns a trend object (direction, arrow, color) by comparing 
+ * current value to a predicted future value.
+ */
+export function getPredictionTrend(current, predicted, t) {
+  if (current == null || predicted == null) return { dir: 'none', icon: '→', color: t?.muted || '#94a3b8' };
+  
+  const diff = predicted - current;
+  const threshold = 2; // BPM threshold for "stable"
+
+  if (diff > threshold) return { dir: 'up', icon: '↑', color: '#ef4444' };
+  if (diff < -threshold) return { dir: 'down', icon: '↓', color: '#10b981' };
+  return { dir: 'stable', icon: '→', color: '#3b82f6' };
+}
+
