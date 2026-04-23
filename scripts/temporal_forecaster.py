@@ -67,10 +67,10 @@ class PhysiologicalTrendForecaster:
             
         # 3. Rolling Statistics (Smoothing out noise to find the trend)
         df['rolling_mean_30m'] = df.groupby('athlete_id')[self.target_metric].transform(
-            lambda x: x.rolling(window=6, min_periods=1).mean()
+            lambda x: x.shift(1).rolling(window=6, min_periods=1).mean()
         )
         df['rolling_std_30m'] = df.groupby('athlete_id')[self.target_metric].transform(
-            lambda x: x.rolling(window=6, min_periods=1).std()
+            lambda x: x.shift(1).rolling(window=6, min_periods=1).std()
         )
         
         # Drop NaN values created by shifting/rolling
