@@ -39,6 +39,34 @@ export const AthleteDataProvider = ({ children }) => {
             timestamp: r.timestamp || new Date().toISOString()
         };
     };
+    
+    /**
+     * Fetches historical readings for an athlete from Firebase.
+     * This is used to populate charts with history on load.
+     */
+    const fetchHistoricalData = async (aid) => {
+        try {
+            console.log(`[AthleteData] Fetching history for ${aid}...`);
+            const readingsRef = dbRef(db, `athlete_records/${aid}/readings`);
+            const historyQuery = query(readingsRef, limitToLast(200));
+            const snap = await get(historyQuery);
+            
+            if (snap.exists()) {
+                const data = snap.val();
+                const historicalRecords = Object.values(data)
+                    .map(normaliseRecord)
+                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                
+                setLiveData(prev => ({
+                    ...prev,
+                    [aid]: historicalRecords
+                }));
+                console.log(`[AthleteData] Loaded ${historicalRecords.length} historical points for ${aid}`);
+            }
+        } catch (err) {
+            console.error(`[AthleteData] Error fetching history for ${aid}:`, err);
+        }
+    };
 
     useEffect(() => {
         console.log("[AthleteData] Initializing global listeners...");
@@ -63,6 +91,9 @@ export const AthleteDataProvider = ({ children }) => {
                 if (!listenersRef.current[aid]) {
                     console.log(`[AthleteData] Attaching listeners for ${aid}`);
                     
+                    // 0. Fetch initial history
+                    fetchHistoricalData(aid);
+                    
                     // A. Latest Telemetry Listener
                     const latestRef = dbRef(db, `athlete_records/${aid}/latest`);
                     const unsubLat = onValue(latestRef, (lSnap) => {
@@ -74,7 +105,7 @@ export const AthleteDataProvider = ({ children }) => {
                             const current = prev[aid] || [];
                             // Avoid duplicate points if Firebase triggers twice for same TS
                             if (current.some(r => r.timestamp === lat.timestamp)) return prev;
-                            return { ...prev, [aid]: [...current, lat].slice(-100) };
+                            return { ...prev, [aid]: [...current, lat].slice(-200) };
                         });
                     });
 
