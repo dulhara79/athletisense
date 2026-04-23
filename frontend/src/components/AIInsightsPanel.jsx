@@ -88,7 +88,7 @@ export function AIInsightsPanel({ mlData, athleteName, currentHR, t }) {
                     </div>
                     
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ fontSize: '28px', fontWeight: 800, color: t.text, fontFamily: "'DM Mono', monospace" }}>
+                        <div style={{ fontSize: '28px', fontWeight: 800, color: t.text, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                             {predicted_hr ? Math.round(predicted_hr) : '--'}
                             <span style={{ fontSize: '12px', color: t.muted, marginLeft: '4px' }}>BPM</span>
                         </div>
