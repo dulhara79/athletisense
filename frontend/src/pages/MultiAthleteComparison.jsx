@@ -31,6 +31,7 @@ import {
   fatigueScore,
   athleteColor,
   initials,
+  isStale,
 } from "../utils/dataHelpers";
 
 function ChartTip({ active, payload, label, t }) {
@@ -151,10 +152,18 @@ export default function MultiAthleteComparison({ t }) {
           status,
           load: parseFloat(load.toFixed(1)),
           dataPoints: recs.length,
+          isOffline: !latest || isStale(latest.timestamp),
         };
       }),
     [visibleAthletes, liveData],
   );
+
+  // Force re-render for staleness checks
+  const [, setTicker] = useState(0);
+  React.useEffect(() => {
+    const timer = setInterval(() => setTicker(t => t + 1), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Sort table
   const sorted = [...stats].sort((a, b) => {
@@ -305,7 +314,16 @@ export default function MultiAthleteComparison({ t }) {
                 <p style={{ fontSize: 12, fontWeight: 700, color: t.text }}>
                   {s.name}
                 </p>
-                <p style={{ fontSize: 10, color: t.muted }}>{s.sport}</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ 
+                    width: 6, 
+                    height: 6, 
+                    borderRadius: "50%", 
+                    background: s.isOffline ? t.danger : t.success,
+                    boxShadow: s.isOffline ? "none" : `0 0 8px ${t.success}`
+                  }} />
+                  <p style={{ fontSize: 10, color: t.muted }}>{s.isOffline ? "Offline" : "Live"}</p>
+                </div>
               </div>
             </div>
             <div
