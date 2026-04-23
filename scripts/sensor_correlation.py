@@ -98,9 +98,11 @@ class PhysiologicalCorrelationAnalyzer:
         X = df[self.features]
         y = df[self.target]
         
-        # Split data to validate that the model actually learned real relationships,
-        # not just noise (overfitting).
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        # Split data chronologically to validate that the model actually learned real relationships
+        # without suffering from time-series data leakage.
+        split_idx = int(len(X) * 0.8)
+        X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+        y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
         
         try:
             self.model.fit(X_train, y_train)
