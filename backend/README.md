@@ -8,174 +8,115 @@ app_file: Dockerfile
 pinned: false
 ---
 
-# AthletiSense Backend v2.0
+# 🏃 AthletiSense Backend: Logic & Inference Engine
 
-Production-grade Node.js backend for the **AthletiSense IoT Athletic Performance Monitoring Platform**.
+The **AthletiSense Backend** is the high-performance core of the ecosystem. It manages real-time telemetry streaming, executes complex physiological analytics, and coordinates multi-model machine learning inference to provide "Advanced Athlete Insights."
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
-```
+The backend is split into two primary services working in tandem:
+
+### 1. Node.js Core (API & WebSocket)
+The central orchestrator for data access, authentication, and real-time push.
+- **REST API**: Standardized access to historical data, summaries, and AI chat.
+- **WebSocket**: Low-latency push of `live_update` events to the dashboard.
+- **AI Coach**: RAG-based conversational agent using OpenAI.
+
+### 2. ML Inference Worker (Python)
+A continuous-processing engine that runs live inference on incoming telemetry.
+- **Anomaly Detection**: Uses an **Isolation Forest** to detect multi-sensor physiological deviations.
+- **Behavior Analysis**: Uses **GMM/K-Means** to classify the athlete's current state (Resting, Active, Peak).
+- **Temporal Forecasting**: Uses **Gradient Boosting** to predict heart rate trends based on historical lags.
+
+---
+
+## 📁 Directory Structure
+
+```text
 src/
-├── server.js                      # Entry point, route wiring, graceful shutdown
-├── config/
-│   ├── firebase.js                # Firebase Admin SDK singleton
-│   ├── logger.js                  # Winston (JSON prod / coloured dev)
-│   └── athletes.js                # Static athlete metadata
-├── middleware/
-│   ├── index.js                   # requireFirebase, requestId, sanitiseInput, validateBody, errorHandler
-│   └── auth.js                    # requireAuth, requireAdmin, optionalAuth (Firebase ID token)
-├── routes/
-│   ├── athleteRoutes.js           # CRUD data endpoints
-│   ├── chatRoutes.js              # OpenAI conversational agent
-│   ├── analyticsRoutes.js         # Visual analytics & decision-support
-│   └── metricsRoutes.js           # /health + /api/v1/metrics
-├── services/
-│   ├── athleteService.js          # Firebase data access layer
-│   ├── analyticsService.js        # Pure analytics functions (no Firebase)
-│   └── websocketService.js        # Real-time push + heartbeat
-└── __tests__/
-    ├── athleteService.test.js
-    └── analyticsService.test.js   # 20+ unit tests, no credentials needed
+├── server.js              # Entry point & Express configuration
+├── config/                # Firebase Admin, Logger, and Athlete metadata
+├── middleware/            # Auth (JWT), Sanitization, and Error Handling
+├── routes/                # API Route definitions (Athletes, Chat, Analytics)
+├── services/              # Business logic (Firebase Access, Analytics Engine, WebSockets)
+└── models/                # AI/ML Component
+    ├── ml_worker.py       # Python Continuous Inference Engine
+    └── *.joblib           # Serialized ML Models (Alerter, Analyzer, Forecaster)
 ```
 
 ---
 
-## API Reference
+## 🧠 ML Inference Pipeline
 
-### Data Endpoints
+The **ML Worker** (`ml_worker.py`) performs the following steps every 3 seconds:
+1. **Poll**: Fetches the latest telemetry from the Firebase `latest` node.
+2. **Pre-process**: Scales and engineers features (e.g., cyclical time, rolling means, lags).
+3. **Inference**:
+   - `anomaly_detector`: Outputs a severity score and boolean alert.
+   - `behavior_analyzer`: Maps metrics to a cluster ID (e.g., "Active Load").
+   - `temporal_forecaster`: Generates a `predicted_hr` for the next interval.
+4. **Push**: Writes the `ml_insight` payload back to Firebase, triggering frontend updates.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/health` | None | Liveness probe |
-| GET | `/api/v1/metrics` | Optional | System + Firebase metrics |
-| GET | `/api/v1/athletes` | None | All athletes + latest snapshots |
-| GET | `/api/v1/athletes/:id` | None | Full profile + stats |
-| GET | `/api/v1/athletes/:id/latest` | None | Latest snapshot only |
-| GET | `/api/v1/athletes/:id/history` | None | Archived readings (`?limit=N`) |
-| GET | `/api/v1/summary` | None | Cross-athlete summary + alerts |
+---
 
-### Analytics Endpoints (all require `Authorization: Bearer <token>`)
+## 📊 Analytics Engine (Node.js)
 
+For non-ML historical analysis, the backend implements:
+- **Trend Detection**: Linear regression slope calculation for all sensors.
+- **Fatigue Scoring**: A weighted index combining HR recovery, Temperature spikes, and Respiratory load.
+- **Training Load (TRIMP)**: Normalized physiological load calculation based on duration and intensity.
+- **Correlation Matrix**: Pearson coefficients (e.g., HR ↔ Motion) to identify gait efficiency or stress responses.
+
+---
+
+## 📡 API Reference
+
+### Data & Analytics
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/v1/analytics/athlete/:id/trend` | Trend, slope, anomaly, correlations, training load |
-| GET | `/api/v1/analytics/athlete/:id/fatigue` | Fatigue/recovery score + status |
-| GET | `/api/v1/analytics/athlete/:id/timeseries` | Hourly/daily bucketed series (`?granularity=hourly\|daily`) |
-| GET | `/api/v1/analytics/athlete/:id/narrative` | Storytelling narrative for Visual Analytics page |
-| GET | `/api/v1/analytics/comparison` | Cross-athlete comparison matrix |
-| GET | `/api/v1/analytics/leaderboard` | Ranked by metric (`?metric=hr\|temp\|load\|fatigue\|steps&order=asc\|desc`) |
-| GET | `/api/v1/analytics/anomalies` | All z-score anomalies across all athletes |
-| GET | `/api/v1/analytics/performance-zones` | HR training zone distribution (Z1-Z5) |
+| GET | `/api/v1/athletes` | List athletes with real-time snapshots |
+| GET | `/api/v1/athletes/:id/trend` | slope-based trend analysis per sensor |
+| GET | `/api/v1/analytics/anomalies` | Global log of ML-detected anomalies |
+| GET | `/api/v1/analytics/comparison` | Cross-athlete performance matrix |
 
-### Chat
-
+### AI Coaching
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/chat` | AI conversational agent (OpenAI) |
-| GET | `/api/v1/chat/suggestions` | Starter question chips |
-
-### WebSocket
-
-Connect to `ws://localhost:3001`.  
-Messages: `snapshot`, `live_update`, `error`, `pong`.
+| POST | `/api/v1/chat` | Context-aware AI coach (Live data + RAG) |
+| GET | `/api/v1/chat/suggestions` | dynamic question prompts based on status |
 
 ---
 
-## Analytics Logic
+## 🚀 Quick Start
 
-| Feature | Implementation |
-|---------|---------------|
-| Trend detection | Linear regression slope over time series |
-| Anomaly detection | Z-score (default threshold: 2.5σ) |
-| Correlation | Pearson coefficient (HR↔Temp, HR↔Resp, HR↔Motion) |
-| Fatigue score | Weighted: HR penalty (40%) + Temp penalty (30%) + Resp penalty (30%) |
-| Training load | TRIMP-inspired: duration × normalised HR × motion factor |
-| Performance zones | Karvonen 5-zone model (Z1 Recovery → Z5 Max) |
-| Time bucketing | Hourly and daily aggregation with avg HR/Temp/Resp |
-| Storytelling | `sessionNarrative()` → headline + insights + recommendation |
+### 1. Environment Configuration
+Create a `.env` file with the following:
+```env
+FIREBASE_SERVICE_ACCOUNT_PATH=path/to/key.json
+FIREBASE_DATABASE_URL=https://your-db.firebaseio.com
+OPENAI_API_KEY=sk-....
+```
 
----
-
-## Security
-
-| Layer | Detail |
-|-------|--------|
-| Helmet | 11 HTTP security headers |
-| CORS | Origin whitelist from `ALLOWED_ORIGINS` |
-| Rate limiting | 120/min API, 60/min analytics, 30/min chat |
-| Input sanitisation | Strips `<>`, `${}`, null bytes from all string inputs |
-| Firebase Auth | `requireAuth` middleware verifies ID tokens on analytics routes |
-| RBAC & AI Privacy | Strict data isolation preventing users from querying other athletes' biometric data via the Chatbot (`requireAdmin` / ownership verification) |
-| Request tracing | `X-Request-Id` on every response |
-| Graceful shutdown | SIGTERM/SIGINT with 10s forced-exit fallback |
-| Non-root Docker | Runs as `appuser` |
-
----
-
-## Quick Start
-
+### 2. Execution
 ```bash
-cp .env.example .env
-# Fill FIREBASE_SERVICE_ACCOUNT_PATH, FIREBASE_DATABASE_URL, OPENAI_API_KEY
-# For local dev without Firebase: set DISABLE_AUTH=true
-
+# Install dependencies
 npm install
-npm run dev       # development (nodemon)
-npm start         # production
-npm test          # unit tests (no credentials needed)
+
+# Start Node.js Core
+npm start
+
+# (In separate terminal) Start ML Worker
+cd src/models
+python ml_worker.py
 ```
 
 ---
 
-## Docker & Deployment
+## 🚢 Deployment (Hybrid Strategy)
 
-```bash
-docker compose up --build
-curl http://localhost:3001/health
-```
-
-### Hugging Face Deployment Automation
-This backend is continuously deployed to **Hugging Face Spaces**. We use a GitHub Actions CI/CD pipeline (`.github/workflows/huggingface-deploy.yml`) that:
-1. Syncs the backend directory to Hugging Face on push.
-2. Triggers an automated Docker build via the Space's configuration (`Dockerfile`).
-3. Ensures all environments variables and secrets (like OpenAI and Firebase keys) are securely mapped.
-
----
-
-## Environment Variables
-
-| Variable | Required | Default |
-|----------|----------|---------|
-| `PORT` | No | `3001` |
-| `NODE_ENV` | No | `development` |
-| `FIREBASE_SERVICE_ACCOUNT_PATH` | **Yes** | — |
-| `FIREBASE_DATABASE_URL` | **Yes** | — |
-| `OPENAI_API_KEY` | No* | — |
-| `ALLOWED_ORIGINS` | No | *(all)* |
-| `DISABLE_AUTH` | No | `false` |
-| `CHAT_RATE_LIMIT_RPM` | No | `30` |
-| `ANALYTICS_RATE_LIMIT_RPM` | No | `60` |
-| `API_RATE_LIMIT_RPM` | No | `120` |
-| `LOG_LEVEL` | No | `info` |
-
-\* Chat returns 503 without this key; all other endpoints still work.
-
----
-
-## Assignment Criteria Coverage
-
-| Criterion | Implementation |
-|-----------|---------------|
-| 10+ variables | HR, BPM avg, ECG, Temp (C/F), Accel X/Y/Z, Gyro X/Y/Z, Step count, Resp rate, Strain, RSSI, Heap free |
-| Multi-dimensional analysis | `athleteTrend()` covers HR, Temp, Resp, Motion simultaneously |
-| Comparisons | `buildComparison()` → `/analytics/comparison` |
-| Trends | `linearSlope()` per metric → rising/falling/stable |
-| Visual storytelling | `sessionNarrative()` → headline, insights, alerts, recommendation |
-| Conversational agent | OpenAI chat with live Firebase data context |
-| Decision support | Fatigue score, recovery recommendation, anomaly flags, leaderboard |
-| Interactive features | WebSocket live updates, filter by `?limit`, `?granularity`, `?metric` |
-| UX / dashboard support | Narrative endpoint feeds storytelling section directly |
-| Security | Auth, CORS, helmet, sanitisation, rate limiting |
-| Scalability | Modular service layer, Docker, graceful shutdown |
+The backend is containerized via **Docker** and deployed to **Hugging Face Spaces**.
+- **CI/CD**: GitHub Actions sync the codebase and trigger a Docker build.
+- **Port 3001**: Main API & WebSocket.
+- **ML Worker**: Runs as a background process within the same container or as a sidecar.
