@@ -61,7 +61,7 @@ function ChartTip({ active, payload, label, t }) {
         padding: "8px 12px",
         boxShadow: t.shadow,
         fontSize: 11,
-        fontFamily: "'DM Mono',monospace",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
       }}
     >
       <p style={{ color: t.muted, marginBottom: 5, fontWeight: 700 }}>
@@ -112,7 +112,7 @@ function Card({ title, children, t, right }) {
             textTransform: "uppercase",
             letterSpacing: "0.10em",
             color: t.muted,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}
         >
           {title}
@@ -529,7 +529,7 @@ export default function PerformanceAnalytics({ t }) {
                 textTransform: "uppercase",
                 letterSpacing: "0.10em",
                 color: t.muted,
-                fontFamily: "'DM Mono',monospace",
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
                 marginBottom: 6,
               }}
             >
@@ -541,7 +541,7 @@ export default function PerformanceAnalytics({ t }) {
                   fontSize: 28,
                   fontWeight: 800,
                   color: k.color,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                   letterSpacing: "-1px",
                 }}
               >
@@ -636,7 +636,7 @@ export default function PerformanceAnalytics({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -836,7 +836,7 @@ export default function PerformanceAnalytics({ t }) {
                         fontSize: 11,
                         fontWeight: 700,
                         color: t.muted,
-                        fontFamily: "'DM Mono',monospace",
+                        fontFamily: "'Plus Jakarta Sans', sans-serif",
                       }}
                     >
                       {d.pct}%
@@ -896,7 +896,7 @@ export default function PerformanceAnalytics({ t }) {
                 <Legend
                   wrapperStyle={{
                     fontSize: 9,
-                    fontFamily: "'DM Mono',monospace",
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
                   }}
                 />
                 <Line
