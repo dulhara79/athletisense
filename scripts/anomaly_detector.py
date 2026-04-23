@@ -135,6 +135,33 @@ class TelemetryAnomalyDetector:
             self._is_fitted = False
             raise
 
+    def evaluate_live_stream(self, live_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Evaluates new, live streaming telemetry without re-fitting the model or scaler.
+        """
+        if not self._is_fitted:
+            raise NotFittedError("The model must be trained via detect_anomalies first.")
+            
+        if live_df.empty:
+            logger.warning("Empty live stream provided. Skipping evaluation.")
+            return live_df
+
+        logger.info("Evaluating live telemetry for anomalies...")
+        
+        eval_data = live_df.dropna(subset=self.features).copy()
+        X_live = eval_data[self.features].values
+        
+        # Notice we use .transform(), NOT .fit_transform()
+        X_scaled = self.scaler.transform(X_live)
+        
+        predictions = self.model.predict(X_scaled)
+        scores = self.model.decision_function(X_scaled)
+        
+        eval_data['is_anomaly'] = predictions == -1
+        eval_data['anomaly_severity_score'] = scores * -1 
+        
+        return eval_data
+
     def visualize_anomalies(self, df: pd.DataFrame, target_metric: str = 'heart_rate_bpm', 
                             athlete_id: str = "Global", output_dir: str = "."):
         """
