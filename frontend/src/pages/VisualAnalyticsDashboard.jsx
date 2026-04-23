@@ -115,7 +115,7 @@ function Card({ title, icon: Icon, children, t, span, action }) {
               textTransform: "uppercase",
               letterSpacing: "0.10em",
               color: t.muted,
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
             {title}
@@ -173,7 +173,7 @@ function KPICard({ title, value, unit, change, color, icon: Icon, t }) {
             letterSpacing: "0.08em",
             textTransform: "uppercase",
             color: t.muted,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}
         >
           {title}
@@ -186,7 +186,7 @@ function KPICard({ title, value, unit, change, color, icon: Icon, t }) {
             fontWeight: 800,
             lineHeight: 1,
             color,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
             letterSpacing: "-1.5px",
           }}
         >
@@ -529,7 +529,7 @@ export default function VisualAnalyticsDashboard({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -696,7 +696,7 @@ export default function VisualAnalyticsDashboard({ t }) {
                         fontSize: 11,
                         fontWeight: 700,
                         color: t.muted,
-                        fontFamily: "'DM Mono',monospace",
+                        fontFamily: "'Plus Jakarta Sans', sans-serif",
                       }}
                     >
                       {d.pct}%
@@ -724,7 +724,7 @@ export default function VisualAnalyticsDashboard({ t }) {
                       fontSize: 11,
                       fontWeight: 800,
                       color: t.muted,
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
                       width: 16,
                     }}
                   >
@@ -774,7 +774,7 @@ export default function VisualAnalyticsDashboard({ t }) {
                             : a.score > 25
                               ? t.warning
                               : t.success,
-                        fontFamily: "'DM Mono',monospace",
+                        fontFamily: "'Plus Jakarta Sans', sans-serif",
                       }}
                     >
                       {a.score ?? "--"}%
