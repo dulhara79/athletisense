@@ -139,7 +139,7 @@ export function NotificationBell({ t }) {
                       <p style={{ fontSize: 10, fontWeight: 800, color: n.level === 'critical' ? t.danger : t.warning, textTransform: 'uppercase' }}>
                         {n.athleteName}
                       </p>
-                      <p style={{ fontSize: 9, color: t.faint, fontFamily: "'DM Mono',monospace" }}>
+                      <p style={{ fontSize: 9, color: t.faint, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                         {n.timestamp}
                       </p>
                     </div>
