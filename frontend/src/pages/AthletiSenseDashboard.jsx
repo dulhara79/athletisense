@@ -432,11 +432,11 @@ function MotionGaugeViz({ value = 0, t }) {
 
 // getAlerts moved to dataHelpers.js
 
-function AlertsPanel({ latest, t }) {
+function AlertsPanel({ latest, mlInsight, t }) {
   const [dismissed, setDismissed] = useState(new Set());
   const alerts = useMemo(
-    () => getAlerts(latest).filter((a) => !dismissed.has(a.id)),
-    [latest, dismissed],
+    () => getAlerts(latest, mlInsight).filter((a) => !dismissed.has(a.id)),
+    [latest, mlInsight, dismissed],
   );
   const cfg = {
     critical: {
@@ -992,9 +992,9 @@ export default function AthletiSenseDashboard({ t }) {
           value={fmtResp(resp)}
           unit="br/min"
           sub={
-            chartData.length
-              ? `Avg: ${(chartData.reduce((s, d) => s + (d.resp || 0), 0) / chartData.length).toFixed(0)} br/min`
-              : null
+            chartData.length > 0
+              ? `Avg: ${(chartData.reduce((s, d) => s + (Number(d.resp) || 0), 0) / chartData.length).toFixed(0)} br/min`
+              : "No data available"
           }
           color="#3b82f6"
           icon={Wind}
@@ -1405,17 +1405,31 @@ export default function AthletiSenseDashboard({ t }) {
         </div>
       </div>
 
-      {/* ── Alerts ── */}
-      <div
-        style={{
-          background: t.card,
-          border: `1px solid ${t.border}`,
-          borderRadius: 16,
-          padding: "1.25rem",
-          boxShadow: t.shadow,
-        }}
-      >
-        <AlertsPanel latest={latest} t={t} />
+      {/* ── AI Insights & Alerts ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {mlInsights?.[selectedId] && (
+          <AIInsightsPanel 
+            mlData={mlInsights[selectedId]} 
+            athleteName={athletes.find(a => a.id === selectedId)?.name || selectedId}
+            t={t} 
+          />
+        )}
+        
+        <div
+          style={{
+            background: t.card,
+            border: `1px solid ${t.border}`,
+            borderRadius: 16,
+            padding: "1.25rem",
+            boxShadow: t.shadow,
+          }}
+        >
+          <AlertsPanel 
+            latest={latest} 
+            mlInsight={mlInsights?.[selectedId]} 
+            t={t} 
+          />
+        </div>
       </div>
     </main>
   );
