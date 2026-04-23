@@ -65,3 +65,10 @@ backend/performance-monitering-glove-default-rtdb-export.json
 backend_documentation.md
 frontend_documentation.md
 project_architecture_overview.md
+
+__pycache__/
+
+*.joblib
+*.pkl
+*.png
+*.csv
