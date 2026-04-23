@@ -20,7 +20,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { Filter, RefreshCw, ChevronDown, WifiOff } from "lucide-react";
+import { Filter, RefreshCw, ChevronDown, WifiOff, TrendingUp, Zap } from "lucide-react";
 import {
   getBpm,
   getTemp,
@@ -214,7 +214,7 @@ function Dropdown({ label, options, value, onChange, t }) {
 
 export default function PerformanceAnalytics({ t }) {
   const { user, connectedAthletes = [] } = useAuth();
-  const { athletes, liveData, connected, loading, getAthleteData } =
+  const { athletes, liveData, connected, loading, getAthleteData, mlHistory: allMLHistory, getMLHistory } =
     useAthleteData();
   const isAdmin = user?.role === "admin";
   const connectedAthleteIds = isAdmin ? connectedAthletes.map(a => a.athleteId) : [];
@@ -235,19 +235,30 @@ export default function PerformanceAnalytics({ t }) {
   }, [visibleAthletes.length]);
 
   const records = getAthleteData(selectedId);
+  const mlHistory = getMLHistory(selectedId);
 
   // Build chart-ready data from real records
   const chartData = useMemo(
     () =>
-      records.map((r) => ({
-        time: timeLabel(r.timestamp),
-        bpm: getBpm(r),
-        temp: getTemp(r),
-        resp: getResp(r),
-        mg: parseFloat((getMag(r) ?? 0).toFixed(2)),
-        steps: getSteps(r),
-      })),
-    [records],
+      records.map((r) => {
+        // FUZZY MATCHING: Find prediction within 1 second of record timestamp
+        const rTime = new Date(r.timestamp).getTime();
+        const prediction = mlHistory.find(m => {
+          const mTime = new Date(m.timestamp).getTime();
+          return Math.abs(mTime - rTime) < 1000; // 1 second tolerance
+        });
+        
+        return {
+          time: timeLabel(r.timestamp),
+          bpm: getBpm(r),
+          temp: getTemp(r),
+          resp: getResp(r),
+          mg: parseFloat((getMag(r) ?? 0).toFixed(2)),
+          steps: getSteps(r),
+          predicted_hr: prediction?.predicted_hr || null
+        };
+      }),
+    [records, mlHistory],
   );
 
   // Rolling 5-point average
@@ -481,6 +492,12 @@ export default function PerformanceAnalytics({ t }) {
             unit: "pts",
             color: "#10b981",
           },
+          {
+            label: "AI Forecast",
+            value: mlHistory.length ? `${Math.round(mlHistory[mlHistory.length-1].predicted_hr)}` : "--",
+            unit: "bpm",
+            color: "#6366f1",
+          },
         ].map((k) => (
           <div
             key={k.label}
@@ -539,7 +556,49 @@ export default function PerformanceAnalytics({ t }) {
       </div>
 
       {/* Trend chart */}
-      <Card title={`${metricLabel} Trend`} t={t}>
+      <Card 
+        title={`${metricLabel} Trend`} 
+        icon={TrendingUp}
+        t={t}
+        action={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {mlHistory.length > 0 && (
+              <div style={{
+                background: '#3b82f620',
+                color: '#3b82f6',
+                padding: '4px 8px',
+                borderRadius: 6,
+                fontSize: 10,
+                fontWeight: 800,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                border: '1px solid #3b82f640'
+              }}>
+                <Zap size={10} fill="#3b82f6" />
+                AI FORECASTING ACTIVE
+              </div>
+            )}
+            <select
+              value={metric}
+              onChange={(e) => setMetric(e.target.value)}
+              style={{
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                color: t.text,
+                fontSize: 11,
+                borderRadius: 6,
+                padding: "2px 6px",
+              }}
+            >
+              <option value="hr">Heart Rate</option>
+              <option value="temp">Skin Temp</option>
+              <option value="resp">Respiration</option>
+              <option value="mg">Motion</option>
+            </select>
+          </div>
+        }
+      >
         {chartData.length === 0 ? (
           <p
             style={{
@@ -602,6 +661,20 @@ export default function PerformanceAnalytics({ t }) {
               {metric === "hr" && (
                 <Line
                   type="monotone"
+                  dataKey="predicted_hr"
+                  name="Predicted Trend (ML)"
+                  stroke="#6366f1"
+                  strokeWidth={5}
+                  strokeDasharray="8 5"
+                  strokeOpacity={0.8}
+                  dot={false}
+                  isAnimationActive={false}
+                  connectNulls
+                />
+              )}
+              {metric === "hr" && (
+                <Line
+                  type="monotone"
                   dataKey="hrRolling"
                   name="5-pt Avg"
                   stroke={`${metricColor}80`}
@@ -609,12 +682,39 @@ export default function PerformanceAnalytics({ t }) {
                   strokeDasharray="4 3"
                   dot={false}
                   isAnimationActive={true}
+                  connectNulls
                 />
               )}
             </AreaChart>
           </ResponsiveContainer>
         )}
       </Card>
+
+      {/* AI Coaching Insight */}
+      <div style={{
+          background: `linear-gradient(135deg, ${t.accent}10 0%, ${t.surface} 100%)`,
+          border: `1px solid ${t.accent}30`,
+          borderRadius: 16,
+          padding: '1.25rem',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 14,
+          boxShadow: t.shadow
+      }}>
+          <div style={{ background: t.accent, padding: 10, borderRadius: 12 }}>
+              <Zap size={20} color="#fff" />
+          </div>
+          <div style={{ flex: 1 }}>
+              <h4 style={{ fontSize: 13, fontWeight: 800, color: t.text, marginBottom: 4, letterSpacing: '0.02em' }}>
+                  AI COACHING INSIGHT
+              </h4>
+              <p style={{ fontSize: 12, color: t.muted, lineHeight: 1.5, margin: 0 }}>
+                  The dashed line on the chart represents your <strong>Predicted Performance Trend</strong>. 
+                  Our ML models analyze your historical heart rate and motion patterns to forecast your cardiovascular response. 
+                  {mlHistory.length > 0 ? " Currently, the engine is tracking your recovery efficiency based on your last session." : " Continue training to enable more granular forecasting."}
+              </p>
+          </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* Monthly averages */}
@@ -888,6 +988,30 @@ export default function PerformanceAnalytics({ t }) {
             </ResponsiveContainer>
           )}
         </Card>
+      </div>
+      {/* Live AI Monitoring Debug Footer */}
+      <div style={{
+        marginTop: 24,
+        padding: 16,
+        background: t.card,
+        border: `1px dashed ${t.border}`,
+        borderRadius: 12,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: mlHistory.length > 0 ? '#10b981' : '#f59e0b' }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: t.text }}>AI Stream Monitor:</span>
+          <span style={{ fontSize: 12, color: t.muted }}>
+            {mlHistory.length > 0 
+              ? `Connected - Receiving live forecasting data (${mlHistory.length} pts cached)` 
+              : 'Waiting for ML Worker to send predictions (requires 7 simulator readings)...'}
+          </span>
+        </div>
+        <div style={{ fontSize: 10, color: t.faint, fontFamily: 'monospace' }}>
+          PATH: athlete_records/{selectedId}/ml_predictions
+        </div>
       </div>
     </main>
   );
