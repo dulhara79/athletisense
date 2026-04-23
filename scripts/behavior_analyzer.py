@@ -121,6 +121,29 @@ class PhysiologicalBehaviorAnalyzer:
             self._is_fitted = False
             raise
 
+    def predict_live_state(self, live_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Evaluates new, live streaming data without re-fitting the scaler or model.
+        """
+        if not self._is_fitted:
+            raise NotFittedError("The model must be trained via discover_patterns first.")
+            
+        if live_df.empty:
+            logger.warning("Empty live stream provided. Skipping evaluation.")
+            return live_df
+
+        logger.info("Evaluating live telemetry behavior state...")
+        
+        eval_data = live_df.dropna(subset=self.features).copy()
+        X_live = eval_data[self.features].values
+        
+        # Notice we use .transform(), NOT .fit_transform()
+        X_scaled = self.scaler.transform(X_live)
+        
+        eval_data['behavior_cluster'] = self.model.predict(X_scaled)
+        
+        return eval_data
+
     def _profile_centroids(self):
         """
         Translates the mathematical cluster centers back into real-world units
