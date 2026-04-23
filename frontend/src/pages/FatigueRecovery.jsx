@@ -93,7 +93,7 @@ function Card({ title, children, t, right }) {
             textTransform: "uppercase",
             letterSpacing: "0.10em",
             color: t.muted,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}
         >
           {title}
@@ -396,7 +396,7 @@ export default function FatigueRecovery({ t }) {
               letterSpacing: "0.10em",
               color: t.muted,
               marginBottom: 12,
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
             Fatigue Score
@@ -420,7 +420,7 @@ export default function FatigueRecovery({ t }) {
                   fontSize: 24,
                   fontWeight: 900,
                   color: statusColor,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                   lineHeight: 1,
                 }}
               >
@@ -514,7 +514,7 @@ export default function FatigueRecovery({ t }) {
                 letterSpacing: "0.10em",
                 color: t.muted,
                 marginBottom: 6,
-                fontFamily: "'DM Mono',monospace",
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}
             >
               {k.label}
@@ -525,7 +525,7 @@ export default function FatigueRecovery({ t }) {
                   fontSize: 30,
                   fontWeight: 800,
                   color: k.color,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                   letterSpacing: "-1px",
                 }}
               >
@@ -574,7 +574,7 @@ export default function FatigueRecovery({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -772,7 +772,7 @@ export default function FatigueRecovery({ t }) {
                       fontSize: 12,
                       fontWeight: 700,
                       color: barColor,
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
                     }}
                   >
                     {c.value.toFixed(2)}
