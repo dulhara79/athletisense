@@ -105,7 +105,10 @@ cd ../frontend && npm install
 cd backend && npm start
 
 # Terminal B (ML Worker)
-cd backend/src/models && python ml_worker.py
+python -m venv venv
+venv\Scripts\activate
+pip install firebase-admin pandas numpy joblib scikit-learn
+cd backend/src/models && python -m ml_worker
 
 # Terminal C (Frontend)
 cd frontend && npm run dev
