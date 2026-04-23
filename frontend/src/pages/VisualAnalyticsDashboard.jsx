@@ -568,7 +568,7 @@ export default function VisualAnalyticsDashboard({ t }) {
                     stroke={athleteColor(id, allIds)}
                     strokeWidth={2}
                     dot={false}
-                    isAnimationActive={false}
+                    isAnimationActive={true}
                     connectNulls
                   />
                 );
@@ -843,7 +843,7 @@ export default function VisualAnalyticsDashboard({ t }) {
                       stroke={athleteColor(id, allIds)}
                       strokeWidth={1.5}
                       dot={false}
-                      isAnimationActive={false}
+                      isAnimationActive={true}
                       connectNulls
                     />
                   );
