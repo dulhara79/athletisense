@@ -12,7 +12,7 @@ export const useNotifications = () => useContext(NotificationContext);
  * Monitors all athlete data and manages a unified notification history + sound alerts.
  */
 export const NotificationProvider = ({ children }) => {
-  const { liveData, athletes } = useAthleteData();
+  const { liveData, athletes, mlInsights } = useAthleteData();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [toasts, setToasts] = useState([]);
@@ -60,7 +60,7 @@ export const NotificationProvider = ({ children }) => {
       const latest = records.at(-1);
       if (!latest) return;
 
-      const activeAlerts = getAlerts(latest).filter(a => a.level !== "info");
+      const activeAlerts = getAlerts(latest, mlInsights[athleteId]).filter(a => a.level !== "info");
       if (!activeAlerts.length) return;
 
       if (!notifiedAlerts.current.has(athleteId)) {
