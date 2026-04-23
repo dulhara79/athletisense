@@ -726,15 +726,6 @@ export default function AthletiSenseDashboard({ t }) {
         </div>
       </div>
 
-      <div style={{ marginBottom: '24px' }}>
-        <AIInsightsPanel
-          mlData={mlInsights?.[selectedId]} 
-          athleteName={athleteName}         
-          currentHR={bpm}
-          t={t}
-        />
-      </div>
-
       {/* ── Athlete selector + timer + status ── */}
       <div
         style={{
@@ -1083,6 +1074,15 @@ export default function AthletiSenseDashboard({ t }) {
           }
           color="#6366f1"
           icon={TrendingUp}
+          t={t}
+        />
+      </div>
+
+      <div style={{ width: "100%" }}>
+        <AIInsightsPanel
+          mlData={mlInsights?.[selectedId]} 
+          athleteName={athleteName}         
+          currentHR={bpm}
           t={t}
         />
       </div>
@@ -1458,16 +1458,8 @@ export default function AthletiSenseDashboard({ t }) {
         </div>
       </div>
 
-      {/* ── AI Insights & Alerts ── */}
+      {/* ── Alerts ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {mlInsights?.[selectedId] && (
-          <AIInsightsPanel 
-            mlData={mlInsights[selectedId]} 
-            athleteName={athletes.find(a => a.id === selectedId)?.name || selectedId}
-            t={t} 
-          />
-        )}
-        
         <div
           style={{
             background: t.card,
