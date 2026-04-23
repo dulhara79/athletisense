@@ -89,7 +89,7 @@ function Card({ title, children, t, right, span }) {
             textTransform: "uppercase",
             letterSpacing: "0.10em",
             color: t.muted,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}
         >
           {title}
@@ -364,7 +364,7 @@ export default function MultiAthleteComparison({ t }) {
                       fontSize: 12,
                       fontWeight: 800,
                       color: t.text,
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
                     }}
                   >
                     {m.value}
@@ -478,7 +478,7 @@ export default function MultiAthleteComparison({ t }) {
                         fontSize: 11,
                         color: s.color,
                         fontWeight: 700,
-                        fontFamily: "'DM Mono',monospace",
+                        fontFamily: "'Plus Jakarta Sans', sans-serif",
                       }}
                     >
                       {s.avgHR ?? "--"} bpm
@@ -593,7 +593,7 @@ export default function MultiAthleteComparison({ t }) {
                       borderBottom: `1px solid ${t.border}`,
                       cursor: "pointer",
                       whiteSpace: "nowrap",
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
                     }}
                   >
                     {col}
@@ -665,7 +665,7 @@ export default function MultiAthleteComparison({ t }) {
                       borderBottom: `1px solid ${t.border}`,
                       fontWeight: 700,
                       color: "#ef4444",
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
                     }}
                   >
                     {s.avgHR ?? "--"}
@@ -676,7 +676,7 @@ export default function MultiAthleteComparison({ t }) {
                       borderBottom: `1px solid ${t.border}`,
                       fontWeight: 600,
                       color: t.text,
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
                     }}
                   >
                     {s.maxHR ?? "--"}
@@ -686,7 +686,7 @@ export default function MultiAthleteComparison({ t }) {
                       padding: "10px 12px",
                       borderBottom: `1px solid ${t.border}`,
                       color: "#f59e0b",
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
                     }}
                   >
                     {s.avgTemp ?? "--"}
@@ -696,7 +696,7 @@ export default function MultiAthleteComparison({ t }) {
                       padding: "10px 12px",
                       borderBottom: `1px solid ${t.border}`,
                       color: "#3b82f6",
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
                     }}
                   >
                     {s.avgResp ?? "--"}
@@ -707,7 +707,7 @@ export default function MultiAthleteComparison({ t }) {
                       borderBottom: `1px solid ${t.border}`,
                       fontWeight: 700,
                       color: t.text,
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
                     }}
                   >
                     {s.fatigue ?? "--"}%
@@ -746,7 +746,7 @@ export default function MultiAthleteComparison({ t }) {
                       padding: "10px 12px",
                       borderBottom: `1px solid ${t.border}`,
                       color: t.muted,
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
                     }}
                   >
                     {s.dataPoints}
