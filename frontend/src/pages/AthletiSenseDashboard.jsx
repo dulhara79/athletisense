@@ -73,7 +73,7 @@ function ChartTip({ active, payload, label, t }) {
           fontSize: 10,
           color: t.muted,
           marginBottom: 4,
-          fontFamily: "'DM Mono',monospace",
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
         }}
       >
         {label}
@@ -135,7 +135,7 @@ function StatCard({
           textTransform: "uppercase",
           color: t.muted,
           marginBottom: 6,
-          fontFamily: "'DM Mono',monospace",
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
         }}
       >
         {title}
@@ -154,7 +154,7 @@ function StatCard({
             fontWeight: 800,
             lineHeight: 1,
             color,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
             letterSpacing: "-2px",
           }}
         >
@@ -238,7 +238,7 @@ function SessionTimer({ t }) {
           textTransform: "uppercase",
           color: t.muted,
           marginBottom: 6,
-          fontFamily: "'DM Mono',monospace",
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
         }}
       >
         Session Timer
@@ -251,7 +251,7 @@ function SessionTimer({ t }) {
             color: t.text,
             letterSpacing: "-1px",
             fontVariantNumeric: "tabular-nums",
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}
         >
           {h}:{m}:{s}
@@ -350,7 +350,7 @@ function HRGauge({ bpm = 0, isResting = false, t }) {
         fontSize="36"
         fontWeight="800"
         fill={zone.color}
-        fontFamily="'DM Mono',monospace"
+        fontFamily="'Plus Jakarta Sans', sans-serif"
         letterSpacing="-1"
       >
         {bpm || "--"}
@@ -362,7 +362,7 @@ function HRGauge({ bpm = 0, isResting = false, t }) {
         fontSize="9"
         fontWeight="700"
         fill={t.muted}
-        fontFamily="'DM Mono',monospace"
+        fontFamily="'Plus Jakarta Sans', sans-serif"
         letterSpacing="0.08em"
       >
         {zone.label}
@@ -413,7 +413,7 @@ function MotionGaugeViz({ value = 0, t }) {
         fontSize="36"
         fontWeight="800"
         fill={color}
-        fontFamily="'DM Mono',monospace"
+        fontFamily="'Plus Jakarta Sans', sans-serif"
       >
         {(pct * 10).toFixed(1)}
       </text>
@@ -424,7 +424,7 @@ function MotionGaugeViz({ value = 0, t }) {
         fontSize="9"
         fontWeight="700"
         fill={t.muted}
-        fontFamily="'DM Mono',monospace"
+        fontFamily="'Plus Jakarta Sans', sans-serif"
         letterSpacing="0.08em"
       >
         INTENSITY
@@ -479,7 +479,7 @@ function AlertsPanel({ latest, mlInsight, t }) {
             textTransform: "uppercase",
             letterSpacing: "0.10em",
             color: t.muted,
-            fontFamily: "'DM Mono',monospace",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}
         >
           Alerts Panel
@@ -765,7 +765,7 @@ export default function AthletiSenseDashboard({ t }) {
               textTransform: "uppercase",
               color: t.muted,
               marginBottom: 8,
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
             {isAdmin ? "Athlete Select" : "Viewing As"}
@@ -961,7 +961,7 @@ export default function AthletiSenseDashboard({ t }) {
               textTransform: "uppercase",
               color: t.muted,
               marginBottom: 8,
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
             Status
@@ -1111,7 +1111,7 @@ export default function AthletiSenseDashboard({ t }) {
               color: t.muted,
               marginBottom: 8,
               alignSelf: "flex-start",
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
             HR Gauge
@@ -1142,7 +1142,7 @@ export default function AthletiSenseDashboard({ t }) {
                 letterSpacing: "0.10em",
                 textTransform: "uppercase",
                 color: t.muted,
-                fontFamily: "'DM Mono',monospace",
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}
             >
               Motion Chart
@@ -1151,7 +1151,7 @@ export default function AthletiSenseDashboard({ t }) {
               style={{
                 fontSize: 9,
                 color: t.faint,
-                fontFamily: "'DM Mono',monospace",
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}
             >
               {chartData.length} readings
@@ -1178,7 +1178,7 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 9,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1225,7 +1225,7 @@ export default function AthletiSenseDashboard({ t }) {
               color: t.muted,
               marginBottom: 8,
               alignSelf: "flex-start",
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
             Motion Gauge
@@ -1254,7 +1254,7 @@ export default function AthletiSenseDashboard({ t }) {
               textTransform: "uppercase",
               color: t.muted,
               marginBottom: 12,
-              fontFamily: "'DM Mono',monospace",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
             HR vs Motion
@@ -1280,7 +1280,7 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 8,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                 }}
                 tickLine={false}
                 axisLine={false}
@@ -1366,7 +1366,7 @@ export default function AthletiSenseDashboard({ t }) {
                 letterSpacing: "0.10em",
                 textTransform: "uppercase",
                 color: t.muted,
-                fontFamily: "'DM Mono',monospace",
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}
             >
               Breathing Rate
@@ -1396,7 +1396,7 @@ export default function AthletiSenseDashboard({ t }) {
                 tick={{
                   fontSize: 8,
                   fill: t.faint,
-                  fontFamily: "'DM Mono',monospace",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                 }}
                 tickLine={false}
                 axisLine={false}
