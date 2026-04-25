@@ -72,3 +72,6 @@ __pycache__/
 *.pkl
 *.png
 *.csv
+backend/nexora-firebase-adminsdk.json
+backend/nexora-firebase-adminsdk.json
+*.json
