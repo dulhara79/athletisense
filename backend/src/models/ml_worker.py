@@ -14,12 +14,19 @@ import os
 import firebase_admin
 from firebase_admin import credentials, db
 
+from dotenv import load_dotenv
+
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] ML Worker: %(message)s')
 
 # --- Configuration ---
-FIREBASE_DB_URL = 'https://performance-monitering-glove-default-rtdb.firebaseio.com/'
-CRED_PATH = "C:/Users/dulha/Downloads/GitHub/athletisense/backend/performance-monitering-glove-firebase-adminsdk.json"
+# Load environment variables from backend/.env
+# Since ml_worker.py is in backend/src/models/, we look two levels up.
+env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '.env')
+load_dotenv(env_path)
+
+FIREBASE_DB_URL = os.getenv('FIREBASE_DATABASE_URL', 'https://performance-monitering-glove-default-rtdb.firebaseio.com/')
+CRED_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', './performance-monitering-glove-firebase-adminsdk.json'))
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Global state to prevent re-processing same data

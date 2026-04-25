@@ -1,0 +1,4 @@
+  // "scripts": {
+  //   "start": "concurrently \"node src/server.js\" \"node simulate_device.js\"",
+  //   "dev": "concurrently \"nodemon src/server.js\" \"node simulate_device.js\""
+  // },

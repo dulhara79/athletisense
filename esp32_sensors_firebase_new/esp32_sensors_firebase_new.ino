@@ -2,56 +2,13 @@
  * ============================================================
  * PROJECT: Performance Monitoring Chest Strap
  * ============================================================
- *
- * WHAT THIS PROJECT DOES:
- * This is firmware for a wearable chest strap that monitors an
- * athlete's health and performance in real time. It collects data
- * from 4 sensors, displays live readings on a tiny screen, and
- * uploads everything to the cloud o(Firebase) nce per minute.
- *
- * SENSORS USED:
- * ┌─────────────┬──────────────────────────────────────────────┐
- * │ AD8232      │ ECG / Heart Rate sensor. Reads the tiny       │
- * │             │ electrical signals from your heart through    │
- * │             │ sticky electrode pads on your skin. It        │
- * │             │ produces a wave (ECG waveform) and we detect  │
- * │             │ each heartbeat peak to calculate BPM.         │
- * ├─────────────┼──────────────────────────────────────────────┤
- * │ BMI160      │ Motion sensor (IMU). Measures acceleration    │
- * │             │ (how fast you're moving in 3D space) and      │
- * │             │ rotation speed. Also counts your steps using  │
- * │             │ its built-in step detection algorithm.        │
- * ├─────────────┼──────────────────────────────────────────────┤
- * │ DS18B20     │ Skin temperature sensor. A tiny waterproof    │
- * │             │ digital thermometer that reads your body      │
- * │             │ surface temperature to 0.1°C accuracy.        │
- * ├─────────────┼──────────────────────────────────────────────┤
- * │ BF350       │ Strain gauge / Respiration sensor. A thin     │
- * │(Strain Gauge)│ resistive strip that changes resistance when │
- * │             │ stretched. Strapped to the chest, it flexes   │
- * │             │ with every breath, letting us measure your    │
- * │             │ breathing rate.                               │
- * └─────────────┴──────────────────────────────────────────────┘
- *
- * DISPLAY:
- * SSD1306  — A tiny 0.96 inch OLED screen (128×64 pixels) that
- *            cycles through 4 pages: heart rate, breathing rate,
- *            motion/steps, and temperature/system info.
- *
- * MICROCONTROLLER:
- * ESP32-C3 Mini-1 — A small, low-power WiFi-capable chip that
- *                   runs all this code and connects to the cloud.
- *
- * WIRING (GPIO pin numbers):
- *   AD8232 analog out  → GPIO 4
- *   AD8232 leads-off+  → GPIO 5
- *   AD8232 leads-off-  → GPIO 6
- *   Strain gauge       → GPIO 3
- *   DS18B20 data       → GPIO 2
- *   BMI160 + OLED SDA  → GPIO 8
- *   BMI160 + OLED SCL  → GPIO 9
- *
- * Version: 2.7.0
+ * Hardware:
+ * MCU      : ESP32-C3 Mini-1
+ * AD8232   : ECG / Heart Rate   (Analog, GPIO 7, LO+ 5, LO- 6)
+ * BMI160   : IMU + Step Counter (I2C, SDA=8, SCL=9, 0x69)
+ * DS18B20  : Skin Temperature   (OneWire, GPIO 2)
+ * BF350    : Strain Gauge       (Analog, GPIO 3)
+ * SSD1306  : 0.96" OLED 128x64  (I2C, SDA=8, SCL=9, 0x3C)
  * ============================================================
  */
 
@@ -78,14 +35,14 @@
 namespace Config {
 
   // ---------- WiFi credentials ----------
-  constexpr char SSID[]         = "SLT FIBER";
-  constexpr char PASSWORD[]     = "20hOmewIFi25";
+  constexpr char SSID[]         = "Meow";
+  constexpr char PASSWORD[]     = "TD2001:)";
 
   // ---------- Firebase (cloud database) ----------
   // These values come from your Firebase project settings.
-  constexpr char FB_API_KEY[]   = "AIzaSyDJGddPuRmkgzEoia00gJVYqvil3D_c9ek";
-  constexpr char FB_DB_URL[]    = "https://performance-monitering-glove-default-rtdb.firebaseio.com";
-  constexpr char FB_EMAIL[]     = "esp32@glove.com";
+  constexpr char FB_API_KEY[]   = "AIzaSyC1669EWz-gX0e1SpKqHzMsjsOPNpuVIII";
+  constexpr char FB_DB_URL[]    = "https://nexora-efcc3-default-rtdb.firebaseio.com";
+  constexpr char FB_EMAIL[]     = "esp32@device.com";
   constexpr char FB_PASSWORD[]  = "SuperSecret123!";
 
   // Unique ID for the athlete wearing this strap.
@@ -96,8 +53,8 @@ namespace Config {
   constexpr uint32_t UPLOAD_INTERVAL    = 60000UL;  // Upload to Firebase every 60 seconds
   constexpr uint32_t OLED_INTERVAL      = 200UL;    // Refresh the screen every 200ms (5 fps)
   constexpr uint32_t SERIAL_INTERVAL    = 500UL;    // Print debug info to USB every 500ms
-  constexpr uint32_t SENSOR_INTERVAL    = 100UL;    // Read IMU, temp, strain every 100ms
-  constexpr uint32_t OLED_PAGE_DURATION = 4000UL;   // Stay on each OLED page for 4 seconds
+  constexpr uint32_t SENSOR_INTERVAL    = 1000UL;    // Read IMU, temp, strain every 100ms
+  constexpr uint32_t OLED_PAGE_DURATION = 10000UL;   // Stay on each OLED page for 4 seconds
 
   // ---------- Time zone (NTP clock sync) ----------
   // Sri Lanka is UTC+5:30. Change GMT_OFFSET_SEC for your timezone.
@@ -112,14 +69,14 @@ namespace Config {
   // even if there is an unexpected software crash.
   constexpr uint32_t WDT_TIMEOUT_SEC = 30;
 
-  // ---------- GPIO pin assignments ----------
-  constexpr uint8_t SDA_PIN     = 8;  // I2C data line (shared by BMI160 and OLED)
-  constexpr uint8_t SCL_PIN     = 9;  // I2C clock line (shared by BMI160 and OLED)
-  constexpr uint8_t DS18B20_PIN = 2;  // Temperature sensor data pin (OneWire protocol)
-  constexpr uint8_t STRAIN_PIN  = 3;  // Strain gauge analog output (breathing)
-  constexpr uint8_t ECG_PIN     = 4;  // AD8232 ECG analog output (heart signal)
-  constexpr uint8_t LO_PLUS     = 5;  // AD8232 "leads off" detection, positive electrode
-  constexpr uint8_t LO_MINUS    = 6;  // AD8232 "leads off" detection, negative electrode
+  // Pins
+  constexpr uint8_t SDA_PIN     = 8;
+  constexpr uint8_t SCL_PIN     = 9;
+  constexpr uint8_t DS18B20_PIN = 2;
+  constexpr uint8_t STRAIN_PIN  = 3;
+  constexpr uint8_t ECG_PIN     = 4; // AD8232 Analog Out
+  constexpr uint8_t LO_PLUS     = 5; // AD8232 Leads-off (+)
+  constexpr uint8_t LO_MINUS    = 6; // AD8232 Leads-off (-)
 
   // ---------- I2C device addresses ----------
   // Every I2C device has a unique address on the same bus.
@@ -155,7 +112,7 @@ namespace Config {
   // Set as a fraction of the signal range: 0.60 = 60% of the way
   // from the signal minimum to maximum must be exceeded to count as a beat.
   // Lower value = more sensitive (catches weak beats but may false-trigger).
-  constexpr float ECG_THRESH_RATIO = 0.60f;
+  constexpr float ECG_THRESH_RATIO = 0.40f;
 
   // Hysteresis prevents a single beat from being counted twice.
   // After a peak is detected, the signal must drop below
@@ -331,6 +288,18 @@ String getShortTime() {
   return String(buf);
 }
 
+// Shows a small status message on the "Initializing" screen.
+// Helps find exactly where the setup() is hanging.
+void setOledStatus(const char* msg) {
+  display.fillRect(0, 40, 128, 20, SSD1306_BLACK); // Clear previous status line
+  display.setCursor(10, 42);
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.println(msg);
+  display.display();
+  Serial.printf("[Status] %s\n", msg);
+}
+
 
 // ============================================================
 //  WiFi
@@ -340,23 +309,25 @@ String getShortTime() {
 // Updates health.wifi so the rest of the code knows if it worked.
 void connectWiFi() {
   Serial.printf("[WiFi] Connecting to: %s\n", Config::SSID);
+  WiFi.disconnect(true); // Clean start
+  delay(1000);
   WiFi.mode(WIFI_STA);
   WiFi.begin(Config::SSID, Config::PASSWORD);
 
   uint8_t retries = 0;
-  while (WiFi.status() != WL_CONNECTED && retries < 30) {
+  while (WiFi.status() != WL_CONNECTED && retries < 40) { // Increased to 20 seconds
     delay(500);
     Serial.print(".");
     retries++;
-    esp_task_wdt_reset(); // Pet the watchdog so it doesn't reboot us while we wait
+    esp_task_wdt_reset();
   }
 
   health.wifi = (WiFi.status() == WL_CONNECTED);
   if (health.wifi) {
-    Serial.printf("\n[WiFi] Connected. IP: %s  RSSI: %d dBm\n",
-                  WiFi.localIP().toString().c_str(), WiFi.RSSI());
+    Serial.printf("\n[WiFi] Connected! IP: %s\n", WiFi.localIP().toString().c_str());
   } else {
-    Serial.println("\n[WiFi] FAILED — offline mode.");
+    // 1=No SSID, 4=Wrong Password, 6=Disconnected
+    Serial.printf("\n[WiFi] FAILED! Status Code: %d\n", (int)WiFi.status());
   }
 }
 
@@ -402,29 +373,33 @@ void buildSensorJson(FirebaseJson& json, const char* timestamp) {
   json.set("timestamp",   timestamp);
   json.set("fw_version",  "2.7.0");
 
-  // Heart rate
+  // Heart rate (AD8232)
+  json.set("heart_rate/sensor_id",       "AD8232");
   json.set("heart_rate/bpm",             hrData.bpm);
   json.set("heart_rate/bpm_avg",         hrData.bpmAvg);
   json.set("heart_rate/ecg_value",       hrData.ecgSmoothed);
   json.set("heart_rate/leads_connected", hrData.leadsConnected);
 
-  // Breathing / respiration
+  // Breathing / respiration (BF350)
+  json.set("respiration/sensor_id",     "BF350");
   json.set("respiration/rate_instant",  respData.rateInstant);
   json.set("respiration/rate_avg",      respData.rateAvg);
   json.set("respiration/valid_breaths", (int)respData.validBreaths);
   json.set("respiration/strain_raw",    strainData.raw);
   json.set("respiration/strain_v",      strainData.voltage);
 
-  // Motion (accelerometer + gyroscope + steps)
-  json.set("motion/accel_x",   imuData.ax);
-  json.set("motion/accel_y",   imuData.ay);
-  json.set("motion/accel_z",   imuData.az);
-  json.set("motion/gyro_x",    imuData.gx);
-  json.set("motion/gyro_y",    imuData.gy);
-  json.set("motion/gyro_z",    imuData.gz);
-  json.set("motion/step_count",(int)imuData.stepCount);
+  // Motion (BMI160: accelerometer + gyroscope + steps)
+  json.set("motion/sensor_id",  "BMI160");
+  json.set("motion/accel_x",    imuData.ax);
+  json.set("motion/accel_y",    imuData.ay);
+  json.set("motion/accel_z",    imuData.az);
+  json.set("motion/gyro_x",     imuData.gx);
+  json.set("motion/gyro_y",     imuData.gy);
+  json.set("motion/gyro_z",     imuData.gz);
+  json.set("motion/step_count", (int)imuData.stepCount);
 
-  // Temperature
+  // Temperature (DS18B20)
+  json.set("temperature/sensor_id",  "DS18B20");
   json.set("temperature/celsius",    tempData.celsius);
   json.set("temperature/fahrenheit", tempData.fahrenheit);
   json.set("temperature/valid",      tempData.valid);
@@ -542,162 +517,100 @@ void initAD8232() {
 // Reads the ECG signal, filters it, detects R-peaks (heartbeats),
 // and calculates BPM. All logic is explained step-by-step below.
 void updateHeartRate() {
-  if (!health.ad8232) return; // Skip if sensor failed to initialize
+  if (!health.ad8232) return;
 
-  // Ring buffer stores the last 8 raw ECG samples for averaging (noise filter)
-  static int    history[Config::ECG_FILTER_SIZE] = {0};
-  static uint8_t histIdx = 0;  // Current write position in the ring buffer
+  static int history[Config::ECG_FILTER_SIZE] = {0};
+  static uint8_t histIdx = 0;
 
-  // Adaptive signal range tracking: sigMax and sigMin follow the
-  // ECG waveform's peak and floor. They start at realistic values
-  // for the AD8232 output on a 3.3V ESP32-C3 ADC mid-rail (~2048).
   static int sigMax = 2400;
   static int sigMin = 1800;
 
-  // State variable: are we currently above the detection threshold?
-  // Used to detect the rising edge (start of an R-peak) only once.
   static bool aboveThreshold = false;
-
-  // Remembers whether leads were connected last sample.
-  // Used to detect the moment leads are freshly attached.
-  static bool wasConnected = false;
 
   unsigned long now = millis();
 
-  // Only sample at the configured rate (every ECG_SAMPLE_INTERVAL ms)
+  // -------- SAMPLING CONTROL --------
   if (now - lastEcgRead < Config::ECG_SAMPLE_INTERVAL) return;
   lastEcgRead = now;
 
-  // ── Step 1: Check if electrode pads are touching the skin ──────
-  // LO+ and LO- are HIGH when an electrode is OFF the body.
-  // If either is HIGH, the leads are not properly connected.
-  bool loPlus    = (digitalRead(Config::LO_PLUS)  == HIGH);
-  bool loMinus   = (digitalRead(Config::LO_MINUS) == HIGH);
-  bool connected = !(loPlus || loMinus); // Both must be LOW for good contact
+  // -------- LEADS CHECK --------
+  bool loPlus  = digitalRead(Config::LO_PLUS);
+  bool loMinus = digitalRead(Config::LO_MINUS);
+  bool connected = !(loPlus || loMinus);
 
-  // If leads were just newly attached, record the time.
-  // BPM detection will be suppressed for ECG_SETTLE_MS after this.
-  if (connected && !wasConnected) {
+  // ✅ FIXED: Record timestamp when leads are first connected
+  if (connected && !hrData.leadsConnected) {
     hrData.leadsConnectedAt = now;
-    Serial.println("[AD8232] Leads connected — settling...");
   }
-  wasConnected          = connected;
   hrData.leadsConnected = connected;
+  if (!connected) return;
 
-  // If leads are off, clear all readings and wait for reconnection
-  if (!connected) {
-    hrData.ecgValue    = 0;
-    hrData.ecgSmoothed = 0;
-    hrData.bpm         = 0.0f;
-    hrData.bpmAvg      = 0;
-    hrData.validBeats  = 0;
-    hrData.rateSpot    = 0;
-    hrData.lastBeat    = 0;
-    for (byte i = 0; i < Config::BPM_RATE_SIZE; i++) hrData.rates[i] = 0.0f;
+  // -------- ADC READ FIX --------
+  analogRead(Config::ECG_PIN); // dummy read
+  int raw = analogRead(Config::ECG_PIN);
 
-    aboveThreshold = false;
+  hrData.ecgValue = raw;
 
-    // Reset adaptive range to mid-rail values, ready for next connection
-    sigMax = 2348;
-    sigMin = 1748;
-    for (uint8_t i = 0; i < Config::ECG_FILTER_SIZE; i++) history[i] = 0;
-    histIdx = 0;
-    return;
+  // -------- FILTER --------
+  history[histIdx] = raw;
+  histIdx = (histIdx + 1) % Config::ECG_FILTER_SIZE;
+
+  int sum = 0;  // ✅ FIXED
+  for (int i = 0; i < Config::ECG_FILTER_SIZE; i++) {
+    sum += history[i];
   }
 
-  // ── Step 2: Read the raw ECG signal from the AD8232 ───────────
-  // Returns a number 0–4095 representing the voltage on the pin.
-  hrData.ecgValue = analogRead(Config::ECG_PIN);
-
-  // ── Step 3: Moving-average filter (noise reduction) ────────────
-  // We store the last 8 samples and use their average instead of
-  // the raw value. This smooths out high-frequency electrical noise
-  // and motion artefacts without significantly blurring the heartbeat.
-  history[histIdx] = hrData.ecgValue;
-  histIdx          = (histIdx + 1) % Config::ECG_FILTER_SIZE;
-
-  int sum = 0;
-  for (uint8_t i = 0; i < Config::ECG_FILTER_SIZE; i++) sum += history[i];
   hrData.ecgSmoothed = sum / Config::ECG_FILTER_SIZE;
 
-  // ── Step 4: Adaptive threshold tracking ────────────────────────
-  // The ECG signal amplitude varies between people and over time.
-  // Instead of a fixed threshold, we track the signal's peak (sigMax)
-  // and floor (sigMin) and set the detection threshold as a fraction
-  // of that range. This makes beat detection work for any signal strength.
-  //
-  // Each sample, we nudge sigMax down and sigMin up by ECG_ADAPT_DECAY.
-  // This causes them to slowly converge on the actual signal range.
-  // When a new peak or valley is seen, sigMax/sigMin jump to match it.
-  sigMax -= Config::ECG_ADAPT_DECAY; // Slowly lower the tracked peak
-  sigMin += Config::ECG_ADAPT_DECAY; // Slowly raise the tracked floor
+  // -------- ADAPTIVE RANGE --------
+  sigMax -= Config::ECG_ADAPT_DECAY;
+  sigMin += Config::ECG_ADAPT_DECAY;
 
-  // Ensure there is always at least 100 ADC counts of range.
-  // Without this guard, if the signal is flat, sigMax and sigMin could
-  // converge to the same value, causing divide-by-zero issues.
   if (sigMax < sigMin + 100) sigMax = sigMin + 100;
 
-  // Expand the tracked range if we see a new extreme
   if (hrData.ecgSmoothed > sigMax) sigMax = hrData.ecgSmoothed;
   if (hrData.ecgSmoothed < sigMin) sigMin = hrData.ecgSmoothed;
 
-  int range       = sigMax - sigMin;
-  int adaptThresh = sigMin + (int)(range * Config::ECG_THRESH_RATIO);
-  int hysteresis  = (int)(range * Config::ECG_HYST_RATIO);
-  hrData.adaptThresh = adaptThresh; // Store for display/debug
+  int range  = sigMax - sigMin;
+  int thresh = sigMin + (int)(range * Config::ECG_THRESH_RATIO);
+  int hyst   = (int)(range * Config::ECG_HYST_RATIO);
 
-  // ── Step 5: R-Peak (heartbeat) detection ───────────────────────
-  // The R-peak is the sharp tall spike in an ECG waveform — the
-  // main electrical event of each heartbeat.
-  //
-  // We look for the signal crossing ABOVE the threshold on a rising edge.
-  // "aboveThreshold" prevents the same peak from being counted multiple times.
-  if (hrData.ecgSmoothed > adaptThresh && !aboveThreshold) {
-    aboveThreshold = true; // We are now above threshold — start of a potential R-peak
+  // -------- PEAK DETECTION --------
+  if (hrData.ecgSmoothed > thresh && !aboveThreshold) {
+    aboveThreshold = true;
 
-    // Check whether the settle period has elapsed since leads connected.
-    // During settle the adaptive tracker is still learning the signal range,
-    // so BPM calculations would be unreliable.
-    bool settled = (now - hrData.leadsConnectedAt) >= Config::ECG_SETTLE_MS;
+    bool settled = (now - hrData.leadsConnectedAt) > Config::ECG_SETTLE_MS;
 
-    // 250ms refractory period: ignore any re-trigger within 250ms.
-    // The human heart cannot beat faster than ~4 times per second (240 BPM),
-    // so any threshold crossing within 250ms of the last beat is noise.
     if (settled && (now - hrData.lastBeat > 250)) {
       if (hrData.lastBeat != 0) {
-        // Calculate BPM from the time between this beat and the previous one.
-        // BPM = 60 seconds / (beat interval in seconds)
-        float deltaSec = (now - hrData.lastBeat) / 1000.0f;
-        float instBPM  = 60.0f / deltaSec;
 
-        // Only accept physiologically plausible values
-        if (instBPM >= Config::BPM_MIN && instBPM <= Config::BPM_MAX) {
-          hrData.bpm = instBPM;
+        float dt  = (now - hrData.lastBeat) / 1000.0f;
+        float bpm = 60.0f / dt;
 
-          // Store in ring buffer and update rolling average
-          hrData.rates[hrData.rateSpot++] = instBPM;
+        if (bpm >= Config::BPM_MIN && bpm <= Config::BPM_MAX) {
+
+          hrData.bpm = bpm;
+
+          hrData.rates[hrData.rateSpot++] = bpm;
           hrData.rateSpot %= Config::BPM_RATE_SIZE;
-          if (hrData.validBeats < Config::BPM_RATE_SIZE) hrData.validBeats++;
 
-          float bpmSum = 0;
-          for (byte i = 0; i < hrData.validBeats; i++) bpmSum += hrData.rates[i];
-          hrData.bpmAvg = (int)(bpmSum / (float)hrData.validBeats);
+          if (hrData.validBeats < Config::BPM_RATE_SIZE)
+            hrData.validBeats++;
+
+          float s = 0;
+          for (int i = 0; i < hrData.validBeats; i++) s += hrData.rates[i];
+
+          hrData.bpmAvg = s / hrData.validBeats;
         }
       }
-      hrData.lastBeat = now; // Record this beat's timestamp
-    } else if (!settled && hrData.lastBeat == 0) {
-      // Even during settling, record the first beat time so that
-      // the very first post-settle interval is measured correctly.
+
       hrData.lastBeat = now;
     }
 
-  } else if (hrData.ecgSmoothed < adaptThresh - hysteresis) {
-    // Signal dropped below (threshold minus hysteresis) — reset the
-    // above-threshold flag so the next R-peak can be detected.
+  } else if (hrData.ecgSmoothed < thresh - hyst) {
     aboveThreshold = false;
   }
 }
-
 
 // ============================================================
 //  SENSOR: BMI160 (Accelerometer, Gyroscope, Step Counter)
@@ -929,6 +842,10 @@ void drawOledPage0() {
   display.setTextSize(1);
   display.setCursor(2, 2);  display.print("HEART RATE");
   display.setCursor(72, 2); display.print(getShortTime());
+
+  // Activity Indicator (blinking dot)
+  if ((millis() / 500) % 2 == 0) display.fillCircle(124, 5, 2, SSD1306_BLACK);
+
   display.setTextColor(SSD1306_WHITE);
 
   if (hrData.leadsConnected) {
@@ -981,6 +898,10 @@ void drawOledPage1() {
   display.setTextSize(1);
   display.setCursor(2, 2);  display.print("RESPIRATION");
   display.setCursor(72, 2); display.print(getShortTime());
+  
+  // Activity Indicator (blinking dot)
+  if ((millis() / 500) % 2 == 0) display.fillCircle(124, 5, 2, SSD1306_BLACK);
+
   display.setTextColor(SSD1306_WHITE);
 
   display.setTextSize(3);
@@ -1019,6 +940,10 @@ void drawOledPage2() {
   display.setTextSize(1);
   display.setCursor(2, 2);  display.print("MOTION");
   display.setCursor(72, 2); display.print(getShortTime());
+  
+  // Activity Indicator (blinking dot)
+  if ((millis() / 500) % 2 == 0) display.fillCircle(124, 5, 2, SSD1306_BLACK);
+
   display.setTextColor(SSD1306_WHITE);
 
   display.setCursor(0, 15); display.setTextSize(1); display.print("STEPS");
@@ -1045,6 +970,10 @@ void drawOledPage3() {
   display.setTextSize(1);
   display.setCursor(2, 2);  display.print("TEMP & SYSTEM");
   display.setCursor(90, 2); display.print(getShortTime().substring(0, 5)); // Show HH:MM only (fits)
+  
+  // Activity Indicator (blinking dot)
+  if ((millis() / 500) % 2 == 0) display.fillCircle(124, 5, 2, SSD1306_BLACK);
+
   display.setTextColor(SSD1306_WHITE);
 
   // Temperature (or error message if sensor not responding)
@@ -1141,35 +1070,44 @@ void setup() {
   // Start the I2C bus for the BMI160 and OLED (both share SDA/SCL)
   Wire.begin(Config::SDA_PIN, Config::SCL_PIN);
   Wire.setClock(100000); // 100 kHz — a reliable speed for both devices
+  Wire.setTimeOut(1000); // 1s timeout to prevent I2C hangs
 
   // Set the ADC to 12-bit resolution (0–4095 range for all analog reads)
   analogReadResolution(12);
   // Note: per-pin ADC attenuation is set inside initAD8232()
 
-  // Initialize each hardware component in order.
-  // If any sensor fails, health.xxx stays false and that sensor is skipped.
-  initOLED();      // Display (not critical — code runs without it)
-  initAD8232();    // ECG sensor + ADC attenuation + LO pin config
-  initBMI160();    // Accelerometer / gyroscope / step counter
-  initDS18B20();   // Skin temperature sensor
+  // Initialize the display first so we can show status messages
+  initOLED();
 
-  // Connect to WiFi and sync the clock
+  // 1. Connect WiFi FIRST while power is most stable
+  setOledStatus("WiFi: Connecting...");
   connectWiFi();
   if (health.wifi) {
-    // configTime sets up the NTP client to keep the real-time clock accurate.
-    // The chip will periodically re-sync with pool.ntp.org automatically.
+    setOledStatus("NTP: Syncing...");
     configTime(Config::GMT_OFFSET_SEC, Config::DST_OFFSET_SEC, Config::NTP_SERVER);
-    Serial.println("[NTP] Time sync started...");
   }
 
-  // Connect to Firebase (requires WiFi to already be connected)
+  // 2. Initialize sensors AFTER WiFi
+  setOledStatus("Init Sensors...");
+  initAD8232();
+  
+  setOledStatus("Init IMU...");
+  initBMI160();
+  
+  setOledStatus("Init Temp...");
+  initDS18B20();
+
+  // 3. Connect to Firebase
+  setOledStatus("Firebase: Auth...");
   initFirebase();
 
   // Start the OLED page-rotation timer from now
   lastPageSwitch = millis();
 
+  setOledStatus("Ready!");
+  delay(500);
   Serial.println("[System] Ready. Entering main loop.\n");
-  esp_task_wdt_reset(); // Pet the watchdog after the long setup phase
+  esp_task_wdt_reset();
 }
 
 
@@ -1181,37 +1119,28 @@ void setup() {
 //  This is called "cooperative scheduling" or a "super-loop".
 // ============================================================
 void loop() {
-  esp_task_wdt_reset(); // Pet the watchdog every loop to prevent reboot
+  esp_task_wdt_reset();
 
-  // ECG runs at 100 Hz — checked every single loop iteration.
-  // The function internally checks if it's time to sample (every 10ms).
-  updateHeartRate();
+  updateHeartRate(); // PRIORITY TASK
 
   unsigned long now = millis();
 
-  // Every 100ms: read motion, temperature, and strain/respiration
-  if (now - lastSensor >= Config::SENSOR_INTERVAL) {
+  // REDUCED LOAD
+  if (now - lastSensor >= 150) {
     lastSensor = now;
     updateIMU();
     updateTemperature();
     updateStrain();
   }
 
-  // Every 200ms: refresh the OLED display (5 fps is smooth enough for slow data)
-  if (now - lastOLED >= Config::OLED_INTERVAL) {
+  if (now - lastOLED >= 300) {
     lastOLED = now;
     updateOLED();
   }
 
-  // Every 500ms: print a telemetry line to USB serial for debugging
-  if (now - lastSerial >= Config::SERIAL_INTERVAL) {
+  // DISABLE SERIAL FOR TEST
+  if (now - lastSerial >= 500) {
     lastSerial = now;
     printSerial();
-  }
-
-  // Every 60 seconds: archive old data and upload new readings to Firebase
-  if (now - lastUpload >= Config::UPLOAD_INTERVAL) {
-    lastUpload = now;
-    uploadToFirebase();
   }
 }
