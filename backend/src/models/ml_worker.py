@@ -25,8 +25,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] ML W
 env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '.env')
 load_dotenv(env_path)
 
-FIREBASE_DB_URL = os.getenv('FIREBASE_DATABASE_URL', 'https://performance-monitering-glove-default-rtdb.firebaseio.com/')
-CRED_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', './performance-monitering-glove-firebase-adminsdk.json'))
+FIREBASE_DB_URL = os.getenv('FIREBASE_DATABASE_URL', 'https://performance-monitering-glove-default-rtdb.firebaseio.com/').strip('"')
+CRED_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', './performance-monitering-glove-firebase-adminsdk.json').strip('"'))
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Global state to prevent re-processing same data
@@ -43,14 +43,35 @@ try:
     behavior_pipeline = joblib.load(os.path.join(CURRENT_DIR, "behavior_analyzer_production.joblib"))
     # Load the temporal forecaster for live predictions
     forecaster_model = joblib.load(os.path.join(CURRENT_DIR, "temporal_forecaster_global.joblib"))
-    logging.info("All models (including Forecaster) loaded successfully.")
+    
+    import sklearn
+    logging.info(f"All models (including Forecaster) loaded successfully. sklearn version: {sklearn.__version__}")
 except Exception as e:
     logging.error(f"Failed to load models: {e}")
     exit(1)
 
 # --- 2. Initialize Firebase ---
 try:
-    cred = credentials.Certificate(CRED_PATH)
+    import json
+    if not os.path.exists(CRED_PATH):
+        logging.error(f"Service account file NOT FOUND at: {CRED_PATH}")
+        exit(1)
+        
+    with open(CRED_PATH, 'r') as f:
+        service_account_info = json.load(f)
+    
+    # Critical Fix: Ensure private key newlines are correctly interpreted
+    if 'private_key' in service_account_info:
+        service_account_info['private_key'] = service_account_info['private_key'].replace('\\n', '\n')
+    
+    logging.info(f"Connecting to Firebase Project: {service_account_info.get('project_id')} | DB: {FIREBASE_DB_URL}")
+    logging.info(f"Using Service Account: {service_account_info.get('client_email')} | Key ID: {service_account_info.get('private_key_id')}")
+    
+    # Check for potential time drift
+    import datetime
+    logging.info(f"Current System Time (UTC): {datetime.datetime.utcnow().isoformat()}")
+    
+    cred = credentials.Certificate(service_account_info)
     firebase_admin.initialize_app(cred, {'databaseURL': FIREBASE_DB_URL})
     logging.info("Connected to Firebase.")
 except Exception as e:
@@ -191,7 +212,9 @@ def process_all_telemetry():
             logging.info(f"[{athlete_id}] Inference Complete. Anomaly: {is_anomaly} | State: {states.get(cluster_id)} | Pred HR: {predicted_hr}")
 
     except Exception as e:
+        import traceback
         logging.error(f"Worker Loop Error: {str(e)}")
+        logging.error(traceback.format_exc())
 
 if __name__ == "__main__":
     logging.info("Worker actively monitoring all athletes...")
