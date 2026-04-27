@@ -1,6 +1,7 @@
 // src/context/NotificationContext.jsx
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { useAthleteData } from "../hooks/useAthleteData";
+import { useAuth } from "./AuthContext";
 import { getAlerts } from "../utils/dataHelpers";
 
 const NotificationContext = createContext();
@@ -13,6 +14,7 @@ export const useNotifications = () => useContext(NotificationContext);
  */
 export const NotificationProvider = ({ children }) => {
   const { liveData, athletes, mlInsights } = useAthleteData();
+  const { pendingRequests } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [toasts, setToasts] = useState([]);
@@ -20,6 +22,8 @@ export const NotificationProvider = ({ children }) => {
   // Keep track of which alerts we've already notified for in this session
   // format: { [athleteId]: Set(alertId-timestamp) }
   const notifiedAlerts = useRef(new Map());
+  // Track which connection request IDs we've already surfaced in the bell
+  const notifiedRequests = useRef(new Set());
 
   // Audible alert utility
   const playAlertSound = useCallback((level) => {
@@ -102,6 +106,34 @@ export const NotificationProvider = ({ children }) => {
       else if (hasNewWarning) playAlertSound("warning");
     }
   }, [liveData, athletes, playAlertSound]);
+
+  // ── Connection-request notifications ──────────────────────────
+  // Fires whenever a new pending request lands (athlete→coach or coach→athlete).
+  useEffect(() => {
+    if (!pendingRequests?.length) return;
+    const newNotifs = [];
+    pendingRequests.forEach((req) => {
+      if (notifiedRequests.current.has(req.id)) return;
+      notifiedRequests.current.add(req.id);
+      const senderRole = req.fromRole === "admin" ? "Coach" : "Athlete";
+      const notif = {
+        histId: `conn-req-${req.id}`,
+        title: `Connection request from ${req.fromName || req.fromUsername}`,
+        msg: `@${req.fromUsername} (${senderRole}) wants to connect with you.`,
+        level: "info",
+        athleteName: senderRole,
+        timestamp: new Date().toLocaleTimeString(),
+        read: false,
+      };
+      newNotifs.push(notif);
+    });
+    if (newNotifs.length > 0) {
+      setNotifications((prev) => [...newNotifs, ...prev].slice(0, 50));
+      setUnreadCount((prev) => prev + newNotifs.length);
+      setToasts((prev) => [...prev, ...newNotifs]);
+      playAlertSound("warning");
+    }
+  }, [pendingRequests, playAlertSound]);
 
   const markAllAsRead = useCallback(() => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));

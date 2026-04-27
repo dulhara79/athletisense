@@ -6,7 +6,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Activity,
   BarChart2,
@@ -19,6 +19,8 @@ import {
   Link2,
   Trash2,
   Eye,
+  UserPlus,
+  Send,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -116,6 +118,109 @@ const NAV_ITEMS = [
     desc: "Manage your team",
   },
 ];
+
+/* ── Sidebar Add-Connection Widget ─────────────────────────── */
+function SidebarAddConnection({ t, user }) {
+  const [username, setUsername] = useState("");
+  const [status, setStatus] = useState({ msg: "", ok: false });
+  const [sending, setSending] = useState(false);
+  const { sendRequest } = useAuth();
+  const timerRef = useRef(null);
+
+  const handleSend = async () => {
+    const val = username.trim();
+    if (!val || sending) return;
+    setSending(true);
+    setStatus({ msg: "", ok: false });
+    const res = await sendRequest(val);
+    setStatus({
+      msg: res.success ? "Request sent!" : (res.error || "Failed."),
+      ok: res.success,
+    });
+    if (res.success) setUsername("");
+    setSending(false);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setStatus({ msg: "", ok: false }), 3500);
+  };
+
+  return (
+    <div style={{
+      padding: "0.85rem 1rem",
+      borderBottom: `1px solid ${t.border}`,
+    }}>
+      <p style={{
+        fontSize: 10,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.09em",
+        color: t.muted,
+        marginBottom: 8,
+        display: "flex",
+        alignItems: "center",
+        gap: 5,
+      }}>
+        <UserPlus size={11} color={t.accent} />
+        {user?.role === "admin" ? "Add Athlete" : "Add Coach"}
+      </p>
+      <div style={{ display: "flex", gap: 5 }}>
+        <input
+          id="sidebar-add-connection-input"
+          value={username}
+          onChange={e => { setUsername(e.target.value); setStatus({ msg: "", ok: false }); }}
+          onKeyDown={e => e.key === "Enter" && handleSend()}
+          placeholder={`Enter username…`}
+          style={{
+            flex: 1,
+            padding: "6px 10px",
+            borderRadius: 8,
+            border: `1px solid ${t.border}`,
+            background: t.surface,
+            fontSize: 11,
+            color: t.text,
+            outline: "none",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            transition: "border-color 0.15s",
+          }}
+          onFocus={e => (e.target.style.borderColor = t.accent)}
+          onBlur={e => (e.target.style.borderColor = t.border)}
+        />
+        <button
+          id="sidebar-add-connection-btn"
+          onClick={handleSend}
+          disabled={sending || !username.trim()}
+          title="Send connection request"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            background: username.trim() ? t.accent : t.surface,
+            border: `1px solid ${username.trim() ? t.accent : t.border}`,
+            cursor: username.trim() ? "pointer" : "default",
+            opacity: sending ? 0.6 : 1,
+            transition: "all 0.15s",
+            flexShrink: 0,
+          }}
+        >
+          <Send size={12} color={username.trim() ? "#fff" : t.faint} />
+        </button>
+      </div>
+      {status.msg && (
+        <p style={{
+          fontSize: 10,
+          fontWeight: 600,
+          marginTop: 5,
+          color: status.ok ? t.success : t.danger,
+          animation: "fadein 0.2s ease",
+        }}>
+          {status.msg}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function MainLayout() {
   const [theme, setTheme] = useState("light");
@@ -253,6 +358,9 @@ export default function MainLayout() {
             </p>
           )}
         </div>
+
+        {/* ── Add Connection Widget (below Welcome) ─────────── */}
+        {user && <SidebarAddConnection t={t} user={user} />}
 
         {/* Navigation */}
         <nav style={{ padding: "0.75rem", flex: 1, overflowY: "auto" }}>

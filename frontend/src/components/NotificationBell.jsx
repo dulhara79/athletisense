@@ -1,11 +1,15 @@
 // src/components/NotificationBell.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { Bell, X } from "lucide-react";
+import { Bell, Check, X } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
+import { useAuth } from "../context/AuthContext";
 
 export function NotificationBell({ t }) {
   const { notifications, unreadCount, markAllAsRead, clearNotifications } = useNotifications();
+  const { pendingRequests, acceptRequest, rejectRequest } = useAuth();
   const [open, setOpen] = useState(false);
+  // Track which conn-req notifications have been acted on (so we hide the buttons)
+  const [actedOn, setActedOn] = useState(new Set());
   const ref = useRef();
 
   useEffect(() => {
@@ -19,6 +23,18 @@ export function NotificationBell({ t }) {
   const handleOpen = () => {
     setOpen(!open);
     if (!open) markAllAsRead();
+  };
+
+  const handleAccept = async (reqId, histId) => {
+    const req = pendingRequests.find((r) => r.id === reqId);
+    if (!req) return;
+    await acceptRequest(reqId, req);
+    setActedOn((prev) => new Set([...prev, histId]));
+  };
+
+  const handleReject = async (reqId, histId) => {
+    await rejectRequest(reqId);
+    setActedOn((prev) => new Set([...prev, histId]));
   };
 
   return (
@@ -95,6 +111,8 @@ export function NotificationBell({ t }) {
               to { opacity: 1; transform: translateY(0); }
             }
           `}</style>
+
+          {/* Header */}
           <div
             style={{
               padding: "12px 16px",
@@ -106,50 +124,120 @@ export function NotificationBell({ t }) {
             }}
           >
             <p style={{ fontSize: 13, fontWeight: 700, color: t.text }}>
-              Alert History
+              Notifications
             </p>
-            <button 
+            <button
               onClick={clearNotifications}
-              style={{ fontSize: 10, color: t.danger, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+              style={{ fontSize: 10, color: t.danger, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
             >
               Clear All
             </button>
           </div>
-          <div style={{ maxHeight: 400, overflowY: "auto" }}>
+
+          {/* List */}
+          <div style={{ maxHeight: 420, overflowY: "auto" }}>
             {notifications.length === 0 ? (
               <div style={{ padding: 40, textAlign: "center" }}>
                 <Bell size={24} color={t.faint} style={{ marginBottom: 12, opacity: 0.5 }} />
                 <p style={{ fontSize: 12, color: t.faint }}>No recent alerts</p>
               </div>
             ) : (
-              notifications.map((n) => (
-                <div
-                  key={n.histId}
-                  style={{
-                    padding: "12px 16px",
-                    borderBottom: `1px solid ${t.border}`,
-                    display: "flex",
-                    gap: 12,
-                    background: n.read ? "transparent" : `${t.accent}08`,
-                    transition: "background 0.2s",
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <p style={{ fontSize: 10, fontWeight: 800, color: n.level === 'critical' ? t.danger : t.warning, textTransform: 'uppercase' }}>
-                        {n.athleteName}
+              notifications.map((n) => {
+                // ── Connection request notification ──────────────
+                const isConnReq = n.histId?.startsWith("conn-req-");
+                const reqId = isConnReq ? n.histId.replace("conn-req-", "") : null;
+                const liveReq = reqId ? pendingRequests.find((r) => r.id === reqId) : null;
+                const alreadyActed = actedOn.has(n.histId);
+
+                return (
+                  <div
+                    key={n.histId}
+                    style={{
+                      padding: "12px 16px",
+                      borderBottom: `1px solid ${t.border}`,
+                      background: n.read ? "transparent" : `${t.accent}08`,
+                      transition: "background 0.2s",
+                    }}
+                  >
+                    {/* Top row: label + timestamp */}
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                      <p
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          textTransform: "uppercase",
+                          color: isConnReq
+                            ? t.accent
+                            : n.level === "critical"
+                            ? t.danger
+                            : t.warning,
+                        }}
+                      >
+                        {isConnReq ? "Connection Request" : n.athleteName}
                       </p>
-                      <p style={{ fontSize: 9, color: t.faint, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                        {n.timestamp}
-                      </p>
+                      <p style={{ fontSize: 9, color: t.faint }}>{n.timestamp}</p>
                     </div>
+
+                    {/* Title + message */}
                     <p style={{ fontSize: 12, fontWeight: 700, color: t.text, marginBottom: 2 }}>
                       {n.title}
                     </p>
-                    <p style={{ fontSize: 11, color: t.muted, lineHeight: 1.3 }}>{n.msg}</p>
+                    <p style={{ fontSize: 11, color: t.muted, lineHeight: 1.4 }}>{n.msg}</p>
+
+                    {/* Accept / Reject — only for live pending conn requests */}
+                    {isConnReq && (
+                      <div style={{ marginTop: 8 }}>
+                        {alreadyActed || !liveReq ? (
+                          <p style={{ fontSize: 10, color: t.faint, fontWeight: 600 }}>
+                            {alreadyActed ? "✓ Done" : "Request no longer pending"}
+                          </p>
+                        ) : (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              id={`accept-conn-${reqId}`}
+                              onClick={() => handleAccept(reqId, n.histId)}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                padding: "5px 12px",
+                                borderRadius: 7,
+                                background: "#10b981",
+                                border: "none",
+                                cursor: "pointer",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: "#fff",
+                              }}
+                            >
+                              <Check size={12} /> Accept
+                            </button>
+                            <button
+                              id={`reject-conn-${reqId}`}
+                              onClick={() => handleReject(reqId, n.histId)}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                padding: "5px 12px",
+                                borderRadius: 7,
+                                background: t.dangerBg,
+                                border: `1px solid ${t.danger}30`,
+                                cursor: "pointer",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: t.danger,
+                              }}
+                            >
+                              <X size={12} /> Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

@@ -35,15 +35,15 @@
 namespace Config {
 
   // ---------- WiFi credentials ----------
-  constexpr char SSID[]         = "Meow";
-  constexpr char PASSWORD[]     = "TD2001:)";
+  constexpr char SSID[]         = "YourWiFiSSID"; // Your WiFi network name (SSID)
+  constexpr char PASSWORD[]     = "YourWiFiPassword"; // Your WiFi password (keep this secret!)
 
   // ---------- Firebase (cloud database) ----------
   // These values come from your Firebase project settings.
-  constexpr char FB_API_KEY[]   = "AIzaSyC1669EWz-gX0e1SpKqHzMsjsOPNpuVIII";
-  constexpr char FB_DB_URL[]    = "https://nexora-efcc3-default-rtdb.firebaseio.com";
-  constexpr char FB_EMAIL[]     = "esp32@device.com";
-  constexpr char FB_PASSWORD[]  = "SuperSecret123!";
+  constexpr char FB_API_KEY[]   = "YourFirebaseAPIKey"; // Your Firebase API key (from project settings)
+  constexpr char FB_DB_URL[]    = "https://your-project-id.firebaseio.com/"; // Your Firebase Realtime Database URL (from project settings, ends with .firebaseio.com/)
+  constexpr char FB_EMAIL[]     = "your-email@example.com"; // Your Firebase email account (must have read/write access to the database)
+  constexpr char FB_PASSWORD[]  = "YourFirebasePassword"; // Your Firebase password (for the above email account, keep this secret!)
 
   // Unique ID for the athlete wearing this strap.
   // Change this if you have multiple athletes / devices.
